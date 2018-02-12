@@ -1,0 +1,94 @@
+[include]
+	# Load private user info
+	path = ~/config/private/gitconfig.private
+[color]
+	# Enable colors in color-supporting terminals
+	ui = auto
+[color "grep"]
+	# Enable colors for grep
+	filename = magenta
+	linenumber = yellow
+	match = red
+[color "branch"]
+	# Blue on black is hard to read in git branch -vv: use cyan instead
+	upstream = cyan
+[alias]
+	st = status
+	stu = status --untracked-files=no
+	ci = commit
+	co = checkout
+	lg = log --graph --abbrev-commit --date=short
+	ll = log -20 --graph --abbrev-commit --date=short
+	glog = log --graph --oneline --decorate
+	cdiff = diff --color-words=.
+	oops = commit --amend --no-edit
+[format]
+	# Format used for the log
+	pretty = %Cred%h%Creset -%C(auto)%d%Creset %s %Cgreen(%cr, %cd) %C(bold blue)<%an>%Creset
+[core]
+	editor = emacs
+	excludesfile = ~/.gitignore
+[diff]
+	# Use better, descriptive initials (c, i, w) instead of a/b.
+	mnemonicPrefix = true
+	# When using --word-diff, assume --word-diff-regex=.
+	wordRegex = .
+	# Experimental heuristic for better diff
+	compactionHeuristic = true
+[rerere]
+	# If, like me, you like rerere, decomment these
+	autoupdate = true
+	enabled = true
+[fetch]
+	# Auto-fetch submodule changes (sadly, won't auto-update)
+	recurseSubmodules = on-demand
+[pull]
+	# This is GREAT... when you know what you're doing and are careful
+	# not to pull --no-rebase over a local line containing a true merge.
+	rebase = true
+[push]
+	# Default push should only push the current branch to its push target,
+	# regardless of its remote name
+	default = upstream
+[status]
+	# Display submodule rev change summaries in status
+	#submoduleSummary = true
+	# Recursively traverse untracked directories to display all contents
+	#showUntrackedFiles = all
+[log]
+	# Use abbrev SHAs whenever possible/relevant instead of full 40 chars
+	abbrevCommit = true
+	# Automatically --follow when given a single path
+	follow = true
+[blame]
+	# Use short dates
+	date = short
+[tag]
+	# Sort tags as version numbers whenever applicable,
+	# so 1.10.2 is AFTER 1.2.0.
+	sort = version:refname
+[grep]
+	# Consider most regexes to be ERE
+	extendedRegexp = true
+	linenumber = true
+[merge]
+	conflictStyle = diff3
+[mergetool]
+	# Clean up backup files created by merge tools on tool exit
+	keepBackup = false
+	# Clean up temp files created by merge tools on tool exit
+	keepTemporaries = false
+	# Put the temp files in a dedicated dir anyway
+	writeToTemp = true
+	# Auto-accept file prompts when launching merge tools
+	prompt = false
+[mergetool "ediff"]
+	cmd = emacs --eval \"(ediff-merge-files-with-ancestor \\\"$LOCAL\\\" \\\"$REMOTE\\\" \\\"$BASE\\\" nil \\\"$MERGED\\\")\"
+[filter "media"]
+	required = true
+	clean = git media clean %f
+	smudge = git media smudge %f
+[filter "lfs"]
+	clean = git lfs clean %f
+	smudge = git lfs smudge %f
+	required = true

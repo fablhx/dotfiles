@@ -1,0 +1,32 @@
+export ZSH=~/.oh-my-zsh
+
+plugins=(
+    colored-man-pages
+    colorize
+    compleat
+    git
+    history
+    history-substring-search
+)
+
+REPORTTIME=10
+
+setopt notify
+setopt completeinword
+setopt prompt_subst
+
+autoload -U compinit #promptinit bashcompinit
+compinit
+#promptinit
+#bashcompinit
+
+zstyle ':completion:*' list-colors ${(s.:.)LS_COLORS}
+zstyle ':completion::complete:*' use-cache 1
+
+source ~/.export
+
+source $ZSH/oh-my-zsh.sh
+
+source ~/.aliases
+source ~/.functions
+source ~/.prompt

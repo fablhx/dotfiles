@@ -1,0 +1,369 @@
+;; =========================== Automatic packages ============================
+
+;; Packages
+(setq package-list
+ '(company web-mode whitespace markdown-mode multiple-cursors))
+
+;; Repository containing the packages
+(setq package-archives '(("melpa" . "http://melpa.milkbox.net/packages/")))
+
+;; Activate all the packages
+(require 'package)
+(package-initialize)
+
+;; Fetch the list of packages available
+(unless package-archive-contents (package-refresh-contents))
+
+;; Install the missing packages
+(dolist (package package-list)
+  (unless (package-installed-p package)
+    (package-install package)))
+
+
+;; ============================= Generic options =============================
+
+;; Update search path
+(setq-default load-path
+  (cons (expand-file-name "~/.emacs.d/site-lisp") load-path))
+(setq-default load-path
+  (cons (expand-file-name "~/.emacs.d/elpa") load-path))
+
+;; No startup message
+(setq inhibit-startup-message t inhibit-startup-echo-area-message t)
+
+;; Display line, column, date
+(line-number-mode t)
+(column-number-mode t)
+(display-time-mode t)
+(setq display-time-24hr-format t)
+
+;; Display path file in frame title
+(setq-default frame-title-format "%b (%f)")
+
+;; Display menubar but not tool bar
+(menu-bar-mode t)
+(tool-bar-mode -1)
+
+;; Change audio bell into visible bell
+;(setq visible-bell t)
+
+;; Display scrollbar on the right side
+(scroll-bar-mode t)
+(set-scroll-bar-mode 'right)
+
+;; Highlight while search/replace
+(setq search-highlight t query-replace-highlight t)
+
+;; If search for 2 spaces, then really search 2 spaces
+(setq search-whitespace-regexp -1)
+
+;; Highlight selection
+(transient-mark-mode t)
+
+;; Delete selected text
+(delete-selection-mode t)
+
+;; Replace all yes-no questions into y-n
+(fset 'yes-or-no-p 'y-or-n-p)
+
+;; Cursor, mouse and mouse wheel
+(require 'mwheel)
+(mouse-wheel-mode t)
+(setq scroll-preserve-screen-position t)
+(setq track-eol -1)
+(setq scroll-step 1)
+(setq next-screen-context-lines 1)
+(setq scroll-margin 1
+  scroll-conservatively 100000
+  scroll-up-aggressively 0.01
+  scroll-down-aggressively 0.01)
+
+;; Copy/paste insert at the cursor point
+(setq mouse-yank-at-point -1)
+
+;; No backup files
+(setq make-backup-files nil)
+;(setq version-control -1)
+;(setq backup-directory-alist (quote ((".*" . "~/.emacs_backups/"))))
+
+;; Delete too old backups
+;(setq delete-old-versions t)
+
+;; Don't save abbrevs
+(setq save-abbrevs nil)
+
+;; Case insensitive completing file name
+(setq read-file-name-completion-ignore-case t)
+
+;; Filling paragraph for French
+(setq fill-nobreak-predicate '(fill-french-nobreak-p))
+
+
+;; ========================= Configuration for Mac ===========================
+
+;; To type \{}[] with the normal keyboard combination
+(defun mac_keyboard ()
+  (interactive)
+  (custom-set-variables
+    '(ns-alternate-modifier (quote none))
+    '(ns-command-modifier (quote meta))
+    '(ns-control-modifier (quote none))
+    '(ns-function-modifier (quote control)))
+
+    ;; C-up/C-down to change paragraphs
+    ;; Redefinition of the old commands
+    (define-key
+      (current-global-map) [remap scroll-up-command] 'forward-paragraph)
+    (define-key
+      (current-global-map) [remap scroll-down-command] 'backward-paragraph)
+
+    ;; Redefinition of C-left/C-right for backward/forwad word
+    (global-set-key (kbd "<home>") 'backward-word)
+    (global-set-key (kbd "<end>") 'forward-word))
+
+;; By OPAM user-setup for emacs
+;; Tweak for problem on OS X where Emacs.app doesn't run the right
+;; init scripts when invoking a sub-shell
+(defun set-exec-path-from-shell-PATH ()
+  "Set up Emacs' `exec-path' and PATH environment variable to
+  match that used by the user's shell.
+
+This is particularly useful under Mac OSX, where GUI apps are not
+started from a shell."
+  (interactive)
+  (let ((path-from-shell
+         (replace-regexp-in-string
+          "[ \t\n]*$" ""
+          (shell-command-to-string "$SHELL --login -i -c 'echo $PATH'"))
+         ))
+    (setenv "PATH" path-from-shell)
+    (setq exec-path (split-string path-from-shell path-separator))))
+
+;; Auto load conf if on mac
+(cond
+  ((string-equal system-type "darwin")
+    ;; Open emacs on top of the terminal
+    (when window-system (x-focus-frame nil))
+
+    (set-exec-path-from-shell-PATH)
+
+    (mac_keyboard)))
+
+
+;; =========================== Personal Shortcuts ============================
+
+(defvar my-keys-minor-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "M-<left>") 'windmove-left)
+    (define-key map (kbd "M-<right>") 'windmove-right)
+    (define-key map (kbd "M-<up>") 'windmove-up)
+    (define-key map (kbd "M-<down>") 'windmove-down)
+    map)
+  "my-keys-minor-mode keymap.")
+
+(define-minor-mode my-keys-minor-mode
+  "A minor mode so that my key settings override annoying major modes."
+  :init-value t
+  :lighter " my-keys")
+
+(my-keys-minor-mode t)
+
+(global-set-key [f1] 'comment-dwim)
+(global-set-key [f2] 'undo)
+(global-set-key [f3] 'grep)
+(global-set-key [f4] 'goto-line)
+(global-set-key [f5] 'compile)
+(global-set-key [f6] 'interrupt-and-recompile)
+(global-set-key [f7] 'next-error)
+(global-set-key [f8] 'caml-types-show-type)
+(global-set-key [f10] 'global-auto-revert-mode)
+(global-set-key [f12] 'whitespace-mode)
+
+;; Automatically resize widow when splitting
+(global-set-key
+ (kbd "C-x 2") (lambda () (interactive) (split-window-below) (balance-windows)))
+(global-set-key
+ (kbd "C-x 3") (lambda () (interactive) (split-window-right) (balance-windows)))
+(global-set-key
+ (kbd "C-x 0") (lambda () (interactive) (delete-window) (balance-windows)))
+
+;; Autocomplete
+(add-hook 'after-init-hook 'global-company-mode)
+(autoload 'company-mode "company" nil t)
+(require 'company)
+;(global-set-key (kbd "C-/") 'company-complete)
+(global-set-key [C-tab] 'company-complete-common)
+(setq company-dabbrev-downcase nil)
+
+
+;; =============================== Development ===============================
+
+;; Multiple cursors
+(require 'multiple-cursors)
+
+;; Whitespace
+(require 'whitespace)
+(setq whitespace-style '(face trailing empty lines-tail tabs tab-mark))
+(setq whitespace-space 'whitespace-hspace)
+(setq whitespace-line-column 80)
+;(add-hook 'prog-mode-hook 'whitespace-mode)
+(global-whitespace-mode 1)
+(custom-set-faces
+ ;; custom-set-faces was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ '(whitespace-empty ((t (:foreground "firebrick" :background "SlateGray1"))))
+ '(whitespace-hspace ((t (:foreground "white" :background "red"))))
+ '(whitespace-indentation ((t (:foreground "firebrick" :background "beige"))))
+ '(whitespace-line ((t (:foreground "black" :background "red"))))
+ '(whitespace-newline ((t (:foreground "orange" :background "blue"))))
+ '(whitespace-space ((t (:bold t :foreground "gray75"))))
+ '(whitespace-space-after-tab ((t (:foreground "black" :background "green"))))
+ '(whitespace-space-before-tab ((t (:foreground "black" :background "DarkOrange"))))
+ '(whitespace-tab ((t (:foreground "red" :background "yellow"))))
+ '(whitespace-trailing ((t (:foreground "red" :background "yellow")))))
+
+;; Delete spaces when saving
+;(add-hook 'before-save-hook 'delete-trailing-whitespace)
+
+;; End file with new line
+(setq require-final-newline t)
+
+;; Replace tab with spaces
+(setq-default indent-tabs-mode nil)
+
+;; Show parenthesis
+(require 'paren)
+(show-paren-mode t)
+(setq blink-matching-paren t)
+(setq blink-matching-paren-on-screen t)
+(setq show-paren-style 'expression)
+(setq blink-matching-paren-dont-ignore-comments t)
+
+;; Auto-kill compilation process and recompile
+(defun interrupt-and-recompile ()
+  "Interrupt old compilation, if any, and recompile."
+  (interactive)
+  (ignore-errors
+    (process-kill-without-query
+     (get-buffer-process
+      (get-buffer "*compilation*"))))
+  (ignore-errors
+    (kill-buffer "*compilation*"))
+  (recompile))
+
+;; Auto-scroll in the compilation buffer
+(setq compilation-scroll-output 'first-error)
+
+;; When compilation uses color, apply them if possible
+(require 'ansi-color)
+(defun colorize-compilation-buffer ()
+  (toggle-read-only)
+  (ansi-color-apply-on-region compilation-filter-start (point))
+  (toggle-read-only))
+(add-hook 'compilation-filter-hook 'colorize-compilation-buffer)
+
+;; Ediff
+(setq ediff-split-window-function 'split-window-horizontally)
+
+;; Renumber a list: M-x renumber or C-u 3 M-x renumber
+(defun renumber (&optional num)
+  "Renumber the list items in the current paragraph,
+   starting at point."
+  (interactive "p")
+  (setq num (or num 1))
+  (let ((end (save-excursion
+               (forward-paragraph)
+               (point))))
+    (while (re-search-forward "^[0-9]+" end t)
+      (replace-match (number-to-string num))
+      (setq num (1+ num)))))
+
+(defun renumber-list (start end &optional num)
+  "Renumber the list items in the current START..END region.
+   If optional prefix arg NUM is given, start numbering from that number
+   instead of 1."
+  (interactive "*r\np")
+  (save-excursion
+    (goto-char start)
+    (setq num (or num 1))
+    (save-match-data
+      (while (re-search-forward "^[0-9]+" end t)
+        (replace-match (number-to-string num))
+        (setq num (1+ num))))))
+
+;; Custom vc-annotate to omit the file path
+;; Can't make my mind if I want it or not
+;;(defadvice vc-git-annotate-command (around vc-git-annotate-command activate)
+;;  "Suppress Relative Path Of File From Git Blame Output"
+;;  (let (name (file-relative-name file))
+;;    (vc-git-command buf 'async nil "blame" "--date=short" rev "--" name)))
+
+
+;; =================================== BASH ==================================
+
+(setq-default sh-basic-offset 4)
+(setq-default sh-indentation 4)
+
+
+;; ================================== C/C++ ==================================
+
+(setq-default c-default-style "linux")
+(setq-default c-basic-offset 4)
+
+
+;; =================================== COQ ===================================
+
+(setq auto-mode-alist (cons '("\\.v$" . coq-mode) auto-mode-alist))
+(autoload 'coq-mode "coq" "Major mode for editing Coq vernacular." t)
+(autoload 'run-coq "coq-inferior" "Run an inferior Coq process." t)
+(autoload 'run-coq-other-window "inferior-coq"
+  "Run an inferior Coq process in a new window." t)
+(autoload 'run-coq-other-frame "inferior-coq"
+  "Run an inferior Coq process in a new frame." t)
+;(load-file "/usr/share/emacs/site-lisp/proofgeneral/generic/proof-site.el")
+
+
+;; ================================== OCAML ==================================
+
+(add-to-list 'load-path (concat
+   (replace-regexp-in-string "\n$" ""
+      (shell-command-to-string "opam config var share"))
+   "/emacs/site-lisp"))
+
+(require 'caml-font)
+
+(autoload 'merlin-mode "merlin" nil t nil)
+(add-hook 'caml-mode-hook 'merlin-mode t)
+(setq merlin-command 'opam)
+(add-hook 'caml-mode-hook 'merlin-mode)
+(add-to-list 'company-backends 'merlin-company-backend)
+(add-hook 'merlin-mode-hook 'company-mode)
+
+(setq auto-mode-alist (cons '("\\.ml[iylp]?$" . caml-mode) auto-mode-alist))
+(autoload 'caml-mode "caml" "Major mode for editing Caml code." t)
+(autoload 'camldebug "camldebug" (interactive) "Debug caml mode")
+(autoload 'run-caml "inf-caml" "Run an inferior Caml process." t)
+
+;; ================================= GeneWeb =================================
+
+(setq gw_gnt "~/devel/Geneanet/local_devel/geneweb_git/geneweb/hd/etc/")
+(setq gw_github_gnt "~/devel/git/github/geneanet/geneweb/hd/etc/")
+(setq gw_github_gw "~/devel/git/github/geneweb/geneweb/hd/etc/")
+
+;; Load web-mode for templates
+(require 'web-mode)
+(add-to-list 'auto-mode-alist `(,(expand-file-name gw_gnt) . web-mode))
+(add-to-list 'auto-mode-alist `(,(expand-file-name gw_github_gnt) . web-mode))
+(add-to-list 'auto-mode-alist `(,(expand-file-name gw_github_gw) . web-mode))
+
+
+;; ================================ Markdown =================================
+
+(autoload 'markdown-mode "markdown-mode"
+   "Major mode for editing Markdown files" t)
+;;(add-to-list 'auto-mode-alist '("\\.text\\'" . markdown-mode))
+(add-to-list 'auto-mode-alist '("\\.markdown\\'" . markdown-mode))
+(add-to-list 'auto-mode-alist '("\\.md\\'" . markdown-mode))
+(put 'downcase-region 'disabled nil)

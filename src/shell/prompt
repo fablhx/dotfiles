@@ -1,0 +1,61 @@
+zsh_gitstatus() {
+    _git_status=`python ~/.gitstatus.py 2>/dev/null`
+    _git_status_vars=("${(@s: :)_git_status}")
+    _git_branch=$_git_status_vars[1]
+    _git_branch_group=$_git_status_vars[2]
+    _git_behind=$_git_status_vars[3]
+    _git_ahead=$_git_status_vars[4]
+    _git_staged=$_git_status_vars[5]
+    _git_unmerged=$_git_status_vars[6]
+    _git_changed=$_git_status_vars[7]
+    _git_untracked=$_git_status_vars[8]
+    _git_stashed=$_git_status_vars[9]
+
+    if [ -n "$_git_status_vars" ]; then
+        color_detached='%{\x1b[38;5;200m%}'
+        color_dirty='%{\x1b[38;5;240m%}'
+        color_clean='%{\x1b[38;5;22m%}'
+        if [ "$_git_branch_group" = "deteachde" ]; then
+            color_branch="$color_detached"
+        elif [ "$_git_branch_group" = "dirty" ]; then
+            color_branch="$color_dirty"
+        else
+            color_branch="$color_clean"
+        fi
+        color_behind='%{\x1b[38;5;250m%}'
+        color_ahead='%{\x1b[38;5;250m%}'
+        color_staged='%{\x1b[38;5;28m%}'
+        color_unmerged='%{\x1b[38;5;196m%}'
+        color_changed='%{\x1b[38;5;166m%}'
+        color_untracked='%{\x1b[38;5;172m%}'
+        color_stashed='%{\x1b[38;5;26m%}'
+        reset_color='%{\x1b[0m%}'
+
+        git_prompt=" $color_branch $_git_branch%{${reset_color}%}"
+        if [ "$_git_behind" -ne "0" ]; then
+            git_prompt="$git_prompt $color_behind↓ $_git_behind%{${reset_color}%}"
+        fi
+        if [ "$_git_ahead" -ne "0" ]; then
+            git_prompt="$git_prompt $color_ahead↑$_git_ahead%{${reset_color}%}"
+        fi
+        if [ "$_git_staged" -ne "0" ]; then
+            git_prompt="$git_prompt $color_staged•$_git_staged%{${reset_color}%}"
+        fi
+        if [ "$_git_unmerged" -ne "0" ]; then
+            git_prompt="$git_prompt $color_unmergedx$_git_unmerged%{${reset_color}%}"
+        fi
+        if [ "$_git_changed" -ne "0" ]; then
+            git_prompt="$git_prompt $color_changed+$_git_changed%{${reset_color}%}"
+        fi
+        if [ "$_git_untracked" -ne "0" ]; then
+            git_prompt="$git_prompt $color_untracked…$_git_untracked%{${reset_color}%}"
+        fi
+        if [ "$_git_stashed" -ne "0" ]; then
+            git_prompt="$git_prompt $color_stashed⚑$_git_stashed%{${reset_color}%}"
+        fi
+
+        echo "$git_prompt"
+    fi
+}
+
+#PROMPT=$'%{\x1b[38;5;135m%}%n@%{\x1b[38;5;135m%}%m%{\x1b[0m%} %4(c:…/:)%3c$(zsh_gitstatus)%(0?.. %{\x1b[38;5;196m%}[%?]%{\x1b[0m%}) %# '
