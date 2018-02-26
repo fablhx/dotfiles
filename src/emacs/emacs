@@ -44,13 +44,6 @@
 (menu-bar-mode t)
 (tool-bar-mode -1)
 
-;; Change audio bell into visible bell
-;(setq visible-bell t)
-
-;; Display scrollbar on the right side
-(scroll-bar-mode t)
-(set-scroll-bar-mode 'right)
-
 ;; Highlight while search/replace
 (setq search-highlight t query-replace-highlight t)
 
@@ -65,18 +58,6 @@
 
 ;; Replace all yes-no questions into y-n
 (fset 'yes-or-no-p 'y-or-n-p)
-
-;; Cursor, mouse and mouse wheel
-(require 'mwheel)
-(mouse-wheel-mode t)
-(setq scroll-preserve-screen-position t)
-(setq track-eol -1)
-(setq scroll-step 1)
-(setq next-screen-context-lines 1)
-(setq scroll-margin 1
-  scroll-conservatively 100000
-  scroll-up-aggressively 0.01
-  scroll-down-aggressively 0.01)
 
 ;; Copy/paste insert at the cursor point
 (setq mouse-yank-at-point -1)
@@ -97,6 +78,9 @@
 
 ;; Filling paragraph for French
 (setq fill-nobreak-predicate '(fill-french-nobreak-p))
+
+;; Width buffer list
+(setq Buffer-menu-name-width 30)
 
 
 ;; ========================= Configuration for Mac ===========================
@@ -327,10 +311,12 @@ started from a shell."
 
 ;; ================================== OCAML ==================================
 
-(add-to-list 'load-path (concat
-   (replace-regexp-in-string "\n$" ""
-      (shell-command-to-string "opam config var share"))
-   "/emacs/site-lisp"))
+(setq opam-share
+  (substring
+    (shell-command-to-string "opam config var share")
+    0 -1))
+
+(add-to-list 'load-path (format "%s/emacs/site-lisp/" opam-share))
 
 (require 'caml-font)
 
@@ -348,22 +334,16 @@ started from a shell."
 
 ;; ================================= GeneWeb =================================
 
-(setq gw_gnt "~/devel/Geneanet/local_devel/geneweb_git/geneweb/hd/etc/")
-(setq gw_github_gnt "~/devel/git/github/geneanet/geneweb/hd/etc/")
-(setq gw_github_gw "~/devel/git/github/geneweb/geneweb/hd/etc/")
+(setq github_gw "~/work/git/extern/fablhx/geneweb/hd/etc/")
 
 ;; Load web-mode for templates
 (require 'web-mode)
-(add-to-list 'auto-mode-alist `(,(expand-file-name gw_gnt) . web-mode))
-(add-to-list 'auto-mode-alist `(,(expand-file-name gw_github_gnt) . web-mode))
-(add-to-list 'auto-mode-alist `(,(expand-file-name gw_github_gw) . web-mode))
+(add-to-list 'auto-mode-alist `(,(expand-file-name github_gw) . web-mode))
 
 
 ;; ================================ Markdown =================================
 
 (autoload 'markdown-mode "markdown-mode"
    "Major mode for editing Markdown files" t)
-;;(add-to-list 'auto-mode-alist '("\\.text\\'" . markdown-mode))
 (add-to-list 'auto-mode-alist '("\\.markdown\\'" . markdown-mode))
 (add-to-list 'auto-mode-alist '("\\.md\\'" . markdown-mode))
-(put 'downcase-region 'disabled nil)

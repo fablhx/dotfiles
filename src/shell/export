@@ -1,3 +1,0 @@
-export EDITOR='emacs';
-
-export LESS="-RFX"

@@ -1,6 +1,6 @@
 [include]
 	# Load private user info
-	path = ~/config/private/gitconfig.private
+	path = ~/config/_build/gitconfig.private
 [color]
 	# Enable colors in color-supporting terminals
 	ui = auto

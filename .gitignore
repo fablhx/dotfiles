@@ -1,15 +1,1 @@
-_build/private
-_build/emacs.d
-_build/aliases
-_build/emacs
-_build/export
-_build/functions
-_build/gdbinit
-_build/gitconfig
-_build/gitignore
-_build/gitstatus.py
-_build/prompt
-_build/valgrind/
-_build/valgrindrc
-_build/xmonad/
-_build/zshrc
+_build

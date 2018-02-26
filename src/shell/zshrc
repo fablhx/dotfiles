@@ -1,13 +1,12 @@
 export ZSH=~/.oh-my-zsh
 
 plugins=(
-    colored-man-pages
-    colorize
     compleat
-    git
-    history
     history-substring-search
+    zsh-syntax-highlighting
 )
+
+source $ZSH/oh-my-zsh.sh
 
 REPORTTIME=10
 
@@ -15,18 +14,208 @@ setopt notify
 setopt completeinword
 setopt prompt_subst
 
-autoload -U compinit #promptinit bashcompinit
-compinit
-#promptinit
-#bashcompinit
-
+zstyle ':completion:*' menu select
 zstyle ':completion:*' list-colors ${(s.:.)LS_COLORS}
-zstyle ':completion::complete:*' use-cache 1
+zstyle ':completion:*' verbose yes
+zstyle ':completion:*' group-name ''
+zstyle ':completion:*:descriptions' format "$fg[yellow]%B--- %d%b"
+zstyle ':completion:*:messages' format '%d'
+zstyle ':completion:*:warnings' format "$fg[red]No matches for:$reset_color %d"
+zstyle ':completion:*:corrections' format '%B%d (errors: %e)%b'
 
-source ~/.export
+export EDITOR='emacs';
+export LESS="-RFX"
 
-source $ZSH/oh-my-zsh.sh
+alias ls='ls --color=auto'
+alias grep='grep --color=auto'
+alias fgrep='fgrep --color=auto'
+alias egrep='egrep --color=auto'
 
-source ~/.aliases
-source ~/.functions
-source ~/.prompt
+alias tree='tree -C'
+
+alias l='ls -lh'
+alias ll='ls -lh'
+alias lll='ls -lha'
+alias la='ls -lhd'
+alias lt='ls -lht'
+
+alias rm='rm -i'
+
+alias ip='dig +short myip.opendns.com @resolver1.opendns.com'
+alias localip_osx='ipconfig getifaddr en0'
+alias localip_ubuntu='ifconfig eth0 | grep "inet addr" | cut -d: -f2 | awk "{print $1}"'
+
+alias ocaml='rlwrap -pMagenta ocaml'
+
+alias nedit='emacsclient -n'
+alias cedit='emacsclient -c -n'
+alias start_emacs='emacs --daemon'
+alias stop_emacs='emacsclient -e "(kill-emacs)"'
+
+__git_prompt() {
+    local git_status
+    git_status=("${(f)$(LANG=en_US git -C $(pwd) status --branch --porcelain 2>/dev/null)}")
+
+    if [[ "${git_status[1]}" == "" ]]; then
+        return
+    fi
+
+    local branch detached behind ahead
+
+    local sub_str tmp
+    sub_str="## "
+    git_status[1]="${git_status[1]#$sub_str}"
+
+    if [[ "${git_status[1]}" == "No commits yet on master" ]]; then
+        branch="master"
+        detached="no"
+        behind=0
+        ahead=0
+    fi
+
+    sub_str="Initial commit on "
+    tmp="${git_status[1]#$sub_str}"
+    if [[ "${git_status[1]}" != "$tmp" ]]; then
+        branch="$tmp"
+        detached="no"
+        behind=0
+        ahead=0
+    fi
+
+    sub_str=" (no branch)"
+    tmp="${git_status[1]%$sub_str}"
+    if [[ "${git_status[1]}" != "$tmp" ]]; then
+        branch="$tmp"
+        detached="yes"
+        behind=0
+        ahead=0
+    fi
+
+    tmp="${git_status[1]#*...}"
+    if [[ "${git_status[1]}" != "$tmp" ]]; then
+        branch="${git_status[1]%$tmp}"
+        branch="${branch%...}"
+        detached="no"
+        behind=0
+        ahead=0
+        sub_str_ahead="ahead "
+        sub_str_behind="behind "
+        tmp_ahead="${tmp#*$sub_str_ahead}"
+        tmp_behind="${tmp#*$sub_str_behind}"
+        if [[ "$tmp_ahead" != "$tmp" && "$tmp_behind" != "$tmp" ]]; then
+            ahead="${tmp_ahead%%,*}"
+            behind="${tmp_behind%%]*}"
+        else
+            if [[ "$tmp_ahead" != "$tmp" ]]; then
+                ahead="${tmp_ahead%%]*}"
+            fi
+            if [[ "$tmp_behind" != "$tmp" ]]; then
+                behind="${tmp_behind%%]*}"
+            fi
+        fi
+    fi
+
+    if [[ -z "$branch" ]]; then
+        branch="${git_status[1]}"
+        detached="no"
+        behind=0
+        ahead=0
+    fi
+
+    if [[ "$branch" == "HEAD" ]]; then
+        branch="$(LANG=en_US git -C "$(pwd)" rev-parse --short HEAD 2>/dev/null)"
+    fi
+
+    local staged unmerged changed untracked stashed
+
+    staged=0
+    unmerged=0
+    changed=0
+    untracked=0
+    for line in "${git_status[@]:1}"; do
+        if ([[ "${line:0:1}" == "M" || "${line:0:1}" == "R" || "${line:0:1}" == "C" ]]) ||
+           ([[ "${line:0:1}" == "D" && "${line:1:1}" != "D" ]]) ||
+           ([[ "${line:0:1}" == "A" && "${line:1:1}" != "A" ]]);
+        then
+            staged=$((staged+1))
+        fi
+
+        if [[ "${line:0:1}" == "U" || "${line:1:1}" == "U" ||
+              "${line:0:2}" == "AA" || "${line:0:2}" == "DD" ]];
+        then
+            unmerged=$((unmerged+1))
+        fi
+
+        if [[ "${line:1:1}" == "M" ]] ||
+           ([[ "${line:1:1}" == "D" && "${line:0:1}" != "D" ]]);
+        then
+            changed=$((changed+1))
+        fi
+
+        if [[ "${line:0:1}" == "?" ]];
+        then
+            untracked=$((untracked+1))
+        fi
+    done
+
+    stashed=("${(f)$(LANG=en_US git -C "$(pwd)" stash list --no-decorate 2>/dev/null)}")
+    if [[ "${stashed[1]}" == "" ]]; then
+        stashed=0
+    else
+        stashed="${#stashed}"
+    fi
+
+    local color_detached="%{\033[38;5;200m%}"
+    local color_dirty="%{\033[38;5;240m%}"
+    local color_clean="%{\033[38;5;22m%}"
+    local color_branch="$color_clean"
+    if [[ "$detached" == "yes" ]]; then
+        color_branch="$color_detached"
+    fi
+    if [[ "$staged" -ne 0 || "$unmerged" -ne 0 ||
+          "$changed" -ne 0 || "$untracked" -ne 0 ]];
+    then
+        color_branch="$color_dirty"
+    fi
+    local color_behind="%{\033[38;5;250m%}"
+    local color_ahead="%{\033[38;5;250m%}"
+    local color_staged="%{\033[38;5;28m%}"
+    local color_unmerged="%{\033[38;5;196m%}"
+    local color_changed="%{\033[38;5;166m%}"
+    local color_untracked="%{\033[38;5;172m%}"
+    local color_stashed="%{\033[38;5;26m%}"
+    local reset_color="%{\033[0m%}"
+
+    git_prompt=" $color_branch $branch${reset_color}"
+    if [[ "$behind" -ne "0" ]]; then
+        git_prompt="$git_prompt $color_behind↓ $behind${reset_color}"
+    fi
+    if [[ "$ahead" -ne "0" ]]; then
+        git_prompt="$git_prompt $color_ahead↑$ahead${reset_color}"
+    fi
+    if [[ "$staged" -ne "0" ]]; then
+        git_prompt="$git_prompt $color_staged•$staged${reset_color}"
+    fi
+    if [[ "$unmerged" -ne "0" ]]; then
+        git_prompt="$git_prompt $color_unmerged$unmerged${reset_color}"
+    fi
+    if [[ "$changed" -ne "0" ]]; then
+        git_prompt="$git_prompt $color_changed+$changed${reset_color}"
+    fi
+    if [[ "$untracked" -ne "0" ]]; then
+        git_prompt="$git_prompt $color_untracked…$untracked${reset_color}"
+    fi
+    if [[ "$stashed" -ne "0" ]]; then
+        git_prompt="$git_prompt $color_stashed⚑ $stashed${reset_color}"
+    fi
+
+    echo -e "$git_prompt"
+}
+
+__build_prompt() {
+    PROMPT=$'%{\x1b[38;5;135m%}%n@%m%{\x1b[0m%} %4(c:…/:)%3c$(__git_prompt)%(0?.. %{\x1b[38;5;196m%}[%?]%{\x1b[0m%}) %# '
+}
+
+__build_prompt
+unset __git_prompt
+unset __build_prompt
