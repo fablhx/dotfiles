@@ -22,6 +22,7 @@
 	glog = log --graph --oneline --decorate
 	cdiff = diff --color-words=.
 	oops = commit --amend --no-edit
+	sync = fetch origin --prune --force 'refs/pull-requests/*:refs/pr/*'
 [format]
 	# Format used for the log
 	pretty = %Cred%h%Creset -%C(auto)%d%Creset %s %Cgreen(%cr, %cd) %C(bold blue)<%an>%Creset

@@ -5,6 +5,7 @@ usage:
 .PHONY: build
 build:
 	mkdir -p ${HOME}/config/_build
+	mkdir -p ${HOME}/config/_build/emacs.d
 	cp ${HOME}/config/src/emacs/emacs ${HOME}/config/_build
 	cp ${HOME}/config/src/gdb/gdbinit ${HOME}/config/_build
 	cp ${HOME}/config/src/git/gitconfig ${HOME}/config/_build
