@@ -1,3 +1,5 @@
+[[ $TERM == "dumb" ]] && unsetopt zle && PS1='$ ' && return
+
 export ZSH=~/.oh-my-zsh
 
 plugins=(
