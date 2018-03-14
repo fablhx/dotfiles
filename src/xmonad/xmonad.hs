@@ -29,6 +29,7 @@
 -- Win+E                start an editor
 -- Win+R                open the Gnome run dialog
 -- Win+Q                restart XMonad
+-- Win+Shift+Q          display Gnome shutdown dialog
 
 import XMonad
 import XMonad.Util.EZConfig
@@ -114,6 +115,7 @@ myKeys conf = M.fromList $
     , ((myModMask              , xK_e), spawn editorCmd)
     , ((altMask .|. controlMask, xK_Left  ), prevWS)
     , ((altMask .|. controlMask, xK_Right ), nextWS)
+    , ((myModMask .|. shiftMask, xK_q     ), spawn "gnome-session-quit --power-off")
     ] ++
     -- Alt+F1..F10 switches to workspace
     -- (Alt is in a nicer location for the thumb than the Windows key,
