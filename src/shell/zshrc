@@ -38,7 +38,7 @@ alias tree='tree -C'
 alias l='ls -lh'
 alias ll='ls -lh'
 alias lll='ls -lha'
-alias la='ls -lhd'
+alias la='ls -lhd .?*'
 alias lt='ls -lht'
 
 alias rm='rm -i'
