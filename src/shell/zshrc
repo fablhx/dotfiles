@@ -25,6 +25,9 @@ zstyle ':completion:*:messages' format '%d'
 zstyle ':completion:*:warnings' format "$fg[red]No matches$reset_color"
 zstyle ':completion:*:corrections' format '%B%d (errors: %e)%b'
 
+typeset -A ZSH_HIGHLIGHT_STYLES
+ZSH_HIGHLIGHT_STYLES[path]=''
+
 export EDITOR='emacs';
 export LESS="-RFX"
 
