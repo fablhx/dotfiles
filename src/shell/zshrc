@@ -207,7 +207,15 @@ __git_prompt() {
     local color_stashed="%{\033[38;5;26m%}"
     local reset_color="%{\033[0m%}"
 
-    git_prompt=" $color_branch $branch${reset_color}"
+    # symbols:
+    # ⎇ branch
+    # ↓ ↑ number of commit behind, ahead
+    # • staged
+    # + changed
+    # … untracked
+    # ⚑ stashed
+
+    git_prompt=" $color_branch⎇  $branch${reset_color}"
     if [[ "$behind" -ne 0 ]]; then
         git_prompt="$git_prompt $color_behind↓ $behind${reset_color}"
     fi
