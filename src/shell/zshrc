@@ -28,6 +28,7 @@ zstyle ':completion:*:corrections' format '%B%d (errors: %e)%b'
 typeset -A ZSH_HIGHLIGHT_STYLES
 ZSH_HIGHLIGHT_STYLES[path]=''
 
+export ALTERNATE_EDITOR=""
 export EDITOR='emacs';
 export LESS="-RFX"
 
