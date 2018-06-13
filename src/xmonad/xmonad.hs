@@ -91,7 +91,7 @@ wideLayout = named "wide" $ avoidStruts $ Mirror basicLayout
 singleLayout = named "single" $ avoidStruts $ noBorders Full
 
 myLayoutHook = normal where
-    normal = tallLayout ||| wideLayout ||| singleLayout ||| simplestFloat
+    normal = tallLayout ||| wideLayout ||| singleLayout ||| simplestFloat||| Full
 
 -- better keybindings for dvorak
 myKeys conf = M.fromList $
