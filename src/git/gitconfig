@@ -21,6 +21,7 @@
 	ll = log -20 --graph --abbrev-commit --date=short
 	glog = log --graph --oneline --decorate
 	cdiff = diff --color-words=.
+	cshow = show --color-words=.
 	oops = commit --amend --no-edit
 	sync = fetch origin --prune --force 'refs/pull-requests/*:refs/pr/*'
 [format]
