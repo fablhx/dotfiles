@@ -205,7 +205,7 @@ started from a shell."
  '(whitespace-space ((t (:bold t :foreground "gray75"))))
  '(whitespace-space-after-tab ((t (:foreground "black" :background "green"))))
  '(whitespace-space-before-tab ((t (:foreground "black" :background "DarkOrange"))))
- '(whitespace-tab ((t (:foreground "red" :background "yellow"))))
+ '(whitespace-tab ((t (:foreground "red"))))
  '(whitespace-trailing ((t (:foreground "red" :background "yellow")))))
 
 ;; Delete spaces when saving
