@@ -72,7 +72,6 @@
 [grep]
 	# Consider most regexes to be ERE
 	extendedRegexp = true
-	linenumber = true
 [merge]
 	conflictStyle = diff3
 [mergetool]
