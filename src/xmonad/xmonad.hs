@@ -45,6 +45,7 @@ import XMonad.Layout.Named
 import XMonad.Layout.NoBorders
 import XMonad.Layout.PerWorkspace
 import XMonad.Layout.Reflect
+import XMonad.Layout.ResizableTile
 import XMonad.Layout.SimplestFloat
 import XMonad.Layout.TwoPane
 import XMonad.Layout.WindowNavigation
@@ -82,7 +83,7 @@ myFocusedBorderColor = "#A0A0D0"
 myWorkspaces = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]
 
 -- layouts
-basicLayout = Tall nmaster delta ratio where
+basicLayout = ResizableTall nmaster delta ratio [] where
     nmaster = 1
     delta   = 3/100
     ratio   = 1/2
@@ -91,7 +92,7 @@ wideLayout = named "wide" $ avoidStruts $ Mirror basicLayout
 singleLayout = named "single" $ avoidStruts $ noBorders Full
 
 myLayoutHook = normal where
-    normal = tallLayout ||| wideLayout ||| singleLayout ||| simplestFloat||| Full
+    normal = tallLayout ||| wideLayout ||| singleLayout ||| simplestFloat ||| Full
 
 -- better keybindings for dvorak
 myKeys conf = M.fromList $
@@ -103,10 +104,12 @@ myKeys conf = M.fromList $
     , ((myModMask              , xK_m     ), windows S.swapMaster)
     , ((altMask                , xK_Tab   ), windows S.focusDown)
     , ((altMask .|. shiftMask  , xK_Tab   ), windows S.focusUp)
-    , ((myModMask              , xK_Down  ), windows S.swapDown)
-    , ((myModMask              , xK_Up    ), windows S.swapUp)
+    , ((myModMask .|. shiftMask, xK_Down  ), windows S.swapDown)
+    , ((myModMask .|. shiftMask, xK_Up    ), windows S.swapUp)
     , ((myModMask              , xK_Left  ), sendMessage Expand)
     , ((myModMask              , xK_Right ), sendMessage Shrink)
+    , ((myModMask              , xK_Up    ), sendMessage MirrorExpand)
+    , ((myModMask              , xK_Down  ), sendMessage MirrorShrink)
     , ((myModMask              , xK_t     ), withFocused $ windows . S.sink)
     , ((myModMask              , xK_w     ), sendMessage (IncMasterN 1))
     , ((myModMask              , xK_v     ), sendMessage (IncMasterN (-1)))
