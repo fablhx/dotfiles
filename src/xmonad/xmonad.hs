@@ -2,39 +2,43 @@
 
 -- Navigation:
 -- Alt+F1..F10          switch to workspace
--- Ctrl+Alt+Left/Right  switch to previous/next workspace
+-- Win+F1..F10          move window to workspace
 -- Alt+Tab              focus next window
 -- Alt+Shift+Tab        focus previous window
---
--- Window management:
--- Win+F1..F10          move window to workspace
--- Win+Up/Down          move window up/down
+-- Win+Shift+Up/Down    move window up/down
 -- Win+C                close window
--- Alt+ScrollUp/Down    move focused window up/down
 -- Win+M                move window to master area
--- Win+N                refresh the current window
--- Alt+LMB              move floating window
--- Alt+MMB              resize floating window
--- Alt+RMB              unfloat floating window
--- Win+T                unfloat floating window
+--
+-- Navigation:
+-- Ctrl+Alt+Left/Right         Switch to workspace to the left or right
+-- Win+Left/Right              Move window to left or right and follow
+-- Win+Shift+Left/Right        Move window to left or right
+-- Alt+Win+Left/Right          Swap with workspace to left or right and follow
+-- Alt+Win+Shift+Left/Right    Swap with workspace to left or right
+-- Ctrl+Alt+Up/Down            Switch to next/previous screen
+-- Win+Up/Down                 Move window to next/previous screen and follow
+-- Win+Shift+Up/Down           Move window to next/previous screen
+-- Alt+Win+Up/Down             Swap with next/previous screen and follow
+-- Alt+Win+Shift+Up/Down       Swap with next/previous screen
 --
 -- Layout management:
--- Win+Left/Right       shrink/expand master area
--- Win+W/V              move more/less windows into master area
--- Win+Space            cycle layouts
+-- Ctrl+Win+Alt+Left/Right    shrink/expand master area
+-- Ctrl+Win+Alt+Up/Down       shrink/expand mirror-master area
+-- Win+Space                  cycle layouts
 --
 -- Other:
--- Win+Enter            start a terminal
--- Win+I                start a browser
--- Win+E                start an editor
--- Win+R                open the Gnome run dialog
--- Win+Q                restart XMonad
--- Win+Shift+Q          display Gnome shutdown dialog
+-- Win+Enter      start a terminal
+-- Win+I          start a browser
+-- Win+E          start an editor
+-- Win+R          open the Gnome run dialog
+-- Win+Q          restart XMonad
+-- Win+Shift+Q    display Gnome shutdown dialog
 
 import XMonad
 import XMonad.Util.EZConfig
 import qualified XMonad.StackSet as S
 import XMonad.Actions.CycleWS
+import XMonad.Actions.SwapWorkspaces
 import XMonad.Config.Gnome
 import XMonad.Hooks.EwmhDesktops
 import XMonad.Hooks.ManageDocks
@@ -59,7 +63,7 @@ import qualified Data.Map as M
 myBaseConfig = gnomeConfig
 
 -- Mod4 is the Super / Windows key
-myModMask = mod4Mask
+winMask = mod4Mask
 altMask = mod1Mask
 
 -- default terminal
@@ -94,41 +98,70 @@ singleLayout = named "single" $ avoidStruts $ noBorders Full
 myLayoutHook = normal where
     normal = tallLayout ||| wideLayout ||| singleLayout ||| simplestFloat ||| Full
 
--- better keybindings for dvorak
 myKeys conf = M.fromList $
-    [ ((myModMask              , xK_Return), spawn $ XMonad.terminal conf)
-    , ((myModMask              , xK_r     ), gnomeRun)
-    , ((myModMask              , xK_c     ), kill)
-    , ((myModMask              , xK_space ), sendMessage NextLayout)
-    , ((myModMask              , xK_n     ), refresh)
-    , ((myModMask              , xK_m     ), windows S.swapMaster)
-    , ((altMask                , xK_Tab   ), windows S.focusDown)
-    , ((altMask .|. shiftMask  , xK_Tab   ), windows S.focusUp)
-    , ((myModMask .|. shiftMask, xK_Down  ), windows S.swapDown)
-    , ((myModMask .|. shiftMask, xK_Up    ), windows S.swapUp)
-    , ((myModMask              , xK_Left  ), sendMessage Expand)
-    , ((myModMask              , xK_Right ), sendMessage Shrink)
-    , ((myModMask              , xK_Up    ), sendMessage MirrorExpand)
-    , ((myModMask              , xK_Down  ), sendMessage MirrorShrink)
-    , ((myModMask              , xK_t     ), withFocused $ windows . S.sink)
-    , ((myModMask              , xK_w     ), sendMessage (IncMasterN 1))
-    , ((myModMask              , xK_v     ), sendMessage (IncMasterN (-1)))
-    , ((myModMask              , xK_q     ), broadcastMessage ReleaseResources >> restart "xmonad" True)
-    , ((myModMask              , xK_i), spawn browserCmd)
-    , ((myModMask              , xK_e), spawn editorCmd)
-    , ((altMask .|. controlMask, xK_Left  ), prevWS)
-    , ((altMask .|. controlMask, xK_Right ), nextWS)
-    , ((myModMask .|. shiftMask, xK_q     ), spawn "gnome-session-quit --power-off")
+    [ ((m, xK_Left ), c)
+        | (c, m) <- [ (prevWS               , controlMask .|. altMask)
+                    , (shiftToPrev >> prevWS, winMask)
+                    , (shiftToPrev          , winMask .|. shiftMask)
+                    , (swapTo Prev          , altMask .|. winMask)
+                    , (swapTo Prev >> nextWS, altMask .|. winMask .|. shiftMask)
+                    ]
     ] ++
-    -- Alt+F1..F10 switches to workspace
-    -- (Alt is in a nicer location for the thumb than the Windows key,
-    -- and 1..9 keys are already in use by Firefox, irssi, ...)
+    [ ((m, xK_Right), c)
+        | (c, m) <- [ (nextWS               , controlMask .|. altMask)
+                    , (shiftToNext >> nextWS, winMask)
+                    , (shiftToNext          , winMask .|. shiftMask)
+                    , (swapTo Next          , altMask .|. winMask)
+                    , (swapTo Next >> prevWS, altMask .|. winMask .|. shiftMask)
+                    ]
+    ] ++
+    [ ((m, xK_Up   ), c)
+        | (c, m) <- [ (prevScreen                   , controlMask .|. altMask)
+                    , (shiftPrevScreen >> prevScreen, winMask)
+                    , (shiftPrevScreen              , winMask .|. shiftMask)
+                    , (swapPrevScreen >> nextScreen , altMask .|. winMask)
+                    , (swapPrevScreen               , altMask .|. winMask .|. shiftMask)
+                    ]
+    ] ++
+    [ ((m, xK_Down ), c)
+        | (c, m) <- [ (nextScreen                   , controlMask .|. altMask)
+                    , (shiftNextScreen >> nextScreen, winMask)
+                    , (shiftNextScreen              , winMask .|. shiftMask)
+                    , (swapNextScreen >> prevScreen , altMask .|. winMask)
+                    , (swapNextScreen               , altMask .|. winMask .|. shiftMask)
+                    ]
+    ] ++
+    -- Navigation
     [ ((altMask, k), windows $ S.greedyView i)
         | (i, k) <- zip myWorkspaces workspaceKeys
     ] ++
-    -- mod+F1..F10 moves window to workspace and switches to that workspace
-    [ ((myModMask, k), (windows $ S.shift i) >> (windows $ S.greedyView i))
+    [ ((winMask, k), (windows $ S.shift i) >> (windows $ S.greedyView i))
         | (i, k) <- zip myWorkspaces workspaceKeys
+    ] ++
+    [ ((altMask              , xK_Tab), windows S.focusDown)
+    , ((altMask .|. shiftMask, xK_Tab), windows S.focusUp)
+    ] ++
+    [ ((winMask .|. shiftMask, xK_Down   ), windows S.swapDown)
+    , ((winMask .|. shiftMask, xK_Up     ), windows S.swapUp)
+    , ((winMask              , xK_c      ), kill)
+    , ((winMask              , xK_m      ), windows S.swapMaster)
+    , ((altMask .|. controlMask, xK_Left ), prevWS)
+    , ((altMask .|. controlMask, xK_Right), nextWS)
+    ] ++
+    -- Layout management
+    [ ((controlMask .|. winMask .|. altMask, xK_Left ), sendMessage Expand)
+    , ((controlMask .|. winMask .|. altMask, xK_Right), sendMessage Shrink)
+    , ((controlMask .|. winMask .|. altMask, xK_Up   ), sendMessage MirrorExpand)
+    , ((controlMask .|. winMask .|. altMask, xK_Down ), sendMessage MirrorShrink)
+    , ((controlMask .|. winMask .|. altMask, xK_space), sendMessage NextLayout)
+    ] ++
+    -- Other
+    [ ((winMask              , xK_Return), spawn $ XMonad.terminal conf)
+    , ((winMask              , xK_i     ), spawn browserCmd)
+    , ((winMask              , xK_e     ), spawn editorCmd)
+    , ((winMask              , xK_r     ), gnomeRun)
+    , ((winMask .|. shiftMask, xK_q     ), spawn "gnome-session-quit --power-off")
+    , ((winMask              , xK_q     ), broadcastMessage ReleaseResources >> restart "xmonad" True)
     ]
     where workspaceKeys = [xK_F1 .. xK_F10]
 
@@ -143,7 +176,7 @@ myMouseBindings (XConfig {XMonad.modMask = modMask}) = M.fromList $
 
 -- put it all together
 main = xmonad $ myBaseConfig
-    { modMask = myModMask
+    { modMask = winMask
     , terminal = myTerminal
     , workspaces = myWorkspaces
     , layoutHook = myLayoutHook
