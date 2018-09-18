@@ -30,6 +30,7 @@
 -- Win+Enter      start a terminal
 -- Win+I          start a browser
 -- Win+E          start an editor
+-- Win+F          start a file explorer
 -- Win+R          open the Gnome run dialog
 -- Win+Q          restart XMonad
 -- Win+Shift+Q    display Gnome shutdown dialog
@@ -76,6 +77,10 @@ browserCmd = "google-chrome"
 -- editor to launch
 editorCmd :: String
 editorCmd = "emacs"
+
+-- file explorer to launch
+fileExplorerCmd :: String
+fileExplorerCmd = "nautilus --new-window"
 
 -- display
 -- replace the bright red border with a more stylish colour
@@ -159,6 +164,7 @@ myKeys conf = M.fromList $
     [ ((winMask              , xK_Return), spawn $ XMonad.terminal conf)
     , ((winMask              , xK_i     ), spawn browserCmd)
     , ((winMask              , xK_e     ), spawn editorCmd)
+    , ((winMask              , xK_f     ), spawn fileExplorerCmd)
     , ((winMask              , xK_r     ), gnomeRun)
     , ((winMask .|. shiftMask, xK_q     ), spawn "gnome-session-quit --power-off")
     , ((winMask              , xK_q     ), broadcastMessage ReleaseResources >> restart "xmonad" True)
