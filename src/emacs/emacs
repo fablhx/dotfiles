@@ -164,6 +164,7 @@ started from a shell."
 (global-set-key [f7] 'next-error)
 (global-set-key [f8] 'caml-types-show-type)
 (global-set-key [f10] 'global-auto-revert-mode)
+(global-set-key [f11] 'enlarge-window)
 (global-set-key [f12] 'whitespace-mode)
 
 ;; Automatically resize widow when splitting
