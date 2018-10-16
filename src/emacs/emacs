@@ -82,6 +82,9 @@
 ;; Width buffer list
 (setq Buffer-menu-name-width 30)
 
+;; Workaround for dead-accent key
+(require 'iso-transl)
+
 
 ;; ========================= Configuration for Mac ===========================
 
