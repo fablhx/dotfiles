@@ -47,6 +47,8 @@ alias lt='ls -lht'
 
 alias rm='rm -i'
 
+alias xopen='xdg-open'
+
 alias ip='dig +short myip.opendns.com @resolver1.opendns.com'
 if [ "$(uname -s)" = "Linux" ]; then
     alias localip='ifconfig | grep "inet addr" | cut -d: -f2 | cut -d" " -f1'
