@@ -22,8 +22,6 @@ if [[ $answer =~ ^([yY][eE][sS]|[yY])$ ]]; then
     curl -s https://raw.githubusercontent.com/jeffkaufman/icdiff/release-1.9.4/icdiff \
         | sudo tee /usr/local/bin/icdiff > /dev/null \
         && sudo chmod ugo+rx /usr/local/bin/icdiff
-
-    sh -c "$(wget https://raw.github.com/robbyrussell/oh-my-zsh/master/tools/install.sh -O -)"
 fi
 
 echo -e "\033[36mInstall my config? [y,N]\033[0m"
@@ -60,3 +58,11 @@ if [[ $answer =~ ^([yY][eE][sS]|[yY])$ ]]; then
 fi
 
 sudo apt autoremove
+
+echo -e "\033[36mInstall Oh-My-Zsh and switch to Zsh? [y,N]\033[0m"
+read -re answer
+if [[ $answer =~ ^([yY][eE][sS]|[yY])$ ]]; then
+    echo "This is rename your ${HOME}/.zshrc, you will need to restore it."
+
+    sh -c "$(wget https://raw.github.com/robbyrussell/oh-my-zsh/master/tools/install.sh -O -)"
+fi
