@@ -30,7 +30,7 @@ if [[ $answer =~ ^([yY][eE][sS]|[yY])$ ]]; then
     rm -f ${HOME}/.zshrc
 
     git clone https://github.com/fablhx/dotfiles.git ${HOME}/config
-    cd ${HOME}config
+    cd ${HOME}/config
     make build
     echo "emacs.d" > ${HOME}/config/_build/.gitignore
     cd ${HOME}
