@@ -301,6 +301,14 @@ started from a shell."
 (setq-default c-basic-offset 4)
 
 
+;; ================================= PYTHON ==================================
+
+(add-hook 'python-mode-hook 'flycheck-mode)
+(add-hook 'python-mode-hook
+          (lambda ()
+            (setq flycheck-python-pylint-executable "~/.local/bin/pylint")))
+
+
 ;; =================================== COQ ===================================
 
 (setq auto-mode-alist (cons '("\\.v$" . coq-mode) auto-mode-alist))
