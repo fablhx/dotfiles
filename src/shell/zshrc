@@ -15,7 +15,6 @@ REPORTTIME=10
 setopt notify
 setopt completeinword
 setopt prompt_subst
-unsetopt monitor
 
 zstyle ':completion:*' menu select
 zstyle ':completion:*' list-colors ${(s.:.)LS_COLORS}
