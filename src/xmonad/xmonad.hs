@@ -36,7 +36,6 @@
 -- Win+Shift+Q    display Gnome shutdown dialog
 
 import XMonad
-import XMonad.Util.EZConfig
 import qualified XMonad.StackSet as S
 import XMonad.Actions.CycleWS
 import XMonad.Actions.SwapWorkspaces
@@ -55,6 +54,7 @@ import XMonad.Layout.SimplestFloat
 import XMonad.Layout.TwoPane
 import XMonad.Layout.WindowNavigation
 import XMonad.Util.WindowProperties
+import XMonad.Util.EZConfig
 import Control.Monad
 import Data.Ratio
 import qualified Data.Map as M
@@ -73,6 +73,8 @@ myTerminal = "terminator"
 -- browser to launch
 browserCmd :: String
 browserCmd = "google-chrome"
+browserCmdIncognito :: String
+browserCmdIncognito = "google-chrome --incognito"
 
 -- editor to launch
 editorCmd :: String
@@ -137,10 +139,10 @@ myKeys conf = M.fromList $
                     ]
     ] ++
     -- Navigation
-    [ ((altMask, k), windows $ S.greedyView i)
+    [ ((altMask, k), windows $ S.view i)
         | (i, k) <- zip myWorkspaces workspaceKeys
     ] ++
-    [ ((winMask, k), (windows $ S.shift i) >> (windows $ S.greedyView i))
+    [ ((winMask, k), (windows $ S.shift i) >> (windows $ S.view i))
         | (i, k) <- zip myWorkspaces workspaceKeys
     ] ++
     [ ((altMask              , xK_Tab), windows S.focusDown)
@@ -150,8 +152,6 @@ myKeys conf = M.fromList $
     , ((winMask .|. shiftMask, xK_Up     ), windows S.swapUp)
     , ((winMask              , xK_c      ), kill)
     , ((winMask              , xK_m      ), windows S.swapMaster)
-    , ((altMask .|. controlMask, xK_Left ), prevWS)
-    , ((altMask .|. controlMask, xK_Right), nextWS)
     ] ++
     -- Layout management
     [ ((controlMask .|. winMask .|. altMask, xK_Left ), sendMessage Expand)
@@ -163,6 +163,7 @@ myKeys conf = M.fromList $
     -- Other
     [ ((winMask              , xK_Return), spawn $ XMonad.terminal conf)
     , ((winMask              , xK_i     ), spawn browserCmd)
+    , ((winMask .|. shiftMask, xK_i     ), spawn browserCmdIncognito)
     , ((winMask              , xK_e     ), spawn editorCmd)
     , ((winMask              , xK_f     ), spawn fileExplorerCmd)
     , ((winMask              , xK_r     ), gnomeRun)

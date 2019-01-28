@@ -13,6 +13,7 @@ build:
 	cp ${HOME}/config/src/shell/zshrc ${HOME}/config/_build
 	cp ${HOME}/config/src/valgrind/valgrindrc ${HOME}/config/_build
 	cp -R ${HOME}/config/src/valgrind/valgrind ${HOME}/config/_build
+	cp -R ${HOME}/config/src/xmonad ${HOME}/config/_build
 	ln -sf ${HOME}/config/_build/emacs ${HOME}/.emacs
 	ln -sf ${HOME}/config/_build/emacs.d ${HOME}/.emacs.d
 	ln -sf ${HOME}/config/_build/gdbinit ${HOME}/.gdbinit
@@ -20,3 +21,4 @@ build:
 	ln -sf ${HOME}/config/_build/gitignore ${HOME}/.gitignore
 	ln -sf ${HOME}/config/_build/valgrindrc ${HOME}/.valgrindrc
 	ln -sf ${HOME}/config/_build/zshrc ${HOME}/.zshrc
+	ln -sf ${HOME}/config/_build/xmonad/xmonad.hs ${HOME}/.xmonad.hs
