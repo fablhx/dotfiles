@@ -91,7 +91,7 @@ myNormalBorderColor = "#202030"
 myFocusedBorderColor = "#A0A0D0"
 
 -- workspaces
-myWorkspaces = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]
+myWorkspaces = ["1", "2", "3", "4", "5", "6", "7"]
 
 -- layouts
 basicLayout = ResizableTall nmaster delta ratio [] where
