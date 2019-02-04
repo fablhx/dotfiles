@@ -159,6 +159,8 @@ myKeys conf = M.fromList $
     , ((controlMask .|. winMask .|. altMask, xK_Up   ), sendMessage MirrorExpand)
     , ((controlMask .|. winMask .|. altMask, xK_Down ), sendMessage MirrorShrink)
     , ((controlMask .|. winMask .|. altMask, xK_space), sendMessage NextLayout)
+    , ((winMask                            , xK_comma ), sendMessage (IncMasterN 1))
+    , ((winMask                            , xK_period), sendMessage (IncMasterN (-1)))
     ] ++
     -- Other
     [ ((winMask              , xK_Return), spawn $ XMonad.terminal conf)
