@@ -243,6 +243,22 @@ started from a shell."
     (kill-buffer "*compilation*"))
   (recompile))
 
+;; Always open a new compilation window to easily close it
+(defun new-compilation-window-hook ()
+  (progn
+    (if (not (get-buffer-window "*compilation*"))
+      (progn (split-window-vertically)))))
+(add-hook 'compilation-mode-hook 'new-compilation-window-hook)
+
+;; Close the compilation window if there was no error
+(setq compilation-exit-message-function
+  (lambda (status code msg)
+    (when (and (eq status 'exit) (zerop code))
+      (bury-buffer "*compilation*")
+      (delete-window (get-buffer-window (get-buffer "*compilation*"))))
+    ;; Always return the anticipated result of compilation-exit-message-function
+    (cons msg code)))
+
 ;; Auto-scroll in the compilation buffer
 (setq compilation-scroll-output 'first-error)
 
