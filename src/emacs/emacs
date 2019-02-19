@@ -85,6 +85,17 @@
 ;; Workaround for dead-accent key
 (require 'iso-transl)
 
+;; Spelling
+(when (executable-find "hunspell")
+  (setq-default ispell-program-name "hunspell")
+  (setq ispell-really-hunspell t))
+(defun custom-ispell ()
+  "Skip regions from spell checking."
+  (make-local-variable 'ispell-skip-region-alist)
+  (add-to-list 'ispell-skip-region-alist '("`" . "`"))
+  (add-to-list 'ispell-skip-region-alist '("^```" . "```$")))
+(add-hook 'markdown-mode-hook 'custom-ispell)
+
 
 ;; ========================= Configuration for Mac ===========================
 
