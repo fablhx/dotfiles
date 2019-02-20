@@ -1,39 +1,49 @@
 {-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, TypeSynonymInstances, FlexibleContexts, NoMonomorphismRestriction #-}
 
 -- Navigation:
--- Alt+F1..F10          switch to workspace
--- Win+F1..F10          move window to workspace
--- Alt+Tab              focus next window
--- Alt+Shift+Tab        focus previous window
--- Win+Shift+Up/Down    move window up/down
--- Win+C                close window
--- Win+M                move window to master area
 --
--- Navigation:
--- Ctrl+Alt+Left/Right         Switch to workspace to the left or right
--- Win+Left/Right              Move window to left or right and follow
--- Win+Shift+Left/Right        Move window to left or right
--- Alt+Win+Left/Right          Swap with workspace to left or right and follow
--- Alt+Win+Shift+Left/Right    Swap with workspace to left or right
+-- Ctrl+Alt+Left/Right         Switch to workspace to the left/right
 -- Ctrl+Alt+Up/Down            Switch to next/previous screen
+--
+-- Win+Left/Right              Move window to left/right and follow
 -- Win+Up/Down                 Move window to next/previous screen and follow
+--
+-- Win+Shift+Left/Right        Move window to left/right
 -- Win+Shift+Up/Down           Move window to next/previous screen
+--
+-- Alt+Win+Left/Right          Swap with workspace to left/right and follow
 -- Alt+Win+Up/Down             Swap with next/previous screen and follow
+--
+-- Alt+Win+Shift+Left/Right    Swap with workspace to left/right
 -- Alt+Win+Shift+Up/Down       Swap with next/previous screen
 --
+-- Alt+F1..F10                 Switch to workspace N
+-- Win+F1..F10                 Move window to workspace N
+--
+-- Alt+Tab                     Focus next window
+-- Alt+Shift+Tab               Focus previous window
+-- Alt+Shift+Up/Down           Move window up/down
+--
 -- Layout management:
--- Ctrl+Win+Alt+Left/Right    shrink/expand master area
--- Ctrl+Win+Alt+Up/Down       shrink/expand mirror-master area
--- Win+Space                  cycle layouts
+--
+-- Ctrl+Win+Alt+Left/Right     Shrink/expand master area
+-- Ctrl+Win+Alt+Up/Down        Shrink/expand mirror-master area
+-- Ctrl+Win+Alt+Space          Cycle layouts
+-- Win+,                       Increase number windows master
+-- Win+.                       Decrease number windows master
 --
 -- Other:
--- Win+Enter      start a terminal
--- Win+I          start a browser
--- Win+E          start an editor
--- Win+F          start a file explorer
--- Win+R          open the Gnome run dialog
--- Win+Q          restart XMonad
--- Win+Shift+Q    display Gnome shutdown dialog
+--
+-- Win+E          Start an editor
+-- Win+Enter      Start a terminal
+-- Win+F          Start a file explorer
+-- Win+I          Start a browser
+-- Win+M          Move window to master area
+-- Win+Q          Close window
+-- Win+R          Open the Gnome run dialog
+-- Win+Shift+I    Start a browser incognito
+-- Win+Shift+Q    Display Gnome shutdown dialog
+-- Win+X          Restart XMonad
 
 import XMonad
 import qualified XMonad.StackSet as S
@@ -106,6 +116,7 @@ myLayoutHook = normal where
     normal = tallLayout ||| wideLayout ||| singleLayout ||| simplestFloat ||| Full
 
 myKeys conf = M.fromList $
+    -- Navigation
     [ ((m, xK_Left ), c)
         | (c, m) <- [ (prevWS               , controlMask .|. altMask)
                     , (shiftToPrev >> prevWS, winMask)
@@ -113,7 +124,8 @@ myKeys conf = M.fromList $
                     , (swapTo Prev          , altMask .|. winMask)
                     , (swapTo Prev >> nextWS, altMask .|. winMask .|. shiftMask)
                     ]
-    ] ++
+    ]
+    ++
     [ ((m, xK_Right), c)
         | (c, m) <- [ (nextWS               , controlMask .|. altMask)
                     , (shiftToNext >> nextWS, winMask)
@@ -121,7 +133,8 @@ myKeys conf = M.fromList $
                     , (swapTo Next          , altMask .|. winMask)
                     , (swapTo Next >> prevWS, altMask .|. winMask .|. shiftMask)
                     ]
-    ] ++
+    ]
+    ++
     [ ((m, xK_Up   ), c)
         | (c, m) <- [ (prevScreen                   , controlMask .|. altMask)
                     , (shiftPrevScreen >> prevScreen, winMask)
@@ -129,7 +142,8 @@ myKeys conf = M.fromList $
                     , (swapPrevScreen >> nextScreen , altMask .|. winMask)
                     , (swapPrevScreen               , altMask .|. winMask .|. shiftMask)
                     ]
-    ] ++
+    ]
+    ++
     [ ((m, xK_Down ), c)
         | (c, m) <- [ (nextScreen                   , controlMask .|. altMask)
                     , (shiftNextScreen >> nextScreen, winMask)
@@ -137,22 +151,24 @@ myKeys conf = M.fromList $
                     , (swapNextScreen >> prevScreen , altMask .|. winMask)
                     , (swapNextScreen               , altMask .|. winMask .|. shiftMask)
                     ]
-    ] ++
-    -- Navigation
+    ]
+    ++
     [ ((altMask, k), windows $ S.view i)
         | (i, k) <- zip myWorkspaces workspaceKeys
-    ] ++
+    ]
+    ++
     [ ((winMask, k), (windows $ S.shift i) >> (windows $ S.view i))
         | (i, k) <- zip myWorkspaces workspaceKeys
-    ] ++
+    ]
+    ++
     [ ((altMask              , xK_Tab), windows S.focusDown)
     , ((altMask .|. shiftMask, xK_Tab), windows S.focusUp)
-    ] ++
-    [ ((winMask .|. shiftMask, xK_Down   ), windows S.swapDown)
-    , ((winMask .|. shiftMask, xK_Up     ), windows S.swapUp)
-    , ((winMask              , xK_c      ), kill)
-    , ((winMask              , xK_m      ), windows S.swapMaster)
-    ] ++
+    ]
+    ++
+    [ ((altMask .|. shiftMask, xK_Down   ), windows S.swapDown)
+    , ((altMask .|. shiftMask, xK_Up     ), windows S.swapUp)
+    ]
+    ++
     -- Layout management
     [ ((controlMask .|. winMask .|. altMask, xK_Left ), sendMessage Expand)
     , ((controlMask .|. winMask .|. altMask, xK_Right), sendMessage Shrink)
@@ -161,16 +177,19 @@ myKeys conf = M.fromList $
     , ((controlMask .|. winMask .|. altMask, xK_space), sendMessage NextLayout)
     , ((winMask                            , xK_comma ), sendMessage (IncMasterN 1))
     , ((winMask                            , xK_period), sendMessage (IncMasterN (-1)))
-    ] ++
+    ]
+    ++
     -- Other
-    [ ((winMask              , xK_Return), spawn $ XMonad.terminal conf)
-    , ((winMask              , xK_i     ), spawn browserCmd)
-    , ((winMask .|. shiftMask, xK_i     ), spawn browserCmdIncognito)
-    , ((winMask              , xK_e     ), spawn editorCmd)
+    [ ((winMask              , xK_e     ), spawn editorCmd)
+    , ((winMask              , xK_Return), spawn $ XMonad.terminal conf)
     , ((winMask              , xK_f     ), spawn fileExplorerCmd)
+    , ((winMask              , xK_i     ), spawn browserCmd)
+    , ((winMask              , xK_m     ), windows S.swapMaster)
+    , ((winMask              , xK_q     ), kill)
     , ((winMask              , xK_r     ), gnomeRun)
+    , ((winMask .|. shiftMask, xK_i     ), spawn browserCmdIncognito)
     , ((winMask .|. shiftMask, xK_q     ), spawn "gnome-session-quit --power-off")
-    , ((winMask              , xK_q     ), broadcastMessage ReleaseResources >> restart "xmonad" True)
+    , ((winMask              , xK_x     ), broadcastMessage ReleaseResources >> restart "xmonad" True)
     ]
     where workspaceKeys = [xK_F1 .. xK_F10]
 
