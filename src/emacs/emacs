@@ -210,10 +210,6 @@ started from a shell."
 ;(add-hook 'prog-mode-hook 'whitespace-mode)
 (global-whitespace-mode 1)
 (custom-set-faces
- ;; custom-set-faces was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
  '(whitespace-empty ((t (:foreground "firebrick" :background "SlateGray1"))))
  '(whitespace-hspace ((t (:foreground "white" :background "red"))))
  '(whitespace-indentation ((t (:foreground "firebrick" :background "beige"))))
