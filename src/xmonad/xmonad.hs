@@ -46,7 +46,7 @@
 -- Win+X          Restart XMonad
 
 import XMonad
-import qualified XMonad.StackSet as S
+import qualified XMonad.StackSet as W
 import XMonad.Actions.CycleWS
 import XMonad.Actions.SwapWorkspaces
 import XMonad.Config.Gnome
@@ -153,20 +153,20 @@ myKeys conf = M.fromList $
                     ]
     ]
     ++
-    [ ((altMask, k), windows $ S.view i)
+    [ ((altMask, k), windows $ W.view i)
         | (i, k) <- zip myWorkspaces workspaceKeys
     ]
     ++
-    [ ((winMask, k), (windows $ S.shift i) >> (windows $ S.view i))
+    [ ((winMask, k), (windows $ W.shift i) >> (windows $ W.view i))
         | (i, k) <- zip myWorkspaces workspaceKeys
     ]
     ++
-    [ ((altMask              , xK_Tab), windows S.focusDown)
-    , ((altMask .|. shiftMask, xK_Tab), windows S.focusUp)
+    [ ((altMask              , xK_Tab), windows W.focusDown)
+    , ((altMask .|. shiftMask, xK_Tab), windows W.focusUp)
     ]
     ++
-    [ ((altMask .|. shiftMask, xK_Down   ), windows S.swapDown)
-    , ((altMask .|. shiftMask, xK_Up     ), windows S.swapUp)
+    [ ((altMask .|. shiftMask, xK_Down   ), windows W.swapDown)
+    , ((altMask .|. shiftMask, xK_Up     ), windows W.swapUp)
     ]
     ++
     -- Layout management
@@ -184,7 +184,7 @@ myKeys conf = M.fromList $
     , ((winMask              , xK_Return), spawn $ XMonad.terminal conf)
     , ((winMask              , xK_f     ), spawn fileExplorerCmd)
     , ((winMask              , xK_i     ), spawn browserCmd)
-    , ((winMask              , xK_m     ), windows S.swapMaster)
+    , ((winMask              , xK_m     ), windows W.swapMaster)
     , ((winMask              , xK_q     ), kill)
     , ((winMask              , xK_r     ), gnomeRun)
     , ((winMask .|. shiftMask, xK_i     ), spawn browserCmdIncognito)
@@ -197,9 +197,9 @@ myKeys conf = M.fromList $
 myMouseBindings (XConfig {XMonad.modMask = modMask}) = M.fromList $
     [ ((altMask, button1), (\w -> focus w >> mouseMoveWindow w))
     , ((altMask, button2), (\w -> focus w >> mouseResizeWindow w))
-    , ((altMask, button3), (\w -> focus w >> (withFocused $ windows . S.sink)))
-    , ((altMask, button4), (const $ windows S.swapUp))
-    , ((altMask, button5), (const $ windows S.swapDown))
+    , ((altMask, button3), (\w -> focus w >> (withFocused $ windows . W.sink)))
+    , ((altMask, button4), (const $ windows W.swapUp))
+    , ((altMask, button5), (const $ windows W.swapDown))
     ]
 
 -- put it all together
