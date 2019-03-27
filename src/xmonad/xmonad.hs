@@ -103,6 +103,13 @@ myFocusedBorderColor = "#A0A0D0"
 -- workspaces
 myWorkspaces = ["1", "2", "3", "4", "5", "6", "7"]
 
+-- hooks
+myManageHook =
+  (composeAll . concat $
+    [ [ manageHook myBaseConfig ]
+    , [ className =? c --> doShift "7" | c  <- ["Slack"] ]
+    ])
+
 -- layouts
 basicLayout = ResizableTall nmaster delta ratio [] where
     nmaster = 1
@@ -207,6 +214,7 @@ main = xmonad $ myBaseConfig
     { modMask = winMask
     , terminal = myTerminal
     , workspaces = myWorkspaces
+    , manageHook = myManageHook
     , layoutHook = myLayoutHook
     , borderWidth = myBorderWidth
     , normalBorderColor = myNormalBorderColor
