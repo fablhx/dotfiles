@@ -31,12 +31,8 @@
 	editor = emacs
 	excludesfile = ~/.gitignore
 [diff]
-	# Use better, descriptive initials (c, i, w) instead of a/b.
-	mnemonicPrefix = true
 	# When using --word-diff, assume --word-diff-regex=.
 	wordRegex = .
-	# Experimental heuristic for better diff
-	compactionHeuristic = true
 [rerere]
 	# If, like me, you like rerere, decomment these
 	autoupdate = true
