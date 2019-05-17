@@ -335,6 +335,13 @@ started from a shell."
           (lambda ()
             (setq flycheck-python-pylint-executable "~/.local/bin/pylint")))
 
+;; Packages: elpy flycheck
+;(elpy-enable)
+
+;(when (require 'flycheck nil t)
+;  (setq elpy-modules (delq 'elpy-module-flymake elpy-modules))
+;  (add-hook 'elpy-mode-hook 'flycheck-mode))
+
 
 ;; =================================== COQ ===================================
 
