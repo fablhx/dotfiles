@@ -246,7 +246,6 @@ __git_prompt() {
 }
 
 __build_prompt() {
-    PROMPT=''
     PROMPT=$'%{\033[38;5;135m%}%n@%m%{\033[0m%} %4(c:…/:)%3c'
     PROMPT+="$(__git_prompt)"
     PROMPT+=$'%(0?.. %{\033[38;5;196m%}[%?]%{\033[0m%}) %# '
