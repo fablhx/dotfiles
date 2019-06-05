@@ -15,7 +15,7 @@ REPORTTIME=10
 setopt notify
 setopt completeinword
 setopt prompt_subst
-setopt correct correctall
+#setopt correct correctall
 setopt appendhistory
 setopt incappendhistory
 setopt sharehistory
