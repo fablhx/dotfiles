@@ -2,7 +2,7 @@
 
 ;; Packages
 (setq package-list
- '(company web-mode whitespace markdown-mode multiple-cursors))
+ '(company web-mode whitespace markdown-mode multiple-cursors dumb-jump))
 
 ;; Repository containing the packages
 (setq package-archives '(("melpa" . "http://melpa.milkbox.net/packages/")))
@@ -314,6 +314,9 @@ started from a shell."
 ;;  "Suppress Relative Path Of File From Git Blame Output"
 ;;  (let (name (file-relative-name file))
 ;;    (vc-git-command buf 'async nil "blame" "--date=short" rev "--" name)))
+
+(dumb-jump-mode)
+(global-set-key (kbd "C-M-f") 'dumb-jump-go-other-window)
 
 
 ;; =================================== BASH ==================================
