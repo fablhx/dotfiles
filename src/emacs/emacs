@@ -316,7 +316,13 @@ started from a shell."
 ;;    (vc-git-command buf 'async nil "blame" "--date=short" rev "--" name)))
 
 (dumb-jump-mode)
-(global-set-key (kbd "C-M-f") 'dumb-jump-go-other-window)
+; Remove all dumb-jump default key bindings
+(define-key dumb-jump-mode-map (kbd "C-M-g") nil)
+(define-key dumb-jump-mode-map (kbd "C-M-p") nil)
+(define-key dumb-jump-mode-map (kbd "C-M-q") nil)
+; Add my own
+(define-key dumb-jump-mode-map (kbd "C-c C-s") 'dumb-jump-go-other-window)
+(define-key dumb-jump-mode-map (kbd "C-c C-b") 'dumb-jump-back)
 
 
 ;; =================================== BASH ==================================
