@@ -242,13 +242,14 @@ __git_prompt() {
         git_prompt="$git_prompt $color_stashed⚑ $stashed${reset_color}"
     fi
 
-    echo -e "$git_prompt"
+    echo "$git_prompt"
 }
 
 __build_prompt() {
-    PROMPT=$'%{\x1b[38;5;135m%}%n@%m%{\x1b[0m%} %4(c:…/:)%3c$(__git_prompt)%(0?.. %{\x1b[38;5;196m%}[%?]%{\x1b[0m%}) %# '
+    PROMPT=''
+    PROMPT=$'%{\033[38;5;135m%}%n@%m%{\033[0m%} %4(c:…/:)%3c'
+    PROMPT+="$(__git_prompt)"
+    PROMPT+=$'%(0?.. %{\033[38;5;196m%}[%?]%{\033[0m%}) %# '
 }
 
-__build_prompt
-unset __git_prompt
-unset __build_prompt
+precmd() { __build_prompt; }
