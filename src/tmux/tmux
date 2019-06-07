@@ -2,6 +2,10 @@
 unbind C-b
 set -g prefix C-x
 
+# Start counting from 1
+set -g base-index 1
+setw -g pane-base-index 1
+
 # Create a new window as open a new file
 bind C-f new-window -c "#{pane_current_path}"
 
