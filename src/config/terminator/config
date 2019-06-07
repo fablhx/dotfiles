@@ -4,6 +4,10 @@
   title_transmit_bg_color = "#585858"
   title_use_system_font = False
 [keybindings]
+  go_left = None
+  go_right = None
+  go_up = None
+  go_down = None
 [layouts]
   [[default]]
     [[[child1]]]
