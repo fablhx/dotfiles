@@ -2,6 +2,8 @@
 unbind C-b
 set -g prefix C-x
 
+set -g mouse on
+
 # Start counting from 1
 set -g base-index 1
 setw -g pane-base-index 1
