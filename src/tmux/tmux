@@ -44,6 +44,10 @@ bind Right next-window
 bind -n M-S-Left previous-window
 bind -n M-S-Right next-window
 
+# Swap windows
+bind -n C-S-Left swap-window -t -1
+bind -n C-S-Right swap-window -t +1
+
 # Go to window
 bind -n M-1 select-window -t :1
 bind -n M-2 select-window -t :2

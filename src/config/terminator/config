@@ -8,6 +8,10 @@
   go_right = None
   go_up = None
   go_down = None
+  resize_left = None
+  resize_right = None
+  resize_up = None
+  resize_down = None
 [layouts]
   [[default]]
     [[[child1]]]
