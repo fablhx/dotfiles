@@ -10,11 +10,13 @@ build:
 	cp ${HOME}/config/src/gdb/gdbinit ${HOME}/config/_build
 	cp ${HOME}/config/src/git/gitconfig ${HOME}/config/_build
 	cp ${HOME}/config/src/git/gitignore ${HOME}/config/_build
+	cp ${HOME}/config/src/shell/bashrc ${HOME}/config/_build
 	cp ${HOME}/config/src/shell/zshrc ${HOME}/config/_build
 	cp ${HOME}/config/src/tmux/tmux ${HOME}/config/_build
 	cp ${HOME}/config/src/valgrind/valgrindrc ${HOME}/config/_build
 	cp -R ${HOME}/config/src/valgrind/valgrind ${HOME}/config/_build
 	cp -R ${HOME}/config/src/xmonad ${HOME}/config/_build
+	ln -sf ${HOME}/config/_build/bashrc ${HOME}/.bashrc
 	ln -sf ${HOME}/config/_build/emacs ${HOME}/.emacs
 	ln -sf ${HOME}/config/_build/emacs.d ${HOME}/.emacs.d
 	ln -sf ${HOME}/config/_build/gdbinit ${HOME}/.gdbinit

@@ -15,7 +15,6 @@ REPORTTIME=10
 setopt notify
 setopt completeinword
 setopt prompt_subst
-#setopt correct correctall
 setopt appendhistory
 setopt incappendhistory
 setopt sharehistory
@@ -194,7 +193,8 @@ __git_prompt() {
     local color_dirty="%{\033[38;5;240m%}"
     local color_clean="%{\033[38;5;22m%}"
     local color_branch="$color_clean"
-    if [[ "$detached" == "yes" ]]; then
+    if [[ "$detached" == "yes" ]]
+    then
         color_branch="$color_detached"
     fi
     if [[ "$staged" -ne 0 || "$unmerged" -ne 0 ||
@@ -220,25 +220,32 @@ __git_prompt() {
     # ⚑ stashed
 
     git_prompt=" $color_branch⎇  $branch${reset_color}"
-    if [[ "$behind" -ne 0 ]]; then
+    if [[ "$behind" -ne 0 ]]
+    then
         git_prompt="$git_prompt $color_behind↓ $behind${reset_color}"
     fi
-    if [[ "$ahead" -ne 0 ]]; then
+    if [[ "$ahead" -ne 0 ]]
+    then
         git_prompt="$git_prompt $color_ahead↑$ahead${reset_color}"
     fi
-    if [[ "$staged" -ne 0 ]]; then
+    if [[ "$staged" -ne 0 ]]
+    then
         git_prompt="$git_prompt $color_staged•$staged${reset_color}"
     fi
-    if [[ "$unmerged" -ne 0 ]]; then
+    if [[ "$unmerged" -ne 0 ]]
+    then
         git_prompt="$git_prompt $color_unmerged$unmerged${reset_color}"
     fi
-    if [[ "$changed" -ne 0 ]]; then
+    if [[ "$changed" -ne 0 ]]
+    then
         git_prompt="$git_prompt $color_changed+$changed${reset_color}"
     fi
-    if [[ "$untracked" -ne 0 ]]; then
+    if [[ "$untracked" -ne 0 ]]
+    then
         git_prompt="$git_prompt $color_untracked…$untracked${reset_color}"
     fi
-    if [[ "$stashed" -ne 0 ]]; then
+    if [[ "$stashed" -ne 0 ]]
+    then
         git_prompt="$git_prompt $color_stashed⚑ $stashed${reset_color}"
     fi
 
