@@ -420,4 +420,5 @@ started from a shell."
 
 
 ;; ========================== Various convinent mode ===========================
+
 (add-to-list 'auto-mode-alist '("Makefile.inc\\'" . makefile-mode))
