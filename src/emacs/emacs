@@ -422,3 +422,9 @@ started from a shell."
 ;; ========================== Various convinent mode ===========================
 
 (add-to-list 'auto-mode-alist '("Makefile.inc\\'" . makefile-mode))
+(add-to-list 'auto-mode-alist `(,(expand-file-name "~/config/.*/emacs\\'") . emacs-lisp-mode))
+(add-to-list 'auto-mode-alist `(,(expand-file-name "~/config/.*/config\\'") . shell-script-mode))
+(add-to-list 'auto-mode-alist `(,(expand-file-name "~/config/.*/gitconfig\\'") . shell-script-mode))
+(add-to-list 'auto-mode-alist `(,(expand-file-name "~/config/.*/bashrc\\'") . shell-script-mode))
+(add-to-list 'auto-mode-alist `(,(expand-file-name "~/config/.*/zshrc\\'") . shell-script-mode))
+(add-to-list 'auto-mode-alist `(,(expand-file-name "~/config/.*/tmux\\'") . shell-script-mode))
