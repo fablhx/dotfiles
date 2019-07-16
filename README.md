@@ -1,7 +1,11 @@
-# Dotfiles
+# First Installation
 
-```shell
-git clone git@github.com:fablhx/dotfiles.git ~/config
+```bash
+sh -c "$(wget -O- https://github.com/fablhx/dotfiles/blob/master/src/install.sh)"
+```
+
+# Build
+
+```bash
 make build
-make links
 ```
