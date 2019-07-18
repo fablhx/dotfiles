@@ -198,7 +198,7 @@ started from a shell."
 
 ;; =============================== Development ===============================
 
-(setq grep-command "grep --color -nH -R -e ")
+(setq grep-command "grep --color -nH -rI -e ")
 
 ;; Multiple cursors
 (require 'multiple-cursors)
