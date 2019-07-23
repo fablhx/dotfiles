@@ -55,8 +55,8 @@ alias xopen='xdg-open'
 
 alias ocaml='rlwrap -pMagenta ocaml'
 
-alias nedit='emacsclient -n'
-alias cedit='emacsclient -c -n'
+alias cedit='emacsclient -c -nw'
+alias wedit='emacsclient -c -n'
 alias start_emacs='emacs --daemon'
 alias stop_emacs='emacsclient -e "(kill-emacs)"'
 
