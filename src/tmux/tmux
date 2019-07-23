@@ -1,6 +1,6 @@
 # Change bind key
-unbind C-b
-set -g prefix C-x
+#unbind C-b
+#set -g prefix C-x
 
 set -g mouse on
 
