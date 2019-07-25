@@ -389,11 +389,10 @@ started from a shell."
 
 (require 'caml-font)
 
-(autoload 'merlin-mode "merlin" nil t nil)
-(add-hook 'caml-mode-hook 'merlin-mode t)
-(setq merlin-command 'opam)
+(autoload 'merlin-mode "merlin" "Merlin mode" t)
 (add-hook 'caml-mode-hook 'merlin-mode)
-(add-to-list 'company-backends 'merlin-company-backend)
+(with-eval-after-load 'company
+  (add-to-list 'company-backends 'merlin-company-backend))
 (add-hook 'merlin-mode-hook 'company-mode)
 
 (setq auto-mode-alist (cons '("\\.ml[iylp]?$" . caml-mode) auto-mode-alist))
