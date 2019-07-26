@@ -388,12 +388,14 @@ started from a shell."
 (add-to-list 'load-path (format "%s/emacs/site-lisp/" opam-share))
 
 (require 'caml-font)
+(require 'merlin)
 
 (autoload 'merlin-mode "merlin" "Merlin mode" t)
 (add-hook 'caml-mode-hook 'merlin-mode)
 (with-eval-after-load 'company
   (add-to-list 'company-backends 'merlin-company-backend))
 (add-hook 'merlin-mode-hook 'company-mode)
+(setq merlin-command 'opam)
 
 (setq auto-mode-alist (cons '("\\.ml[iylp]?$" . caml-mode) auto-mode-alist))
 (autoload 'caml-mode "caml" "Major mode for editing Caml code." t)
