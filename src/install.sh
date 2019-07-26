@@ -11,6 +11,7 @@ if [[ $answer =~ ^([yY][eE][sS]|[yY])$ ]]; then
          htop \
          openssh-client \
          openssh-server \
+         silversearcher-ag \
          ssh \
          tmux \
          xmonad \

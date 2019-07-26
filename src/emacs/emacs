@@ -323,6 +323,10 @@ started from a shell."
 ; Add my own
 (define-key dumb-jump-mode-map (kbd "C-c C-s") 'dumb-jump-go-other-window)
 (define-key dumb-jump-mode-map (kbd "C-c C-b") 'dumb-jump-back)
+; Do not consider Makefile as possible project-denoters
+(setq dumb-jump-project-denoters '(".dumbjump" ".projectile" ".git" ".hg"
+                                   ".fslckout" ".bzr" "_darcs" ".svn"
+                                   "PkgInfo" "-pkg.el"))
 
 
 ;; =================================== BASH ==================================
