@@ -3,6 +3,7 @@ usage:
 	@echo 'Run `make build` to generate the files and the links in {HOME}'
 
 .PHONY: build
+build: SHELL := /bin/bash
 build:
 	mkdir -p ${HOME}/config/_build
 	mkdir -p ${HOME}/config/_build/emacs.d
@@ -18,7 +19,7 @@ build:
 	cp -R ${HOME}/config/src/xmonad ${HOME}/config/_build
 	ln -sf ${HOME}/config/_build/bashrc ${HOME}/.bashrc
 	ln -sf ${HOME}/config/_build/emacs ${HOME}/.emacs
-	ln -sf ${HOME}/config/_build/emacs.d ${HOME}/.emacs.d
+	if [ ! -L ${HOME}/.emacs.d ]; then ln -s ${HOME}/config/_build/emacs.d ${HOME}/.emacs.d; fi
 	ln -sf ${HOME}/config/_build/gdbinit ${HOME}/.gdbinit
 	ln -sf ${HOME}/config/_build/gitconfig ${HOME}/.gitconfig
 	ln -sf ${HOME}/config/_build/gitignore ${HOME}/.gitignore
