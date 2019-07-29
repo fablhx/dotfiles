@@ -321,7 +321,7 @@ started from a shell."
 (define-key dumb-jump-mode-map (kbd "C-M-p") nil)
 (define-key dumb-jump-mode-map (kbd "C-M-q") nil)
 ; Add my own
-(define-key dumb-jump-mode-map (kbd "C-c C-s") 'dumb-jump-go-other-window)
+(define-key dumb-jump-mode-map (kbd "C-c C-l") 'dumb-jump-go-other-window)
 (define-key dumb-jump-mode-map (kbd "C-c C-b") 'dumb-jump-back)
 ; Do not consider Makefile as possible project-denoters
 (setq dumb-jump-project-denoters '(".dumbjump" ".projectile" ".git" ".hg"
