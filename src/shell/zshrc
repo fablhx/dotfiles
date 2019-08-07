@@ -55,8 +55,18 @@ alias xopen='xdg-open'
 
 alias ocaml='rlwrap -pMagenta ocaml'
 
+function __emacs() {
+    # This check if I have already run an emacsclient --create-frame,
+    # if yes, use the current frame, if no create a new frame.
+    if emacsclient -n -e "(if (> (length (frame-list)) 1) 't)" | grep -q t;
+    then
+        emacsclient -n "$@"
+    else
+        emacsclient -c -n "$@"
+    fi
+}
 alias cedit='emacsclient -c -nw'
-alias wedit='emacsclient -c -n'
+alias wedit='__emacs'
 alias start_emacs='emacs --daemon'
 alias stop_emacs='emacsclient -e "(kill-emacs)"'
 
