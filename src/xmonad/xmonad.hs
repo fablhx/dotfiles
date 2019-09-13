@@ -1,73 +1,76 @@
 {-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, TypeSynonymInstances, FlexibleContexts, NoMonomorphismRestriction #-}
 
--- Navigation:
---
--- Ctrl+Alt+Left/Right         Switch to workspace to the left/right
--- Ctrl+Alt+Up/Down            Switch to next/previous screen
---
--- Win+Left/Right              Move window to left/right and follow
--- Win+Up/Down                 Move window to next/previous screen and follow
---
--- Win+Shift+Left/Right        Move window to left/right
--- Win+Shift+Up/Down           Move window to next/previous screen
---
--- Alt+Win+Left/Right          Swap with workspace to left/right and follow
--- Alt+Win+Up/Down             Swap with next/previous screen and follow
---
--- Alt+Win+Shift+Left/Right    Swap with workspace to left/right
--- Alt+Win+Shift+Up/Down       Swap with next/previous screen
---
--- Alt+F1..F10                 Switch to workspace N
--- Win+F1..F10                 Move window to workspace N
---
--- Alt+Tab                     Focus next window
--- Alt+Shift+Tab               Focus previous window
--- Alt+Shift+Up/Down           Move window up/down
---
--- Layout management:
---
--- Ctrl+Win+Alt+Left/Right     Shrink/expand master area
--- Ctrl+Win+Alt+Up/Down        Shrink/expand mirror-master area
--- Ctrl+Win+Alt+Space          Cycle layouts
--- Win+,                       Increase number windows master
--- Win+.                       Decrease number windows master
---
--- Other:
---
--- Win+E          Start an editor
--- Win+Enter      Start a terminal
--- Win+F          Start a file explorer
--- Win+I          Start a browser
--- Win+M          Move window to master area
--- Win+Q          Close window
--- Win+R          Open the Gnome run dialog
--- Win+Shift+I    Start a browser incognito
--- Win+Shift+Q    Display Gnome shutdown dialog
--- Win+X          Restart XMonad
-
 import XMonad
-import qualified XMonad.StackSet as W
+
 import XMonad.Actions.CycleWS
 import XMonad.Actions.SwapWorkspaces
+
 import XMonad.Config.Gnome
-import XMonad.Hooks.EwmhDesktops
+
+import XMonad.Hooks.DynamicLog
 import XMonad.Hooks.ManageDocks
-import XMonad.Layout.Combo
-import XMonad.Layout.Grid
-import XMonad.Layout.LayoutModifier
+
+import XMonad.Layout.IndependentScreens
 import XMonad.Layout.Named
 import XMonad.Layout.NoBorders
-import XMonad.Layout.PerWorkspace
 import XMonad.Layout.Reflect
 import XMonad.Layout.ResizableTile
 import XMonad.Layout.SimplestFloat
-import XMonad.Layout.TwoPane
-import XMonad.Layout.WindowNavigation
-import XMonad.Util.WindowProperties
-import XMonad.Util.EZConfig
-import Control.Monad
-import Data.Ratio
+
 import qualified Data.Map as M
+import qualified XMonad.StackSet as W
+
+-- helper
+myHelp :: String
+myHelp = "\
+\ Navigation: \n\
+\ \n\
+\ Ctrl+Alt+Left/Right         Switch to workspace to the left/right \n\
+\ Ctrl+Alt+Up/Down            Switch to next/previous screen \n\
+\ \n\
+\ Win+Left/Right              Move window to left/right and follow \n\
+\ Win+Up/Down                 Move window to next/previous screen and follow \n\
+\ \n\
+\ Win+Shift+Left/Right        Move window to left/right \n\
+\ Win+Shift+Up/Down           Move window to next/previous screen \n\
+\ \n\
+\ Alt+Win+Left/Right          Swap with workspace to left/right and follow \n\
+\ Alt+Win+Up/Down             Swap with next/previous screen and follow \n\
+\ \n\
+\ Alt+Win+Shift+Left/Right    Swap with workspace to left/right \n\
+\ Alt+Win+Shift+Up/Down       Swap with next/previous screen \n\
+\ \n\
+\ Alt+F1..F10                 Switch to workspace N \n\
+\ Win+F1..F10                 Move window to workspace N \n\
+\ \n\
+\ Alt+Tab                     Focus next window \n\
+\ Alt+Shift+Tab               Focus previous window \n\
+\ Alt+Shift+Up/Down           Move window up/down \n\
+\ \n\
+\ Layout management: \n\
+\ \n\
+\ Ctrl+Win+Alt+Left/Right     Shrink/expand master area \n\
+\ Ctrl+Win+Alt+Up/Down        Shrink/expand mirror-master area \n\
+\ Ctrl+Win+Alt+Space          Cycle layouts \n\
+\ Win+,                       Increase number windows master \n\
+\ Win+.                       Decrease number windows master \n\
+\ \n\
+\ Other: \n\
+\ \n\
+\ Win+E                       Start an editor \n\
+\ Win+Enter                   Start a terminal \n\
+\ Win+F                       Start a file explorer \n\
+\ Win+H                       Print this help \n\
+\ Win+I                       Start a browser \n\
+\ Win+M                       Move window to master area \n\
+\ Win+Q                       Close window \n\
+\ Win+R                       Open the Gnome run dialog \n\
+\ Win+Shift+I                 Start a browser incognito \n\
+\ Win+Shift+Q                 Display Gnome shutdown dialog \n\
+\ Win+X                       Restart XMonad"
+
+helperCmd :: String
+helperCmd = "zenity --notification --text=\"TODO\""
 
 -- defaults on which we build
 -- use e.g. defaultConfig or gnomeConfig
@@ -191,6 +194,7 @@ myKeys conf = M.fromList $
     , ((winMask              , xK_Return), spawn $ XMonad.terminal conf)
     , ((winMask              , xK_f     ), spawn fileExplorerCmd)
     , ((winMask              , xK_i     ), spawn browserCmd)
+    , ((winMask              , xK_h     ), spawn helperCmd)
     , ((winMask              , xK_m     ), windows W.swapMaster)
     , ((winMask              , xK_q     ), kill)
     , ((winMask              , xK_r     ), gnomeRun)
@@ -210,9 +214,12 @@ myMouseBindings (XConfig {XMonad.modMask = modMask}) = M.fromList $
     ]
 
 -- put it all together
+--main = do
+--  nScreens <- countScreens
 main = xmonad $ myBaseConfig
     { modMask = winMask
     , terminal = myTerminal
+--    , workspaces = withScreens nScreens (myWorkspaces myBaseConfig)
     , workspaces = myWorkspaces
     , manageHook = myManageHook
     , layoutHook = myLayoutHook
