@@ -1,0 +1,23 @@
+Config
+   { font = "xft:DejaVuSansMono:size=12"
+   , additionalFonts = []
+   , borderColor = "white"
+   , border = NoBorder
+   , bgColor = "#4a4842"
+   , fgColor = "white"
+   , alpha = 255
+   , position = Static { xpos = 190, ypos = 0, width = 200, height = 26 }
+   , textOffset = -1
+   , iconOffset = -1
+   , lowerOnStart = True
+   , pickBroadest = False
+   , persistent = True
+   , hideOnStart = False
+   , iconRoot = "."
+   , allDesktops = True
+   , overrideRedirect = False
+   , commands = [ Run StdinReader ]
+   , sepChar = "%"
+   , alignSep = "}{"
+   , template = " %StdinReader% "
+   }

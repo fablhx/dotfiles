@@ -27,3 +27,4 @@ build:
 	ln -sf ${HOME}/config/_build/valgrindrc ${HOME}/.valgrindrc
 	ln -sf ${HOME}/config/_build/zshrc ${HOME}/.zshrc
 	ln -sf ${HOME}/config/_build/xmonad/xmonad.hs ${HOME}/.xmonad.hs
+	ln -sf ${HOME}/config/_build/xmonad/xmobarrc ${HOME}/.xmobarrc
