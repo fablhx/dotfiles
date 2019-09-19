@@ -43,6 +43,8 @@ alias egrep='egrep --color=auto'
 
 alias tree='tree -C'
 
+alias xclip='xclip -selection clipboard'
+
 alias l='ls -lh'
 alias ll='ls -lh'
 alias lll='ls -lha'
