@@ -28,3 +28,4 @@ build:
 	ln -sf ${HOME}/config/_build/zshrc ${HOME}/.zshrc
 	ln -sf ${HOME}/config/_build/xmonad/xmonad.hs ${HOME}/.xmonad.hs
 	ln -sf ${HOME}/config/_build/xmonad/xmobarrc ${HOME}/.xmobarrc
+	if [ ! -L ${HOME}/.xmonad ]; then ln -s ${HOME}/config/_build/xmonad ${HOME}/.xmonad; fi

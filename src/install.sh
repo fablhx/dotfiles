@@ -14,6 +14,7 @@ if [[ $answer =~ ^([yY][eE][sS]|[yY])$ ]]; then
          silversearcher-ag \
          ssh \
          tmux \
+         xmobar \
          xmonad \
          zsh
 
@@ -22,31 +23,54 @@ if [[ $answer =~ ^([yY][eE][sS]|[yY])$ ]]; then
         && sudo chmod ugo+rx /usr/local/bin/icdiff
 fi
 
-# echo -e "\033[36mInstall full dependencies? [y,N]\033[0m"
-# read -re answer
-# if [[ $answer =~ ^([yY][eE][sS]|[yY])$ ]]; then
-#     sudo apt install \
-#          afl \
-#          gnome-terminator \
-#          google-chrome \
-#          hunspell \
-#          nginx \
-#          weechat \
-#          weechat-plugins \
-#          weechat-scripts
-# fi
+echo -e "\033[36mInstall full dependencies? [y,N]\033[0m"
+read -re answer
+if [[ $answer =~ ^([yY][eE][sS]|[yY])$ ]]; then
+    sudo sh -c 'echo "deb [arch=amd64] https://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list'
+    wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+
+    sudo add-apt-repository ppa:gnome-terminator/nightly-gtk3
+
+    sudo apt-get update
+
+    sudo apt install \
+         afl \
+         bear \
+         cabal-install \
+         cloc \
+         docker.io \
+         google-chrome-stable \
+         hunspell \
+         hunspell-en-us \
+         hunspell-fr \
+         hunspell-fr-classical \
+         nginx \
+         terminator \
+         xclip
+
+    sh -c "$(wget https://raw.github.com/robbyrussell/oh-my-zsh/master/tools/install.sh -O -)"
+    git clone https://github.com/zsh-users/zsh-syntax-highlighting.git "${HOME}/.oh-my-zsh/custom/plugins/"
+
+    cabal update
+
+    mkdir -p /home/fabien/work/git/extern
+    git clone https://github.com/koalaman/shellcheck.git /home/fabien/work/git/extern/
+    pushd /home/fabien/work/git/extern/shellcheck
+    cabal install
+    popd
+fi
 
 echo -e "\033[36mInstall my config? [y,N]\033[0m"
 read -re answer
 if [[ $answer =~ ^([yY][eE][sS]|[yY])$ ]]; then
-    rm -f ${HOME}/.zshrc
+    rm -f "${HOME}/.zshrc"
 
-    git clone https://github.com/fablhx/dotfiles.git ${HOME}/config
-    cd ${HOME}/config
+    git clone git@github.com:fablhx/dotfiles.git "${HOME}/config"
+    cd "${HOME}/config"
     make build
-    echo "emacs.d" > ${HOME}/config/_build/.gitignore
-    cd ${HOME}
-    source ${HOME}/.zshrc
+    echo "emacs.d" > "${HOME}/config/_build/.gitignore"
+    cd "${HOME}"
+    source "${HOME}/.zshrc"
     echo -e "\033[36m[Info]\033[0m Remaining manual things to do:"
     echo "	- Start a git repo in ${HOME}/config/_build"
     echo "	- Create the file ${HOME}/config/_build/gitconfig.private"
@@ -66,15 +90,7 @@ if [[ $answer =~ ^([yY][eE][sS]|[yY])$ ]]; then
          scratch* \
          sonic-pi
 
-    rm -rf ${HOME}/python_games
+    rm -rf "${HOME}/python_games"
 fi
 
 sudo apt autoremove
-
-echo -e "\033[36mInstall Oh-My-Zsh and switch to Zsh? [y,N]\033[0m"
-read -re answer
-if [[ $answer =~ ^([yY][eE][sS]|[yY])$ ]]; then
-    echo "This is rename your ${HOME}/.zshrc, you will need to restore it."
-
-    sh -c "$(wget https://raw.github.com/robbyrussell/oh-my-zsh/master/tools/install.sh -O -)"
-fi
