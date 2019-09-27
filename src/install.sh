@@ -45,6 +45,8 @@ if [[ $answer =~ ^([yY][eE][sS]|[yY])$ ]]; then
          hunspell-fr \
          hunspell-fr-classical \
          nginx \
+         python3-pip \
+         pylint3 \
          terminator \
          tree \
          xclip
