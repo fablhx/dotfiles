@@ -1,12 +1,12 @@
 Config
-   { font = "xft:DejaVuSansMono:size=12"
+   { font = "xft:DejaVuSansMono:size=11"
    , additionalFonts = []
    , borderColor = "white"
    , border = NoBorder
    , bgColor = "#4a4842"
    , fgColor = "white"
    , alpha = 255
-   , position = Static { xpos = 190, ypos = 0, width = 200, height = 26 }
+   , position = Static { xpos = 190, ypos = 3, width = 200, height = 23 }
    , textOffset = -1
    , iconOffset = -1
    , lowerOnStart = True
