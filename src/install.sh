@@ -46,6 +46,7 @@ if [[ $answer =~ ^([yY][eE][sS]|[yY])$ ]]; then
          hunspell-fr-classical \
          nginx \
          terminator \
+         tree \
          xclip
 
     sh -c "$(wget https://raw.github.com/robbyrussell/oh-my-zsh/master/tools/install.sh -O -)"
