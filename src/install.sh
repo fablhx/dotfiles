@@ -9,6 +9,7 @@ if [[ $answer =~ ^([yY][eE][sS]|[yY])$ ]]; then
          emacs \
          git \
          htop \
+         icdiff \
          openssh-client \
          openssh-server \
          silversearcher-ag \
@@ -17,10 +18,6 @@ if [[ $answer =~ ^([yY][eE][sS]|[yY])$ ]]; then
          xmobar \
          xmonad \
          zsh
-
-    curl -s https://raw.githubusercontent.com/jeffkaufman/icdiff/release-1.9.4/icdiff \
-        | sudo tee /usr/local/bin/icdiff > /dev/null \
-        && sudo chmod ugo+rx /usr/local/bin/icdiff
 fi
 
 echo -e "\033[36mInstall full dependencies? [y,N]\033[0m"
