@@ -63,6 +63,8 @@ fi
 echo -e "\033[36mInstall my config? [y,N]\033[0m"
 read -re answer
 if [[ $answer =~ ^([yY][eE][sS]|[yY])$ ]]; then
+    sed -i 's/^XDG_DESKTOP_DIR/#XDG_DESKTOP_DIR/g; s/^XDG_TEMPLATES_DIR/#XDG_TEMPLATES_DIR/g; s/^XDG_PUBLICSHARE_DIR/#XDG_PUBLICSHARE_DIR/g; s/^XDG_MUSIC_DIR/#XDG_MUSIC_DIR/g; s/^XDG_PICTURES_DIR/#XDG_PICTURES_DIR/g; s/^XDG_VIDEOS_DIR/#XDG_VIDEOS_DIR/g' "$HOME"/.config/user-dirs.dirs
+
     rm -f "${HOME}/.zshrc"
 
     git clone git@github.com:fablhx/dotfiles.git "${HOME}/config"
