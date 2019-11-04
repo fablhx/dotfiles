@@ -1,26 +1,39 @@
 #!/usr/bin/env bash
 
-set -euo pipefail
+set -Eeuo pipefail
 
-echo -e "\033[36mInstall minimal dependencies? [y,N]\033[0m"
-read -re answer
-if [[ $answer =~ ^([yY][eE][sS]|[yY])$ ]]; then
-    sudo apt install \
-         emacs \
-         git \
-         htop \
-         icdiff \
-         openssh-client \
-         openssh-server \
-         silversearcher-ag \
-         ssh \
-         tmux \
-         xmobar \
-         xmonad \
-         zsh
-fi
+APT_PKG=(
+    afl
+    bear
+    cabal-install
+    cloc
+    docker.io
+    emacs
+    git
+    google-chrome-stable
+    htop
+    hunspell
+    hunspell-en-us
+    hunspell-fr
+    hunspell-fr-classical
+    icdiff
+    nginx
+    openssh-client
+    openssh-server
+    pylint3
+    python3-pip
+    silversearcher-ag
+    ssh
+    terminator
+    tmux
+    tree
+    xclip
+    xmobar
+    xmonad
+    zsh
+)
 
-echo -e "\033[36mInstall full dependencies? [y,N]\033[0m"
+echo -e "\033[36mInstall dependencies? [y,N]\033[0m"
 read -re answer
 if [[ $answer =~ ^([yY][eE][sS]|[yY])$ ]]; then
     sudo sh -c 'echo "deb [arch=amd64] https://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list'
@@ -30,23 +43,7 @@ if [[ $answer =~ ^([yY][eE][sS]|[yY])$ ]]; then
 
     sudo apt-get update
 
-    sudo apt install \
-         afl \
-         bear \
-         cabal-install \
-         cloc \
-         docker.io \
-         google-chrome-stable \
-         hunspell \
-         hunspell-en-us \
-         hunspell-fr \
-         hunspell-fr-classical \
-         nginx \
-         python3-pip \
-         pylint3 \
-         terminator \
-         tree \
-         xclip
+    sudo apt install "${APT_PKG[@]}"
 
     sh -c "$(wget https://raw.github.com/robbyrussell/oh-my-zsh/master/tools/install.sh -O -)"
     git clone https://github.com/zsh-users/zsh-syntax-highlighting.git "${HOME}/.oh-my-zsh/custom/plugins/"
@@ -74,6 +71,14 @@ if [[ $answer =~ ^([yY][eE][sS]|[yY])$ ]]; then
     echo "emacs.d" > "${HOME}/config/_build/.gitignore"
     cd "${HOME}"
     source "${HOME}/.zshrc"
+
+    #TODO
+    # create the files to run xmonad:
+    #/usr/share/applications/xmonad.desktop
+    #/usr/share/gnome-session/sessions/xmonad.session
+    #/usr/share/xsessions/xmonad.desktop
+    # see also: https://github.com/Gekkio/gnome-session-xmonad
+
     echo -e "\033[36m[Info]\033[0m Remaining manual things to do:"
     echo "	- Start a git repo in ${HOME}/config/_build"
     echo "	- Create the file ${HOME}/config/_build/gitconfig.private"
