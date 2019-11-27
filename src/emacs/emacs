@@ -34,8 +34,8 @@
 ;; Display line, column, date
 (line-number-mode t)
 (column-number-mode t)
-(display-time-mode t)
-(setq display-time-24hr-format t)
+;(display-time-mode t)
+;(setq display-time-24hr-format t)
 
 ;; Display path file in frame title
 (setq-default frame-title-format "%b (%f)")
@@ -187,17 +187,13 @@ started from a shell."
 (global-set-key
  (kbd "C-x 0") (lambda () (interactive) (delete-window) (balance-windows)))
 
-;; Autocomplete
-(add-hook 'after-init-hook 'global-company-mode)
-(autoload 'company-mode "company" nil t)
-(require 'company)
-;(global-set-key (kbd "C-/") 'company-complete)
-(global-set-key [C-tab] 'company-complete-common)
-(setq company-dabbrev-downcase nil)
+;; Delete trailing whitespaces
+(global-set-key (kbd "C-c w d") 'delete-trailing-whitespace)
 
 
 ;; =============================== Development ===============================
 
+;; Custom grep command
 (setq grep-command "grep --color -nH -rI -e ")
 
 ;; Multiple cursors
@@ -223,8 +219,21 @@ started from a shell."
  '(whitespace-tab ((t (:foreground "red"))))
  '(whitespace-trailing ((t (:foreground "red" :background "yellow")))))
 
+;; Autocomplete
+(add-hook 'after-init-hook 'global-company-mode)
+(autoload 'company-mode "company" nil t)
+(require 'company)
+;(global-set-key (kbd "C-/") 'company-complete)
+(global-set-key [C-tab] 'company-complete-common)
+(setq company-dabbrev-downcase nil)
+
 ;; Delete spaces when saving
 ;(add-hook 'before-save-hook 'delete-trailing-whitespace)
+
+;; Delete spaces when saving in manual non programming mode
+(add-hook 'markdown-mode-hook
+          (lambda ()
+            (add-hook 'before-save-hook 'delete-trailing-whitespace)))
 
 ;; End file with new line
 (setq require-final-newline t)
@@ -302,6 +311,7 @@ started from a shell."
 ;;  (let (name (file-relative-name file))
 ;;    (vc-git-command buf 'async nil "blame" "--date=short" rev "--" name)))
 
+;; Dumb jump setup
 (dumb-jump-mode)
 ; Remove all dumb-jump default key bindings
 (define-key dumb-jump-mode-map (kbd "C-M-g") nil)

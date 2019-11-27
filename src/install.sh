@@ -41,7 +41,7 @@ if [[ $answer =~ ^([yY][eE][sS]|[yY])$ ]]; then
 
     sudo add-apt-repository ppa:gnome-terminator/nightly-gtk3
 
-    sudo apt-get update
+    sudo apt update
 
     sudo apt install "${APT_PKG[@]}"
 
@@ -68,7 +68,14 @@ if [[ $answer =~ ^([yY][eE][sS]|[yY])$ ]]; then
     git clone git@github.com:fablhx/dotfiles.git "${HOME}/config"
     cd "${HOME}/config"
     make build
-    echo "emacs.d" > "${HOME}/config/_build/.gitignore"
+    cat > "${HOME}/config/_build/.gitignore" <<EOF
+emacs.d
+xmonad/xmonad.errors
+xmonad/xmonad.hi
+xmonad/xmonad.o
+xmonad/xmonad.state
+xmonad/xmonad-x86_64-linux
+EOF
     cd "${HOME}"
     source "${HOME}/.zshrc"
 
