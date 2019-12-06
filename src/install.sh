@@ -45,28 +45,26 @@ if [[ $answer =~ ^([yY][eE][sS]|[yY])$ ]]; then
 
     sudo apt install "${APT_PKG[@]}"
 
-    sh -c "$(wget https://raw.github.com/robbyrussell/oh-my-zsh/master/tools/install.sh -O -)"
-    git clone https://github.com/zsh-users/zsh-syntax-highlighting.git "${HOME}/.oh-my-zsh/custom/plugins/"
-
     cabal update
 
     mkdir -p /home/fabien/work/git/extern
-    git clone https://github.com/koalaman/shellcheck.git /home/fabien/work/git/extern/
-    pushd /home/fabien/work/git/extern/shellcheck
+    pushd /home/fabien/work/git/extern
+    git clone https://github.com/koalaman/shellcheck.git
+    pushd shellcheck
     cabal install
     popd
+    popd
+
+    (sh -c "$(wget https://raw.github.com/robbyrussell/oh-my-zsh/master/tools/install.sh -O -)")
+    git clone https://github.com/zsh-users/zsh-syntax-highlighting.git "${HOME}/.oh-my-zsh/custom/plugins/"
 fi
 
 echo -e "\033[36mInstall my config? [y,N]\033[0m"
 read -re answer
 if [[ $answer =~ ^([yY][eE][sS]|[yY])$ ]]; then
-    sed -i 's/^XDG_DESKTOP_DIR/#XDG_DESKTOP_DIR/g; s/^XDG_TEMPLATES_DIR/#XDG_TEMPLATES_DIR/g; s/^XDG_PUBLICSHARE_DIR/#XDG_PUBLICSHARE_DIR/g; s/^XDG_MUSIC_DIR/#XDG_MUSIC_DIR/g; s/^XDG_PICTURES_DIR/#XDG_PICTURES_DIR/g; s/^XDG_VIDEOS_DIR/#XDG_VIDEOS_DIR/g' "$HOME"/.config/user-dirs.dirs
-    echo 'enable=False' >> "$HOME"/.config/user-dirs.dirs
-
-    rm -f "${HOME}/.zshrc"
-
     git clone git@github.com:fablhx/dotfiles.git "${HOME}/config"
     cd "${HOME}/config"
+    make clean
     make build
     cat > "${HOME}/config/_build/.gitignore" <<EOF
 emacs.d

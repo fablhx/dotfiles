@@ -29,3 +29,19 @@ build:
 	ln -sf ${HOME}/config/_build/xmonad/xmonad.hs ${HOME}/.xmonad.hs
 	ln -sf ${HOME}/config/_build/xmonad/xmobarrc ${HOME}/.xmobarrc
 	if [ ! -L ${HOME}/.xmonad ]; then ln -s ${HOME}/config/_build/xmonad ${HOME}/.xmonad; fi
+
+.PHONY: clean
+clean: SHELL := /bin/bash
+clean:
+	rm -f ${HOME}/.bashrc
+	rm -f ${HOME}/.emacs
+	rm -rf ${HOME}/.emacs.d
+	rm -f ${HOME}/.gdbinit
+	rm -f ${HOME}/.gitconfig
+	rm -f ${HOME}/.gitignore
+	rm -f ${HOME}/.tmux.conf
+	rm -f ${HOME}/.valgrindrc
+	rm -f ${HOME}/.zshrc
+	rm -f ${HOME}/.xmonad.hs
+	rm -f ${HOME}/.xmobarrc
+	rm -rf ${HOME}/.xmonad
