@@ -350,32 +350,32 @@ started from a shell."
 
 ;; https://stackoverflow.com/questions/7189742/
 ;; change-color-of-code-within-if-0-endif-block-in-c-c-mode-in-emacs-21-3-1
-(defun cpp-highlight-if-0/1 ()
-  "Modify the face of text in between #if 0 ... #endif."
-  (interactive)
-  (setq cpp-known-face '(background-color . "dim gray"))
-  (setq cpp-unknown-face 'default)
-  (setq cpp-face-type 'dark)
-  (setq cpp-known-writable 't)
-  (setq cpp-unknown-writable 't)
-  (setq cpp-edit-list
-        '((#("1" 0 1
-             (fontified nil))
-           nil
-           (background-color . "dim gray")
-           both nil)
-          (#("0" 0 1
-             (fontified nil))
-           (background-color . "dim gray")
-           nil
-           both nil)))
-  (cpp-highlight-buffer t))
+;; (defun cpp-highlight-if-0/1 ()
+;;   "Modify the face of text in between #if 0 ... #endif."
+;;   (interactive)
+;;   (setq cpp-known-face '(background-color . "dim gray"))
+;;   (setq cpp-unknown-face 'default)
+;;   (setq cpp-face-type 'dark)
+;;   (setq cpp-known-writable 't)
+;;   (setq cpp-unknown-writable 't)
+;;   (setq cpp-edit-list
+;;         '((#("1" 0 1
+;;              (fontified nil))
+;;            nil
+;;            (background-color . "dim gray")
+;;            both nil)
+;;           (#("0" 0 1
+;;              (fontified nil))
+;;            (background-color . "dim gray")
+;;            nil
+;;            both nil)))
+;;   (cpp-highlight-buffer t))
 
-(defun jpk/c-mode-hook ()
-  (cpp-highlight-if-0/1)
-  (add-hook 'after-save-hook 'cpp-highlight-if-0/1 'append 'local))
+;; (defun jpk/c-mode-hook ()
+;;   (cpp-highlight-if-0/1)
+;;   (add-hook 'after-save-hook 'cpp-highlight-if-0/1 'append 'local))
 
-(add-hook 'c-mode-common-hook 'jpk/c-mode-hook)
+;; (add-hook 'c-mode-common-hook 'jpk/c-mode-hook)
 
 
 ;; ================================= PYTHON ==================================
