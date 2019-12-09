@@ -190,6 +190,18 @@ started from a shell."
 ;; Delete trailing whitespaces
 (global-set-key (kbd "C-c w d") 'delete-trailing-whitespace)
 
+;; Kill the last opened window, e.g. after a grep.
+(defun kill-last-opened-buffer ()
+  "Kill the last opened buffer"
+  (interactive)
+  (let ((win-curr (selected-window))
+        (win-other (next-window)))
+    (select-window win-other)
+    (kill-buffer-and-window)
+    (select-window win-curr)))
+
+(global-set-key (kbd "C-x C-k") 'kill-last-opened-buffer)
+
 
 ;; =============================== Development ===============================
 
