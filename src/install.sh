@@ -55,8 +55,13 @@ if [[ $answer =~ ^([yY][eE][sS]|[yY])$ ]]; then
     popd
     popd
 
-    (sh -c "$(wget https://raw.github.com/robbyrussell/oh-my-zsh/master/tools/install.sh -O -)")
-    git clone https://github.com/zsh-users/zsh-syntax-highlighting.git "${HOME}/.oh-my-zsh/custom/plugins/"
+    wget --output-document=oh-my-zsh-install.sh \
+         https://raw.github.com/robbyrussell/oh-my-zsh/master/tools/install.sh
+    sed -i'' 's/exec zsh -l/#exec zsh -l/g' oh-my-zsh-install.sh
+    sh oh-my-zsh-install.sh
+    pushd "${HOME}/.oh-my-zsh/custom/plugins/"
+    git clone https://github.com/zsh-users/zsh-syntax-highlighting.git
+    popd
 fi
 
 echo -e "\033[36mInstall my config? [y,N]\033[0m"
