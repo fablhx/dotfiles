@@ -2,7 +2,9 @@
 
 ;; Packages
 (setq package-list
- '(company web-mode whitespace markdown-mode multiple-cursors dumb-jump))
+      '(company whitespace multiple-cursors dumb-jump
+        web-mode markdown-mode json-mode yaml-mode
+        haskell-mode))
 
 ;; Repository containing the packages
 (setq package-archives '(("melpa" . "http://melpa.milkbox.net/packages/")))
