@@ -3,8 +3,8 @@
 ;; Packages
 (setq package-list
       '(company whitespace multiple-cursors dumb-jump
-        web-mode markdown-mode json-mode yaml-mode
-        haskell-mode))
+                web-mode markdown-mode json-mode yaml-mode
+                haskell-mode))
 
 ;; Repository containing the packages
 (setq package-archives '(("melpa" . "http://melpa.milkbox.net/packages/")))
@@ -25,10 +25,10 @@
 ;; ============================= Generic options =============================
 
 ;; Update search path
-(setq-default load-path
-  (cons (expand-file-name "~/.emacs.d/site-lisp") load-path))
-(setq-default load-path
-  (cons (expand-file-name "~/.emacs.d/elpa") load-path))
+(setq-default
+ load-path (cons (expand-file-name "~/.emacs.d/site-lisp") load-path))
+(setq-default
+ load-path (cons (expand-file-name "~/.emacs.d/elpa") load-path))
 
 ;; No startup message
 (setq inhibit-startup-message t inhibit-startup-echo-area-message t)
@@ -36,11 +36,6 @@
 ;; Display line, column, date
 (line-number-mode t)
 (column-number-mode t)
-;(display-time-mode t)
-;(setq display-time-24hr-format t)
-
-;; Display path file in frame title
-(setq-default frame-title-format "%b (%f)")
 
 ;; Display menubar but not tool bar
 (menu-bar-mode t)
@@ -66,11 +61,6 @@
 
 ;; No backup files
 (setq make-backup-files nil)
-;(setq version-control -1)
-;(setq backup-directory-alist (quote ((".*" . "~/.emacs_backups/"))))
-
-;; Delete too old backups
-;(setq delete-old-versions t)
 
 ;; Don't save abbrevs
 (setq save-abbrevs nil)
@@ -84,6 +74,20 @@
 ;; Width buffer list
 (setq Buffer-menu-name-width 30)
 
+;; End file with new line
+(setq require-final-newline t)
+
+;; Replace tab with spaces
+(setq-default indent-tabs-mode nil)
+
+;; Show parenthesis
+(require 'paren)
+(show-paren-mode t)
+(setq blink-matching-paren t)
+(setq blink-matching-paren-on-screen t)
+(setq show-paren-style 'expression)
+(setq blink-matching-paren-dont-ignore-comments t)
+
 ;; Workaround for dead-accent key
 (require 'iso-transl)
 
@@ -91,11 +95,13 @@
 (when (executable-find "hunspell")
   (setq-default ispell-program-name "hunspell")
   (setq ispell-really-hunspell t))
+
 (defun custom-ispell ()
   "Skip regions from spell checking."
   (make-local-variable 'ispell-skip-region-alist)
   (add-to-list 'ispell-skip-region-alist '("`" . "`"))
   (add-to-list 'ispell-skip-region-alist '("^```" . "```$")))
+
 (add-hook 'markdown-mode-hook 'custom-ispell)
 
 
@@ -105,21 +111,21 @@
 (defun mac_keyboard ()
   (interactive)
   (custom-set-variables
-    '(ns-alternate-modifier (quote none))
-    '(ns-command-modifier (quote meta))
-    '(ns-control-modifier (quote none))
-    '(ns-function-modifier (quote control)))
+   '(ns-alternate-modifier (quote none))
+   '(ns-command-modifier (quote meta))
+   '(ns-control-modifier (quote none))
+   '(ns-function-modifier (quote control)))
 
-    ;; C-up/C-down to change paragraphs
-    ;; Redefinition of the old commands
-    (define-key
-      (current-global-map) [remap scroll-up-command] 'forward-paragraph)
-    (define-key
-      (current-global-map) [remap scroll-down-command] 'backward-paragraph)
+  ;; C-up/C-down to change paragraphs
+  ;; Redefinition of the old commands
+  (define-key
+    (current-global-map) [remap scroll-up-command] 'forward-paragraph)
+  (define-key
+    (current-global-map) [remap scroll-down-command] 'backward-paragraph)
 
-    ;; Redefinition of C-left/C-right for backward/forwad word
-    (global-set-key (kbd "<home>") 'backward-word)
-    (global-set-key (kbd "<end>") 'forward-word))
+  ;; Redefinition of C-left/C-right for backward/forwad word
+  (global-set-key (kbd "<home>") 'backward-word)
+  (global-set-key (kbd "<end>") 'forward-word))
 
 ;; By OPAM user-setup for emacs
 ;; Tweak for problem on OS X where Emacs.app doesn't run the right
@@ -141,56 +147,34 @@ started from a shell."
 
 ;; Auto load conf if on mac
 (cond
-  ((string-equal system-type "darwin")
-    ;; Open emacs on top of the terminal
-    (when window-system (x-focus-frame nil))
-
-    (set-exec-path-from-shell-PATH)
-
-    (mac_keyboard)))
+ ((string-equal system-type "darwin")
+  ;; Open emacs on top of the terminal
+  (when window-system (x-focus-frame nil))
+  (set-exec-path-from-shell-PATH)
+  (mac_keyboard)))
 
 
 ;; =========================== Personal Shortcuts ============================
 
-(defvar my-keys-minor-mode-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "M-<left>") 'windmove-left)
-    (define-key map (kbd "M-<right>") 'windmove-right)
-    (define-key map (kbd "M-<up>") 'windmove-up)
-    (define-key map (kbd "M-<down>") 'windmove-down)
-    map)
-  "my-keys-minor-mode keymap.")
-
-(define-minor-mode my-keys-minor-mode
-  "A minor mode so that my key settings override annoying major modes."
-  :init-value t
-  :lighter " my-keys")
-
-(my-keys-minor-mode t)
-
 (global-set-key [f1] 'comment-dwim)
-(global-set-key [f2] 'undo)
+(global-set-key [f2] 'whitespace-mode)
 (global-set-key [f3] 'grep)
-(global-set-key [f4] 'goto-line)
+
 (global-set-key [f5] 'compile)
 (global-set-key [f6] 'interrupt-and-recompile)
 (global-set-key [f7] 'next-error)
-(global-set-key [f8] 'caml-types-show-type)
-(global-set-key [f9] 'flycheck-mode)
-(global-set-key [f10] 'global-auto-revert-mode)
-(global-set-key [f11] 'enlarge-window)
-(global-set-key [f12] 'whitespace-mode)
+(global-set-key [f8] 'flycheck-mode)
 
-;; Automatically resize widow when splitting
+(global-set-key [f11] 'global-auto-revert-mode)
+(global-set-key [f12] 'enlarge-window)
+
+;; Automatically resize window when splitting
 (global-set-key
  (kbd "C-x 2") (lambda () (interactive) (split-window-below) (balance-windows)))
 (global-set-key
  (kbd "C-x 3") (lambda () (interactive) (split-window-right) (balance-windows)))
 (global-set-key
  (kbd "C-x 0") (lambda () (interactive) (delete-window) (balance-windows)))
-
-;; Delete trailing whitespaces
-(global-set-key (kbd "C-c w d") 'delete-trailing-whitespace)
 
 ;; Kill the last opened window, e.g. after a grep.
 (defun kill-last-opened-buffer ()
@@ -202,8 +186,7 @@ started from a shell."
     (kill-buffer-and-window)
     (select-window win-curr)))
 
-(global-set-key (kbd "C-x C-k") 'kill-last-opened-buffer)
-
+;; Insert symbol left-bracket/right-bracket around word
 (defun gen-insert-pair (@left-bracket @right-bracket &optional)
   (progn
     (let ($p1 $p2)
@@ -219,6 +202,7 @@ started from a shell."
             (insert @left-bracket)
             (goto-char (+ $p2 (length @left-bracket)))))))))
 
+;; Handles the symbols I want
 (defun gen-quote-word (x)
   (interactive "sQuote symbol: ")
   (cond ((string-equal "(" x)  (gen-insert-pair "(" ")"))
@@ -228,7 +212,27 @@ started from a shell."
         ((string-equal "{{" x) (gen-insert-pair "{{" "}}"))
         (t (gen-insert-pair x x))))
 
-(global-set-key (kbd "C-c C-q") 'gen-quote-word)
+(defvar my-keys-minor-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "M-<left>") 'windmove-left)
+    (define-key map (kbd "M-<right>") 'windmove-right)
+    (define-key map (kbd "M-<up>") 'windmove-up)
+    (define-key map (kbd "M-<down>") 'windmove-down)
+
+    (define-key map (kbd "C-c w d") 'delete-trailing-whitespace)
+    (define-key map (kbd "C-x C-k") 'kill-last-opened-buffer)
+
+    (define-key map (kbd "C-c C-q") 'gen-quote-word)
+
+    map)
+  "my-keys-minor-mode keymap.")
+
+(define-minor-mode my-keys-minor-mode
+  "A minor mode so that my key settings override annoying major modes."
+  :init-value t
+  :lighter " my-keys")
+
+(my-keys-minor-mode t)
 
 
 ;; =============================== Development ===============================
@@ -245,7 +249,7 @@ started from a shell."
 (setq whitespace-style '(face trailing empty lines-tail tabs tab-mark))
 (setq whitespace-space 'whitespace-hspace)
 (setq whitespace-line-column 80)
-;(add-hook 'prog-mode-hook 'whitespace-mode)
+;; (add-hook 'prog-mode-hook 'whitespace-mode)
 (global-whitespace-mode 1)
 (custom-set-faces
  '(whitespace-empty ((t (:foreground "firebrick" :background "SlateGray1"))))
@@ -272,20 +276,6 @@ started from a shell."
           (lambda ()
             (add-to-list 'write-file-functions 'delete-trailing-whitespace)))
 
-;; End file with new line
-(setq require-final-newline t)
-
-;; Replace tab with spaces
-(setq-default indent-tabs-mode nil)
-
-;; Show parenthesis
-(require 'paren)
-(show-paren-mode t)
-(setq blink-matching-paren t)
-(setq blink-matching-paren-on-screen t)
-(setq show-paren-style 'expression)
-(setq blink-matching-paren-dont-ignore-comments t)
-
 ;; Auto-kill compilation process and recompile
 (defun interrupt-and-recompile ()
   "Interrupt old compilation, if any, and recompile."
@@ -302,17 +292,18 @@ started from a shell."
 (defun new-compilation-window-hook ()
   (progn
     (if (not (get-buffer-window "*compilation*"))
-      (progn (split-window-vertically)))))
+        (progn (split-window-vertically)))))
+
 (add-hook 'compilation-mode-hook 'new-compilation-window-hook)
 
 ;; Close the compilation window if there was no error
 (setq compilation-exit-message-function
-  (lambda (status code msg)
-    (when (and (eq status 'exit) (zerop code))
-      (bury-buffer "*compilation*")
-      (delete-window (get-buffer-window (get-buffer "*compilation*"))))
-    ;; Always return the anticipated result of compilation-exit-message-function
-    (cons msg code)))
+      (lambda (status code msg)
+        (when (and (eq status 'exit) (zerop code))
+          (bury-buffer "*compilation*")
+          (delete-window (get-buffer-window (get-buffer "*compilation*"))))
+        ;; Always return the anticipated result of compilation-exit-message-function
+        (cons msg code)))
 
 ;; Auto-scroll in the compilation buffer
 (setq compilation-scroll-output 'first-error)
@@ -323,6 +314,7 @@ started from a shell."
   (toggle-read-only)
   (ansi-color-apply-on-region compilation-filter-start (point))
   (toggle-read-only))
+
 (add-hook 'compilation-filter-hook 'colorize-compilation-buffer)
 
 ;; Ediff
@@ -350,14 +342,14 @@ started from a shell."
 
 ;; Dumb jump setup
 (dumb-jump-mode)
-; Remove all dumb-jump default key bindings
+;; Remove all dumb-jump default key bindings
 (define-key dumb-jump-mode-map (kbd "C-M-g") nil)
 (define-key dumb-jump-mode-map (kbd "C-M-p") nil)
 (define-key dumb-jump-mode-map (kbd "C-M-q") nil)
-; Add my own
+;; Add my own
 (define-key dumb-jump-mode-map (kbd "C-c C-l") 'dumb-jump-go-other-window)
 (define-key dumb-jump-mode-map (kbd "C-c C-b") 'dumb-jump-back)
-; Do not consider Makefile as possible project-denoters
+;; Do not consider Makefile as possible project-denoters
 (setq dumb-jump-project-denoters '(".dumbjump" ".projectile" ".git" ".hg"
                                    ".fslckout" ".bzr" "_darcs" ".svn"
                                    "PkgInfo" "-pkg.el"))
@@ -388,69 +380,20 @@ started from a shell."
 
 (add-hook 'c++-mode-hook 'my-cc-style)
 
-;; https://stackoverflow.com/questions/7189742/
-;; change-color-of-code-within-if-0-endif-block-in-c-c-mode-in-emacs-21-3-1
-;; (defun cpp-highlight-if-0/1 ()
-;;   "Modify the face of text in between #if 0 ... #endif."
-;;   (interactive)
-;;   (setq cpp-known-face '(background-color . "dim gray"))
-;;   (setq cpp-unknown-face 'default)
-;;   (setq cpp-face-type 'dark)
-;;   (setq cpp-known-writable 't)
-;;   (setq cpp-unknown-writable 't)
-;;   (setq cpp-edit-list
-;;         '((#("1" 0 1
-;;              (fontified nil))
-;;            nil
-;;            (background-color . "dim gray")
-;;            both nil)
-;;           (#("0" 0 1
-;;              (fontified nil))
-;;            (background-color . "dim gray")
-;;            nil
-;;            both nil)))
-;;   (cpp-highlight-buffer t))
-
-;; (defun jpk/c-mode-hook ()
-;;   (cpp-highlight-if-0/1)
-;;   (add-hook 'after-save-hook 'cpp-highlight-if-0/1 'append 'local))
-
-;; (add-hook 'c-mode-common-hook 'jpk/c-mode-hook)
-
 
 ;; ================================= PYTHON ==================================
 
-;(add-hook 'python-mode-hook 'flycheck-mode)
 (add-hook 'python-mode-hook
           (lambda ()
             (setq flycheck-python-pylint-executable "~/.local/bin/pylint")))
-
-;; Packages: elpy flycheck
-;(elpy-enable)
-
-;(when (require 'flycheck nil t)
-;  (setq elpy-modules (delq 'elpy-module-flymake elpy-modules))
-;  (add-hook 'elpy-mode-hook 'flycheck-mode))
-
-
-;; =================================== COQ ===================================
-
-(setq auto-mode-alist (cons '("\\.v$" . coq-mode) auto-mode-alist))
-(autoload 'coq-mode "coq" "Major mode for editing Coq vernacular." t)
-(autoload 'run-coq "coq-inferior" "Run an inferior Coq process." t)
-(autoload 'run-coq-other-window "inferior-coq"
-  "Run an inferior Coq process in a new window." t)
-(autoload 'run-coq-other-frame "inferior-coq"
-  "Run an inferior Coq process in a new frame." t)
-;(load-file "/usr/share/emacs/site-lisp/proofgeneral/generic/proof-site.el")
 
 
 ;; ================================== OCAML ==================================
 
 (setq opam-share
-  (substring
-    (shell-command-to-string "opam config var share")
-    0 -1))
+      (substring
+       (shell-command-to-string "opam config var share")
+       0 -1))
 
 (add-to-list 'load-path (format "%s/emacs/site-lisp/" opam-share))
 
@@ -470,19 +413,10 @@ started from a shell."
 (autoload 'run-caml "inf-caml" "Run an inferior Caml process." t)
 
 
-;; ================================= GeneWeb =================================
-
-(setq github_gw "~/work/git/extern/fablhx/geneweb/hd/etc/")
-
-;; Load web-mode for templates
-(require 'web-mode)
-(add-to-list 'auto-mode-alist `(,(expand-file-name github_gw) . web-mode))
-
-
 ;; ================================ Markdown =================================
 
 (autoload 'markdown-mode "markdown-mode"
-   "Major mode for editing Markdown files" t)
+  "Major mode for editing Markdown files" t)
 (add-to-list 'auto-mode-alist '("\\.markdown\\'" . markdown-mode))
 (add-to-list 'auto-mode-alist '("\\.md\\'" . markdown-mode))
 
