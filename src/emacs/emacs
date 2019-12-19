@@ -80,6 +80,9 @@
 ;; Replace tab with spaces
 (setq-default indent-tabs-mode nil)
 
+;; Auto reload
+(global-auto-revert-mode t)
+
 ;; Show parenthesis
 (require 'paren)
 (show-paren-mode t)
@@ -165,7 +168,6 @@ started from a shell."
 (global-set-key [f7] 'next-error)
 (global-set-key [f8] 'flycheck-mode)
 
-(global-set-key [f11] 'global-auto-revert-mode)
 (global-set-key [f12] 'enlarge-window)
 
 ;; Automatically resize window when splitting
