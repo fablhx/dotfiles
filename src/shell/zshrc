@@ -29,8 +29,7 @@ zstyle ':completion:*:messages' format '%d'
 zstyle ':completion:*:warnings' format "$fg[red]No matches$reset_color"
 zstyle ':completion:*:corrections' format '%B%d (errors: %e)%b'
 
-# TODO: Fix this! Probably need to deactivate some option that
-# I actually don't use.
+# TODO: Fix this! Do I really need zsh-syntax-highlighting
 #
 # This speeds up pasting w/ autosuggest
 # https://github.com/zsh-users/zsh-autosuggestions/issues/238
