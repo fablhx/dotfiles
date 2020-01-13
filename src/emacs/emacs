@@ -251,8 +251,8 @@ started from a shell."
 (setq whitespace-style '(face trailing empty lines-tail tabs tab-mark))
 (setq whitespace-space 'whitespace-hspace)
 (setq whitespace-line-column 80)
-;; (add-hook 'prog-mode-hook 'whitespace-mode)
-(global-whitespace-mode 1)
+(add-hook 'prog-mode-hook 'whitespace-mode)
+;(global-whitespace-mode 1)
 (custom-set-faces
  '(whitespace-empty ((t (:foreground "firebrick" :background "SlateGray1"))))
  '(whitespace-hspace ((t (:foreground "white" :background "red"))))
