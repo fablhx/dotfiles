@@ -277,6 +277,9 @@ started from a shell."
 (add-hook 'markdown-mode-hook
           (lambda ()
             (add-to-list 'write-file-functions 'delete-trailing-whitespace)))
+(add-hook 'rst-mode-hook
+          (lambda ()
+            (add-to-list 'write-file-functions 'delete-trailing-whitespace)))
 
 ;; Auto-kill compilation process and recompile
 (defun interrupt-and-recompile ()
