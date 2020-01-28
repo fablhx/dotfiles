@@ -189,20 +189,29 @@ started from a shell."
     (select-window win-curr)))
 
 ;; Insert symbol left-bracket/right-bracket around word
-(defun gen-insert-pair (@left-bracket @right-bracket &optional)
-  (progn
-    (let ($p1 $p2)
-      (cond
-       (t (progn
-            (skip-chars-backward "-_[:alnum:]")
-            (setq $p1 (point))
-            (skip-chars-forward "-_[:alnum:]")
-            (setq $p2 (point))
-            (goto-char $p2)
-            (insert @right-bracket)
-            (goto-char $p1)
-            (insert @left-bracket)
-            (goto-char (+ $p2 (length @left-bracket)))))))))
+(defun gen-insert-pair (@left-bracket @right-bracket)
+  (if (use-region-p)
+      (progn
+        (let (($p1 (region-beginning))
+              ($p2 (region-end)))
+          (goto-char $p2)
+          (insert @right-bracket)
+          (goto-char $p1)
+          (insert @left-bracket)
+          (insert "\n")
+          (goto-char (+ $p2 2))))
+    (progn
+      (let ($p1 $p2)
+        (progn
+          (skip-chars-backward "-_[:alnum:]")
+          (setq $p1 (point))
+          (skip-chars-forward "-_[:alnum:]")
+          (setq $p2 (point))
+          (goto-char $p2)
+          (insert @right-bracket)
+          (goto-char $p1)
+          (insert @left-bracket)
+          (goto-char (+ $p2 (length @left-bracket))))))))
 
 ;; Handles the symbols I want
 (defun gen-quote-word (x)
