@@ -283,12 +283,10 @@ started from a shell."
 (setq company-dabbrev-downcase nil)
 
 ;; Delete spaces when saving in manual non programming mode
-(add-hook 'markdown-mode-hook
-          (lambda ()
-            (add-to-list 'write-file-functions 'delete-trailing-whitespace)))
-(add-hook 'rst-mode-hook
-          (lambda ()
-            (add-to-list 'write-file-functions 'delete-trailing-whitespace)))
+(defun my-txt-trailing-whitespace ()
+  (unless (derived-mode-p 'prog-mode)
+    (delete-trailing-whitespace)))
+(add-hook 'before-save-hook 'my-txt-trailing-whitespace)
 
 ;; Auto-kill compilation process and recompile
 (defun interrupt-and-recompile ()
