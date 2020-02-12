@@ -2,7 +2,7 @@
 
 ;; Packages
 (setq package-list
-      '(company whitespace multiple-cursors dumb-jump
+      '(company whitespace multiple-cursors dumb-jump ag
                 web-mode markdown-mode json-mode yaml-mode
                 haskell-mode))
 
