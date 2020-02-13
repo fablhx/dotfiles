@@ -161,7 +161,7 @@ started from a shell."
 
 (global-set-key [f1] 'comment-dwim)
 (global-set-key [f2] 'whitespace-mode)
-(global-set-key [f3] 'ag)
+(global-set-key [f3] 'ag-project)
 
 (global-set-key [f5] 'compile)
 (global-set-key [f6] 'interrupt-and-recompile)
