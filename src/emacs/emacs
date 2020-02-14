@@ -26,14 +26,12 @@
 
 ;; Update search path
 (setq-default
- load-path (cons (expand-file-name "~/.emacs.d/site-lisp") load-path))
-(setq-default
  load-path (cons (expand-file-name "~/.emacs.d/elpa") load-path))
 
 ;; No startup message
 (setq inhibit-startup-message t inhibit-startup-echo-area-message t)
 
-;; Display line, column, date
+;; Display line, column
 (line-number-mode t)
 (column-number-mode t)
 
@@ -350,7 +348,7 @@ started from a shell."
 ;;    (vc-git-command buf 'async nil "blame" "--date=short" rev "--" name)))
 
 ;; Dumb jump setup
-(dumb-jump-mode)
+(dumb-jump-mode t)
 ;; Remove all dumb-jump default key bindings
 (define-key dumb-jump-mode-map (kbd "C-M-g") nil)
 (define-key dumb-jump-mode-map (kbd "C-M-p") nil)
