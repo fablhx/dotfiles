@@ -25,7 +25,7 @@
     cursor_color = "#839496"
     font = Ubuntu Mono 14
     foreground_color = "#839496"
-    scrollback_lines = 10000
+    scrollback_lines = 50000
     show_titlebar = False
     use_system_font = False
     word_chars = "-./?%&#_~"
