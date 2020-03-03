@@ -202,9 +202,9 @@ started from a shell."
     (progn
       (let ($p1 $p2)
         (progn
-          (skip-chars-backward "-_[:alnum:]")
+          (skip-syntax-backward "^\s")
           (setq $p1 (point))
-          (skip-chars-forward "-_[:alnum:]")
+          (skip-syntax-forward "^\s")
           (setq $p2 (point))
           (goto-char $p2)
           (insert @right-bracket)
