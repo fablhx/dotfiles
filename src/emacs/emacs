@@ -202,9 +202,9 @@ started from a shell."
     (progn
       (let ($p1 $p2)
         (progn
-          (skip-syntax-backward "^\s")
+          (skip-syntax-backward "^[\s().]")
           (setq $p1 (point))
-          (skip-syntax-forward "^\s")
+          (skip-syntax-forward "^[\s().]")
           (setq $p2 (point))
           (goto-char $p2)
           (insert @right-bracket)
@@ -250,6 +250,9 @@ started from a shell."
 ;; Multiple cursors
 (require 'multiple-cursors)
 (global-set-key (kbd "C-c e l") 'mc/edit-lines)
+(global-set-key (kbd "C->") 'mc/mark-next-like-this)
+(global-set-key (kbd "C-<") 'mc/mark-previous-like-this)
+(global-set-key (kbd "C-c C-<") 'mc/mark-all-like-this)
 
 ;; Whitespace
 (require 'whitespace)
