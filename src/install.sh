@@ -47,8 +47,8 @@ if [[ $answer =~ ^([yY][eE][sS]|[yY])$ ]]; then
 
     cabal update
 
-    mkdir -p /home/fabien/work/git/extern
-    pushd /home/fabien/work/git/extern
+    mkdir -p "${HOME}/work/git/extern"
+    pushd "${HOME}/work/git/extern"
     git clone https://github.com/koalaman/shellcheck.git
     pushd shellcheck
     cabal install
