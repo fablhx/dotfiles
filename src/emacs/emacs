@@ -202,9 +202,9 @@ started from a shell."
     (progn
       (let ($p1 $p2)
         (progn
-          (skip-syntax-backward "^[\s().]")
+          (skip-chars-backward "[:graph:]")
           (setq $p1 (point))
-          (skip-syntax-forward "^[\s().]")
+          (skip-syntax-forward "[:graph:]")
           (setq $p2 (point))
           (goto-char $p2)
           (insert @right-bracket)
