@@ -197,7 +197,6 @@ started from a shell."
           (insert @right-bracket)
           (goto-char $p1)
           (insert @left-bracket)
-          (insert "\n")
           (goto-char (+ $p2 2))))
     (progn
       (let ($p1 $p2)
@@ -213,8 +212,15 @@ started from a shell."
           (goto-char (+ $p2 (length @left-bracket))))))))
 
 ;; Handles the symbols I want
+(defvar gen-quote-history nil)
 (defun gen-quote-word (x)
-  (interactive "sQuote symbol: ")
+  (interactive
+   (list
+    (read-string (format "Quote symbol (default %s): "
+                         (or (car gen-quote-history) ""))
+                 nil 'gen-quote-history
+                 (car gen-quote-history)
+                 'inherit-input-method)))
   (cond ((string-equal "(" x)  (gen-insert-pair "(" ")"))
         ((string-equal "[" x)  (gen-insert-pair "[" "]"))
         ((string-equal "{" x)  (gen-insert-pair "{" "}"))
