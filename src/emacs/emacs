@@ -201,9 +201,9 @@ started from a shell."
     (progn
       (let ($p1 $p2)
         (progn
-          (skip-chars-backward "[:graph:]")
+          (skip-chars-backward "-_[:alnum:]")
           (setq $p1 (point))
-          (skip-syntax-forward "[:graph:]")
+          (skip-syntax-forward "-_[:alnum:]")
           (setq $p2 (point))
           (goto-char $p2)
           (insert @right-bracket)
