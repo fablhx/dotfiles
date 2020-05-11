@@ -159,8 +159,16 @@ started from a shell."
 
 (global-set-key [f1] 'comment-dwim)
 (global-set-key [f2] 'whitespace-mode)
+
 (global-set-key [f3] 'ag)
 (global-set-key [(shift f3)] 'ag-project)
+
+(defun my-pop-local-mark-ring ()
+  (interactive)
+  (set-mark-command t))
+
+(global-set-key [f4] 'my-pop-local-mark-ring)
+(global-set-key [(shift f4)] 'pop-global-mark)
 
 (global-set-key [f5] 'compile)
 (global-set-key [f6] 'interrupt-and-recompile)
