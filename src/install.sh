@@ -16,6 +16,7 @@ APT_PKG=(
     hunspell-en-us
     hunspell-fr
     hunspell-fr-classical
+    #hyperfine # TODO
     icdiff
     nginx
     openssh-client
