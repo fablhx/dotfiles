@@ -1,10 +1,10 @@
 ;; =========================== Automatic packages ============================
 
 ;; Packages
-(setq package-list
-      '(company whitespace multiple-cursors dumb-jump ag
-                web-mode markdown-mode json-mode yaml-mode
-                haskell-mode))
+(setq package-list '(ag blacken company dumb-jump elpy flycheck
+      flycheck-mypy haskell-mode json-mode lua-mode markdown-mode
+      multiple-cursors smartparens web-mode whitespace
+      xterm-color yaml-mode))
 
 ;; Repository containing the packages
 (setq package-archives '(("melpa" . "http://melpa.milkbox.net/packages/")))
