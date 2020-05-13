@@ -175,7 +175,7 @@ started from a shell."
 
 (global-set-key [f5] 'compile)
 (global-set-key [f6] 'interrupt-and-recompile)
-(global-set-key [f7] 'my-wrap-next-error)
+(global-set-key [f7] 'next-error)
 (global-set-key [f8] 'flycheck-mode)
 
 (global-set-key [f12] 'enlarge-window)
