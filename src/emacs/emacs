@@ -411,9 +411,8 @@ started from a shell."
 
 ;; ================================= PYTHON ==================================
 
-;; (add-hook 'python-mode-hook
-;;           (lambda ()
-;;             (setq flycheck-python-pylint-executable "~/.local/bin/pylint")))
+(setq flycheck-python-pylint-executable "pylint3")
+(setq flycheck-python-mypy-cache-dir "/dev/null")
 
 
 ;; ================================== OCAML ==================================
