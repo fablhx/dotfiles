@@ -157,22 +157,25 @@ started from a shell."
 
 ;; =========================== Personal Shortcuts ============================
 
-(global-set-key [f1] 'comment-dwim)
-(global-set-key [f2] 'whitespace-mode)
-
-(global-set-key [f3] 'ag)
-(global-set-key [(shift f3)] 'ag-project)
-
 (defun my-pop-local-mark-ring ()
   (interactive)
   (set-mark-command t))
 
+(defun my-wrap-next-error ()
+  (interactive)
+  (condition-case nil (next-error)
+    (error (next-error 1 t))))
+
+(global-set-key [f1] 'comment-dwim)
+(global-set-key [f2] 'whitespace-mode)
+(global-set-key [f3] 'ag)
+(global-set-key [(shift f3)] 'ag-project)
 (global-set-key [f4] 'my-pop-local-mark-ring)
 (global-set-key [(shift f4)] 'pop-global-mark)
 
 (global-set-key [f5] 'compile)
 (global-set-key [f6] 'interrupt-and-recompile)
-(global-set-key [f7] 'next-error)
+(global-set-key [f7] 'my-wrap-next-error)
 (global-set-key [f8] 'flycheck-mode)
 
 (global-set-key [f12] 'enlarge-window)
@@ -408,9 +411,9 @@ started from a shell."
 
 ;; ================================= PYTHON ==================================
 
-(add-hook 'python-mode-hook
-          (lambda ()
-            (setq flycheck-python-pylint-executable "~/.local/bin/pylint")))
+;; (add-hook 'python-mode-hook
+;;           (lambda ()
+;;             (setq flycheck-python-pylint-executable "~/.local/bin/pylint")))
 
 
 ;; ================================== OCAML ==================================
