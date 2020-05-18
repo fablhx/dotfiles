@@ -214,7 +214,7 @@ started from a shell."
         (progn
           (skip-chars-backward "-_[:alnum:]")
           (setq $p1 (point))
-          (skip-syntax-forward "-_[:alnum:]")
+          (skip-chars-forward "-_[:alnum:]")
           (setq $p2 (point))
           (goto-char $p2)
           (insert @right-bracket)
