@@ -72,6 +72,8 @@ alias xopen='xdg-open'
 
 alias ocaml='rlwrap -pMagenta ocaml'
 
+alias pretty_py='autopep8 --in-place --aggressive --aggressive'
+
 function __emacs() {
     # This check if I have already run an emacsclient --create-frame,
     # if yes, use the current frame, if no create a new frame.
