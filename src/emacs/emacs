@@ -414,6 +414,7 @@ started from a shell."
 (setq flycheck-python-pylint-executable "pylint3")
 (setq flycheck-python-mypy-cache-dir "/dev/null")
 
+(add-hook 'python-mode-hook 'flycheck-mode)
 
 ;; ================================== OCAML ==================================
 
