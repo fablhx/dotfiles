@@ -3,7 +3,7 @@
 ;; Packages
 (setq package-list '(ag blacken company dumb-jump elpy flycheck
       flycheck-mypy haskell-mode json-mode lua-mode markdown-mode
-      multiple-cursors smartparens web-mode whitespace
+      multiple-cursors phi-search smartparens web-mode whitespace
       xterm-color yaml-mode))
 
 ;; Repository containing the packages
@@ -271,6 +271,11 @@ started from a shell."
 (global-set-key (kbd "C-<") 'mc/mark-previous-like-this)
 (global-set-key (kbd "C-c C-<") 'mc/mark-all-like-this)
 
+;; Isearch replacement that works with multiple cursors
+(require 'phi-search)
+(global-set-key (kbd "C-s") 'phi-search)
+(global-set-key (kbd "C-r") 'phi-search-backward)
+
 ;; Whitespace
 (require 'whitespace)
 (setq whitespace-style '(face trailing empty lines-tail tabs tab-mark))
@@ -278,17 +283,6 @@ started from a shell."
 (setq whitespace-line-column 80)
 (add-hook 'prog-mode-hook 'whitespace-mode)
 ;(global-whitespace-mode 1)
-(custom-set-faces
- '(whitespace-empty ((t (:foreground "firebrick" :background "SlateGray1"))))
- '(whitespace-hspace ((t (:foreground "white" :background "red"))))
- '(whitespace-indentation ((t (:foreground "firebrick" :background "beige"))))
- '(whitespace-line ((t (:foreground "black" :background "red"))))
- '(whitespace-newline ((t (:foreground "orange" :background "blue"))))
- '(whitespace-space ((t (:bold t :foreground "gray75"))))
- '(whitespace-space-after-tab ((t (:foreground "black" :background "green"))))
- '(whitespace-space-before-tab ((t (:foreground "black" :background "DarkOrange"))))
- '(whitespace-tab ((t (:foreground "red"))))
- '(whitespace-trailing ((t (:foreground "red" :background "yellow")))))
 
 ;; Autocomplete
 (add-hook 'after-init-hook 'global-company-mode)
@@ -458,3 +452,32 @@ started from a shell."
 (add-to-list 'auto-mode-alist `(,(expand-file-name "~/config/.*/bashrc\\'") . shell-script-mode))
 (add-to-list 'auto-mode-alist `(,(expand-file-name "~/config/.*/zshrc\\'") . shell-script-mode))
 (add-to-list 'auto-mode-alist `(,(expand-file-name "~/config/.*/tmux\\'") . shell-script-mode))
+
+
+;; ========================== CUSTOM FACES/VARIABLES ==========================
+
+(custom-set-faces
+ ;; custom-set-faces was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ '(whitespace-empty ((t (:foreground "firebrick" :background "SlateGray1"))))
+ '(whitespace-hspace ((t (:foreground "white" :background "red"))))
+ '(whitespace-indentation ((t (:foreground "firebrick" :background "beige"))))
+ '(whitespace-line ((t (:foreground "black" :background "red"))))
+ '(whitespace-newline ((t (:foreground "orange" :background "blue"))))
+ '(whitespace-space ((t (:bold t :foreground "gray75"))))
+ '(whitespace-space-after-tab ((t (:foreground "black" :background "green"))))
+ '(whitespace-space-before-tab ((t (:foreground "black" :background "DarkOrange"))))
+ '(whitespace-tab ((t (:foreground "red"))))
+ '(whitespace-trailing ((t (:foreground "red" :background "yellow")))))
+(custom-set-variables
+ ;; custom-set-variables was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ '(package-selected-packages
+   (quote
+    (phi-search yaml-mode xterm-color web-mode smartparens multiple-cursors
+                markdown-mode lua-mode json-mode haskell-mode
+                flycheck-pycheckers flycheck-mypy elpy dumb-jump blacken ag))))
