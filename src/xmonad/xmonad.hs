@@ -46,6 +46,10 @@ editorCmd = "emacs"
 fileExplorerCmd :: String
 fileExplorerCmd = "nautilus --new-window"
 
+-- Screenshot
+screenshotCmd :: String
+screenshotCmd = "gnome-screenshot -i"
+
 -- Display
 myBorderWidth = 2
 myNormalBorderColor = "#202030"
@@ -143,6 +147,7 @@ myKeys conf = M.fromList $
     , ((winMask              , xK_Return), spawn $ XMonad.terminal conf)
     , ((winMask              , xK_f     ), spawn fileExplorerCmd)
     , ((winMask              , xK_i     ), spawn browserCmd)
+    , ((0                    , xK_Print ), spawn screenshotCmd)
     , ((winMask              , xK_h     ), spawn ("echo \"" ++ help ++ "\" | xmessage -file -"))
     , ((winMask              , xK_m     ), windows W.swapMaster)
     , ((winMask              , xK_q     ), kill)
