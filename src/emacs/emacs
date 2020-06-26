@@ -239,6 +239,14 @@ started from a shell."
         ((string-equal "{{" x) (gen-insert-pair "{{" "}}"))
         (t (gen-insert-pair x x))))
 
+;; Join next line to the end of current line
+(defun join-next-line ()
+  (interactive)
+  (save-excursion
+    (move-end-of-line nil)
+    (kill-line)
+    (just-one-space)))
+
 (defvar my-keys-minor-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "M-<left>") 'windmove-left)
@@ -250,6 +258,8 @@ started from a shell."
     (define-key map (kbd "C-x C-k") 'kill-last-opened-buffer)
 
     (define-key map (kbd "C-c C-q") 'gen-quote-word)
+
+    (define-key map (kbd "C-<delete>") 'join-next-line)
 
     map)
   "my-keys-minor-mode keymap.")
