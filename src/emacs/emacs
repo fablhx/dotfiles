@@ -361,8 +361,8 @@ started from a shell."
     (goto-char start)
     (setq num (or num 1))
     (save-match-data
-      (while (re-search-forward "[0-9]+" end t)
-        (replace-match (number-to-string num))
+      (while (re-search-forward "^\\(-* *\\)\\([0-9]+\\)" end t)
+        (replace-match (concat (match-string 1) (number-to-string num)))
         (setq num (1+ num))))))
 
 ;; Custom vc-annotate to omit the file path
