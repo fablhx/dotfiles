@@ -54,6 +54,7 @@ if [[ $answer =~ ^([yY][eE][sS]|[yY])$ ]]; then
     pushd shellcheck
     cabal install
     popd
+    git clone https://github.com/cyrus-and/gdb-dashboard.git
     popd
 
     wget --output-document=oh-my-zsh-install.sh \

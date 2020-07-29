@@ -20,7 +20,7 @@ build:
 	ln -sf ${HOME}/config/_build/bashrc ${HOME}/.bashrc
 	ln -sf ${HOME}/config/_build/emacs ${HOME}/.emacs
 	if [ ! -L ${HOME}/.emacs.d ]; then ln -s ${HOME}/config/_build/emacs.d ${HOME}/.emacs.d; fi
-	ln -sf ${HOME}/config/_build/gdbinit ${HOME}/.gdbinit
+	ln -sf ${HOME}/work/git/extern/gdb-dashboard/.gdbinit ${HOME}/.gdbinit
 	ln -sf ${HOME}/config/_build/gitconfig ${HOME}/.gitconfig
 	ln -sf ${HOME}/config/_build/gitignore ${HOME}/.gitignore
 	ln -sf ${HOME}/config/_build/tmux ${HOME}/.tmux.conf
