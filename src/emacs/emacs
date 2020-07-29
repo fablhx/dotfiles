@@ -422,6 +422,8 @@ started from a shell."
 
 (add-hook 'c++-mode-hook 'my-cc-style)
 
+(add-to-list 'auto-mode-alist '("\\.ipp\\'" . c++-mode))
+
 
 ;; ================================= PYTHON ==================================
 
