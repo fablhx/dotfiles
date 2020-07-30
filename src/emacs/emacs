@@ -476,6 +476,15 @@ started from a shell."
 (add-to-list 'auto-mode-alist `(,(expand-file-name "~/config/.*/tmux\\'") . shell-script-mode))
 
 
+;; =================================== TIS ====================================
+(add-to-list 'auto-mode-alist '("\\tis.*.config\\'" . json-mode))
+
+(defun my-tis-prepare-mode ()
+  (when (string-match "tis-prepare" buffer-file-name)
+    (python-mode)))
+(add-hook 'find-file-hook #'my-tis-prepare-mode)
+
+
 ;; ========================== CUSTOM FACES/VARIABLES ==========================
 
 (custom-set-faces
