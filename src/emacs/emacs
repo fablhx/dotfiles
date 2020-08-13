@@ -279,7 +279,7 @@ started from a shell."
 (global-set-key (kbd "C-c e l") 'mc/edit-lines)
 (global-set-key (kbd "C->") 'mc/mark-next-like-this)
 (global-set-key (kbd "C-<") 'mc/mark-previous-like-this)
-(global-set-key (kbd "C-c C-<") 'mc/mark-all-like-this)
+(global-set-key (kbd "C-c C->") 'mc/mark-all-like-this)
 
 ;; Isearch replacement that works with multiple cursors
 (require 'phi-search)
