@@ -247,6 +247,18 @@ started from a shell."
     (kill-line)
     (just-one-space)))
 
+;; Insert output of shell command at point
+(defvar my-insert-shell-command-history nil)
+(defun my-insert-shell-command (cmd)
+  (interactive
+   (list
+    (read-string (format "Run command (default %s): "
+                         (or (car my-insert-shell-command-history) ""))
+                 nil 'my-insert-shell-command-history
+                 (car my-insert-shell-command-history)
+                 'inherit-input-method)))
+  (insert (shell-command-to-string cmd)))
+
 (defvar my-keys-minor-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "M-<left>") 'windmove-left)
