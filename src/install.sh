@@ -10,6 +10,7 @@ APT_PKG=(
     docker.io
     emacs
     git
+    gnome-session-xmonad
     google-chrome-stable
     htop
     hunspell
@@ -41,6 +42,8 @@ if [[ $answer =~ ^([yY][eE][sS]|[yY])$ ]]; then
     wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
 
     sudo add-apt-repository ppa:gnome-terminator/nightly-gtk3
+
+    sudo add-apt-repository ppa:gekkio/xmonad
 
     sudo apt update
 
