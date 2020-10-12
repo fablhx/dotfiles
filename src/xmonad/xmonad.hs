@@ -124,8 +124,8 @@ myKeys conf = M.fromList $
         | (i, k) <- zip myWorkspaces workspaceKeys
     ]
     ++
-    [ ((altMask              , xK_Tab), windows W.focusDown)
-    , ((altMask .|. shiftMask, xK_Tab), windows W.focusUp)
+    [ ((altMask              , xK_Tab), windows W.focusUp)
+    , ((altMask .|. shiftMask, xK_Tab), windows W.focusDown)
     ]
     ++
     [ ((altMask .|. shiftMask, xK_Down   ), windows W.swapDown)
