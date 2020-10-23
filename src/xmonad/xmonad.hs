@@ -3,6 +3,7 @@
 import XMonad
 
 import XMonad.Actions.CycleWS
+import XMonad.Actions.GroupNavigation
 import XMonad.Actions.SwapWorkspaces
 
 import XMonad.Config.Gnome
@@ -126,6 +127,7 @@ myKeys conf = M.fromList $
     ++
     [ ((altMask              , xK_Tab), windows W.focusUp)
     , ((altMask .|. shiftMask, xK_Tab), windows W.focusDown)
+    , ((winMask              , xK_Tab), nextMatch History (return True))
     ]
     ++
     [ ((altMask .|. shiftMask, xK_Down   ), windows W.swapDown)
@@ -195,6 +197,7 @@ myConfig =
     , focusedBorderColor = myFocusedBorderColor
     , keys = myKeys
     , mouseBindings = myMouseBindings
+    , logHook = historyHook
     }
 
 -- main
