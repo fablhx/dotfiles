@@ -166,6 +166,8 @@ started from a shell."
   (condition-case nil (next-error)
     (error (next-error 1 t))))
 
+(global-unset-key (kbd "C-z"))
+
 (global-set-key [f1] 'comment-dwim)
 (global-set-key [f2] 'whitespace-mode)
 (global-set-key [f3] 'ag)
