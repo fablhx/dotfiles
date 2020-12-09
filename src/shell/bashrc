@@ -186,9 +186,9 @@ __git_prompt() {
         stashed="${#stashed[@]}"
     fi
 
-    local color_detached="\033[38;5;200m"
-    local color_dirty="\033[38;5;240m"
-    local color_clean="\033[38;5;22m"
+    local color_detached="\[\033[38;5;200m\]"
+    local color_dirty="\[\033[38;5;240m\]"
+    local color_clean="\[\033[38;5;22m\]"
     local color_branch="$color_clean"
     if [[ "$detached" == "yes" ]]
     then
@@ -199,14 +199,14 @@ __git_prompt() {
     then
         color_branch="$color_dirty"
     fi
-    local color_behind="\033[38;5;250m"
-    local color_ahead="\033[38;5;250m"
-    local color_staged="\033[38;5;28m"
-    local color_unmerged="\033[38;5;196m"
-    local color_changed="\033[38;5;166m"
-    local color_untracked="\033[38;5;172m"
-    local color_stashed="\033[38;5;26m"
-    local reset_color="\033[0m"
+    local color_behind="\[\033[38;5;250m\]"
+    local color_ahead="\[\033[38;5;250m\]"
+    local color_staged="\[\033[38;5;28m\]"
+    local color_unmerged="\[\033[38;5;196m\]"
+    local color_changed="\[\033[38;5;166m\]"
+    local color_untracked="\[\033[38;5;172m\]"
+    local color_stashed="\[\033[38;5;26m\]"
+    local reset_color="\[\033[0m\]"
 
     # symbols:
     # ⎇ branch
@@ -251,9 +251,10 @@ __git_prompt() {
 
 __build_prompt() {
     local exit_code="$?"
-    PS1="\033[38;5;135m\u@\h\033[0m \w"
+    PS1="\[\033[38;5;135m\]\u@\h\[\033[0m\] \w"
+    test -z "$TIS_HOME" || PS1+=$' \[\033[00;36m\]{${TIS_HOME##*/}}\[\033[0m\]'
     PS1+="$(__git_prompt) "
-    test "$exit_code" -eq 0 || PS1+="\033[38;5;196m[$exit_code]\033[0m "
+    test "$exit_code" -eq 0 || PS1+="\[\033[38;5;196m\][$exit_code]\[\033[0m\] "
     PS1+="\$ "
 }
 
