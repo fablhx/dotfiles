@@ -81,6 +81,9 @@
 ;; Auto reload
 (global-auto-revert-mode t)
 
+;; Turn off alarms
+(setq ring-bell-function 'ignore)
+
 ;; Show parenthesis
 (require 'paren)
 (show-paren-mode t)
