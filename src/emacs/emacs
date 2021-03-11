@@ -7,7 +7,7 @@
       xterm-color yaml-mode))
 
 ;; Repository containing the packages
-(setq package-archives '(("melpa" . "http://melpa.milkbox.net/packages/")))
+(setq package-archives '(("melpa" . "http://melpa.org/packages/")))
 
 ;; Activate all the packages
 (require 'package)

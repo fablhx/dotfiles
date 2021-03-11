@@ -24,6 +24,7 @@ APT_PKG=(
   openssh-server
   pylint3
   python3-pip
+  ripgrep
   silversearcher-ag
   ssh
   terminator
@@ -44,6 +45,8 @@ if [[ $answer =~ ^([yY][eE][sS]|[yY])$ ]]; then
   sudo add-apt-repository ppa:gnome-terminator/nightly-gtk3
 
   sudo add-apt-repository ppa:gekkio/xmonad
+
+  sudo add-apt-repository ppa:x4121/ripgrep
 
   sudo apt update
 
