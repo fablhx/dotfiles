@@ -401,6 +401,7 @@ started from a shell."
 
 ;; Dumb jump setup
 (dumb-jump-mode t)
+(add-hook 'xref-backend-functions #'dumb-jump-xref-activate)
 ;; Remove all dumb-jump default key bindings
 (define-key dumb-jump-mode-map (kbd "C-M-g") nil)
 (define-key dumb-jump-mode-map (kbd "C-M-p") nil)
@@ -408,6 +409,11 @@ started from a shell."
 ;; Add my own
 (define-key dumb-jump-mode-map (kbd "C-c C-l") 'dumb-jump-go-other-window)
 (define-key dumb-jump-mode-map (kbd "C-c C-b") 'dumb-jump-back)
+;; Speed up in C: I just want functions
+(defun my-dumb-jump-c-mode-hook ()
+  (setq dumb-jump-force-searcher 'ag)
+  (setq dumb-jump-functions-only t))
+(add-hook 'c-mode-hook 'my-dumb-jump-c-mode-hook)
 ;; Do not consider Makefile as possible project-denoters
 (setq dumb-jump-project-denoters '(".dumbjump" ".projectile" ".git" ".hg"
                                    ".fslckout" ".bzr" "_darcs" ".svn"
