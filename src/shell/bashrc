@@ -29,11 +29,11 @@ alias tree='tree -C'
 
 alias xclip='xclip -selection clipboard'
 
-alias l='ls -lh'
-alias ll='ls -lh'
-alias lll='ls -lha'
-alias la='ls -lhd .?*'
-alias lt='ls -lht'
+alias l='ls -lhv'
+alias ll='ls -lhv'
+alias lll='ls -lhva'
+alias la='ls -lhvd .?*'
+alias lt='ls -lhvt'
 
 alias rm='rm -i'
 

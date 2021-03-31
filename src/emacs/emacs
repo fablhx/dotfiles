@@ -1,10 +1,10 @@
 ;; =========================== Automatic packages ============================
 
 ;; Packages
-(setq package-list '(ag blacken company dumb-jump elpy flycheck
-      flycheck-mypy haskell-mode json-mode lua-mode markdown-mode
-      multiple-cursors phi-search smartparens web-mode whitespace
-      xterm-color yaml-mode))
+(setq package-list '(ag blacken clang-format company dumb-jump
+      elpy flycheck flycheck-mypy haskell-mode json-mode lua-mode
+      markdown-mode multiple-cursors phi-search smartparens
+      web-mode whitespace xterm-color yaml-mode))
 
 ;; Repository containing the packages
 (setq package-archives '(("melpa" . "http://melpa.org/packages/")))
@@ -428,25 +428,14 @@ started from a shell."
 
 ;; ================================== C/C++ ==================================
 
-(setq-default c-default-style "linux")
-(setq-default c-basic-offset 4)
-
-(require 'cc-mode)
-
-(defun my-cc-style()
-  (c-set-style "linux")
-  (c-set-offset 'innamespace '0)
-  (c-set-offset 'inextern-lang '0)
-  (c-set-offset 'inline-open '0)
-  (c-set-offset 'label '*)
-  (c-set-offset 'case-label '*)
-  (c-set-offset 'access-label '/)
-  (setq c-basic-offset 4))
-
-(add-hook 'c++-mode-hook 'my-cc-style)
-
 (add-to-list 'auto-mode-alist '("\\.ipp\\'" . c++-mode))
 
+; Generated with:
+; clang-format -style="{BasedOnStyle: GNU, IndentWidth: 4, SpaceBeforeParens: ControlStatementsExceptForEachMacros}" -dump-config > ~/.clang-format
+
+(require 'clang-format)
+(setq clang-format-style (expand-file-name "~/.clang-format"))
+;(global-set-key [C-M-tab] 'clang-format-region)
 
 ;; ================================= PYTHON ==================================
 
@@ -532,6 +521,7 @@ started from a shell."
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
    (quote
-    (phi-search yaml-mode xterm-color web-mode smartparens multiple-cursors
-                markdown-mode lua-mode json-mode haskell-mode
-                flycheck-pycheckers flycheck-mypy elpy dumb-jump blacken ag))))
+    (clang-format phi-search yaml-mode xterm-color web-mode
+     smartparens multiple-cursors markdown-mode lua-mode
+     json-mode haskell-mode flycheck-pycheckers flycheck-mypy
+     elpy dumb-jump blacken ag))))
