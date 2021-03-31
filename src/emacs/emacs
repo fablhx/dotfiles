@@ -434,8 +434,14 @@ started from a shell."
 ; clang-format -style="{BasedOnStyle: GNU, IndentWidth: 4, SpaceBeforeParens: ControlStatementsExceptForEachMacros}" -dump-config > ~/.clang-format
 
 (require 'clang-format)
+
 (setq clang-format-style (expand-file-name "~/.clang-format"))
-;(global-set-key [C-M-tab] 'clang-format-region)
+
+(defun my-cc-clang-format-keys ()
+  (local-set-key (kbd "C-M-\\") 'clang-format-region))
+
+(add-hook 'c++-mode-hook 'my-cc-clang-format-keys)
+(add-hook 'c-mode-hook 'my-cc-clang-format-keys)
 
 ;; ================================= PYTHON ==================================
 
