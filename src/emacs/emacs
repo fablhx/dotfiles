@@ -430,9 +430,6 @@ started from a shell."
 
 (add-to-list 'auto-mode-alist '("\\.ipp\\'" . c++-mode))
 
-; Generated with:
-; clang-format -style="{BasedOnStyle: GNU, IndentWidth: 4, SpaceBeforeParens: ControlStatementsExceptForEachMacros}" -dump-config > ~/.clang-format
-
 (require 'clang-format)
 
 (setq clang-format-style (expand-file-name "~/.clang-format"))
