@@ -20,7 +20,7 @@ export ALTERNATE_EDITOR=""
 export EDITOR='emacs';
 export LESS="-RFX"
 
-alias ls='ls --color=auto'
+alias ls='ls --color=auto -v'
 alias grep='grep --color=auto'
 alias fgrep='fgrep --color=auto'
 alias egrep='egrep --color=auto'
@@ -29,11 +29,11 @@ alias tree='tree -C'
 
 alias xclip='xclip -selection clipboard'
 
-alias l='ls -lhv'
-alias ll='ls -lhv'
-alias lll='ls -lhva'
-alias la='ls -lhvd .?*'
-alias lt='ls -lhvt'
+alias l='ls -lh'
+alias ll='ls -lh'
+alias lll='ls -lha'
+alias la='ls -lhd .?*'
+alias lt='ls -lht'
 
 alias rm='rm -i'
 
