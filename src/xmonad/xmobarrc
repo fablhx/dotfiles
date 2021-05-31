@@ -3,8 +3,8 @@ Config
    , additionalFonts = []
    , borderColor = "white"
    , border = NoBorder
-   , bgColor = "#4a4842"
-   , fgColor = "white"
+   , bgColor = "#f7f7f7"
+   , fgColor = "black"
    , alpha = 255
    , position = Static { xpos = 190, ypos = 3, width = 200, height = 23 }
    , textOffset = -1

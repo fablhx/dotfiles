@@ -172,7 +172,8 @@ myBar = "xmobar"
 
 -- Custom stdin pretty-printer for xmobar.
 myPP = xmobarPP
-  { ppLayout = const ""
+  { ppCurrent = xmobarColor "#5d00ff" "" . wrap "[" "]"
+  , ppLayout = const ""
   , ppSort = getSortByIndex
   , ppTitle = const ""
   , ppTitleSanitize = const ""
