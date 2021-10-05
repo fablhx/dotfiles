@@ -1,7 +1,9 @@
 # First Installation
 
 ```bash
-wget https://raw.githubusercontent.com/fablhx/dotfiles/master/src/install.sh && bash install.sh
+wget https://raw.githubusercontent.com/fablhx/dotfiles/master/src/install.sh
+chmod +x install.sh
+./install.sh
 ```
 
 # Build
