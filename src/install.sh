@@ -46,8 +46,6 @@ if [[ $answer =~ ^([yY][eE][sS]|[yY])$ ]]; then
 
   sudo add-apt-repository ppa:gekkio/xmonad
 
-  sudo add-apt-repository ppa:x4121/ripgrep
-
   sudo apt update
 
   sudo apt install "${APT_PKG[@]}"
@@ -88,7 +86,7 @@ xmonad/xmonad.state
 xmonad/xmonad-x86_64-linux
 EOF
   cd "${HOME}"
-  source "${HOME}/.zshrc"
+  #source "${HOME}/.zshrc"
 
   #TODO
   # create the files to run xmonad:
