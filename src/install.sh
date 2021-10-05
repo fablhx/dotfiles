@@ -3,7 +3,7 @@
 set -Eeuo pipefail
 
 APT_PKG=(
-  afl
+  afl++ # ubuntu 20.04
   bear
   cabal-install
   cloc
