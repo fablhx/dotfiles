@@ -252,7 +252,7 @@ __git_prompt() {
 __build_prompt() {
     local exit_code="$?"
     PS1="\[\033[38;5;135m\]\u@\h\[\033[0m\] \w"
-    test -z "$TIS_HOME" || PS1+=$' \[\033[00;36m\]{${TIS_HOME##*/}}\[\033[0m\]'
+    test -z "$TIS_CHOOSE" || PS1+=$' \[\033[00;36m\]{${TIS_CHOOSE##*/}}\[\033[0m\]'
     PS1+="$(__git_prompt) "
     test "$exit_code" -eq 0 || PS1+="\[\033[38;5;196m\][$exit_code]\[\033[0m\] "
     PS1+="\$ "
