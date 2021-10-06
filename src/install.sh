@@ -88,6 +88,9 @@ EOF
   cd "${HOME}"
   #source "${HOME}/.zshrc"
 
+  mkdir -p "${HOME}/.config/terminator"
+  cp "${HOME}/config/src/config/terminator/config" "${HOME}/.config/terminator/"
+
   #TODO
   # create the files to run xmonad:
   #/usr/share/applications/xmonad.desktop
