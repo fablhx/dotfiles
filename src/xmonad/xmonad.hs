@@ -5,7 +5,7 @@ import XMonad
 import XMonad.Actions.CycleWS
 import XMonad.Actions.SwapWorkspaces
 
-import XMonad.Config.Gnome
+import XMonad.Config.Mate
 
 import XMonad.Hooks.DynamicLog
 import XMonad.Hooks.ManageDocks
@@ -23,7 +23,7 @@ import qualified Data.Map as M
 import qualified XMonad.StackSet as W
 
 -- Default config
-myBaseConfig = gnomeConfig
+myBaseConfig = mateConfig
 
 -- Mod key. Mod4 is the Super / Windows key
 winMask = mod4Mask
@@ -48,7 +48,7 @@ fileExplorerCmd = "nautilus --new-window"
 
 -- Screenshot
 screenshotCmd :: String
-screenshotCmd = "gnome-screenshot -i"
+screenshotCmd = "mate-screenshot -i"
 
 -- Display
 myBorderWidth = 2
@@ -151,9 +151,9 @@ myKeys conf = M.fromList $
     , ((winMask              , xK_h     ), spawn ("echo \"" ++ help ++ "\" | xmessage -file -"))
     , ((winMask              , xK_m     ), windows W.swapMaster)
     , ((winMask              , xK_q     ), kill)
-    , ((winMask              , xK_r     ), gnomeRun)
+    , ((winMask              , xK_r     ), mateRun)
     , ((winMask .|. shiftMask, xK_i     ), spawn browserCmdIncognito)
-    , ((winMask .|. shiftMask, xK_q     ), spawn "gnome-session-quit --power-off")
+    , ((winMask .|. shiftMask, xK_q     ), spawn "mate-session-quit --power-off")
     , ((winMask              , xK_x     ), broadcastMessage ReleaseResources >> restart "xmonad" True)
     ]
     where workspaceKeys = [xK_F1 .. xK_F10]
@@ -166,22 +166,6 @@ myMouseBindings (XConfig {XMonad.modMask = modMask}) = M.fromList $
     , ((altMask, button4), (const $ windows W.swapUp))
     , ((altMask, button5), (const $ windows W.swapDown))
     ]
-
--- Command to launch the bar.
-myBar = "xmobar"
-
--- Custom stdin pretty-printer for xmobar.
-myPP = xmobarPP
-  { ppCurrent = xmobarColor "#5d00ff" "" . wrap "[" "]"
-  , ppLayout = const ""
-  , ppSort = getSortByIndex
-  , ppTitle = const ""
-  , ppTitleSanitize = const ""
-  , ppVisible = wrap "(" ")"
-  }
-
--- Key binding to toggle the gap for the bar.
-toggleStrutsKey XConfig {XMonad.modMask = modMask} = (modMask, xK_b)
 
 -- Main configuration
 myConfig =
@@ -199,7 +183,7 @@ myConfig =
     }
 
 -- main
-main = xmonad =<< statusBar myBar myPP toggleStrutsKey myConfig
+main = xmonad $ myConfig
 
 -- help
 help :: String
@@ -245,8 +229,8 @@ help = unlines
   , "-- Win+I                       Start a browser"
   , "-- Win+M                       Move window to master area"
   , "-- Win+Q                       Close window"
-  , "-- Win+R                       Open the Gnome run dialog"
+  , "-- Win+R                       Open the Mate run dialog"
   , "-- Win+Shift+I                 Start a browser incognito"
-  , "-- Win+Shift+Q                 Display Gnome shutdown dialog"
+  , "-- Win+Shift+Q                 Display Mate shutdown dialog"
   , "-- Win+X                       Restart XMonad"
   ]

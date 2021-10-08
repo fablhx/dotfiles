@@ -91,6 +91,12 @@ EOF
   mkdir -p "${HOME}/.config/terminator"
   cp "${HOME}/config/src/config/terminator/config" "${HOME}/.config/terminator/"
 
+  gsettings set org.mate.session.required-components windowmanager xmonad
+  gsettings set org.mate.session required-components-list "['windowmanager', 'panel']"
+  gsettings set org.mate.mate-menu hot-key ''
+  gsettings set com.solus-project.brisk-menu hot-key ''
+
+
   #TODO
   # create the files to run xmonad:
   #/usr/share/applications/xmonad.desktop
