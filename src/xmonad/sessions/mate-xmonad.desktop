@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=MATE + XMonad
+Comment=Lightweight tiling window manager
+Exec=mate-session
+TryExec=mate-session
+Icon=xmonad.png
+Type=XSession

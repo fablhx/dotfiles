@@ -44,7 +44,7 @@ editorCmd = "emacs"
 
 -- File explorer to launch
 fileExplorerCmd :: String
-fileExplorerCmd = "nautilus --new-window"
+fileExplorerCmd = "caja --new-window"
 
 -- Screenshot
 screenshotCmd :: String
@@ -61,9 +61,7 @@ myWorkspaces = ["1", "2", "3", "4", "5", "6", "7"]
 -- Hooks
 myManageHook =
   (composeAll . concat $
-    [ [ manageHook myBaseConfig ]
-    , [ className =? c --> doShift "7" | c  <- ["Slack"] ]
-    ])
+    [ [ manageHook myBaseConfig ] ])
 
 -- Layouts
 basicLayout = ResizableTall nmaster delta ratio [] where
@@ -153,7 +151,7 @@ myKeys conf = M.fromList $
     , ((winMask              , xK_q     ), kill)
     , ((winMask              , xK_r     ), mateRun)
     , ((winMask .|. shiftMask, xK_i     ), spawn browserCmdIncognito)
-    , ((winMask .|. shiftMask, xK_q     ), spawn "mate-session-quit --power-off")
+    , ((winMask .|. shiftMask, xK_q     ), spawn "mate-session-save --shutdown-dialog")
     , ((winMask              , xK_x     ), broadcastMessage ReleaseResources >> restart "xmonad" True)
     ]
     where workspaceKeys = [xK_F1 .. xK_F10]
