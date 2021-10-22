@@ -22,6 +22,7 @@ APT_PKG=(
   nginx
   openssh-client
   openssh-server
+  parallel
   pylint3
   python3-pip
   ripgrep
@@ -31,7 +32,6 @@ APT_PKG=(
   tmux
   tree
   xclip
-  xmobar
   xmonad
   zsh
 )

@@ -7,6 +7,7 @@ build: SHELL := /bin/bash
 build:
 	mkdir -p ${HOME}/config/_build
 	mkdir -p ${HOME}/config/_build/emacs.d
+	mkdir -p ${HOME}/config/_build/xmonad
 	cp ${HOME}/config/src/emacs/emacs ${HOME}/config/_build
 	cp ${HOME}/config/src/git/gitconfig ${HOME}/config/_build
 	cp ${HOME}/config/src/git/gitignore ${HOME}/config/_build
@@ -15,7 +16,8 @@ build:
 	cp ${HOME}/config/src/tmux/tmux ${HOME}/config/_build
 	cp ${HOME}/config/src/valgrind/valgrindrc ${HOME}/config/_build
 	cp -R ${HOME}/config/src/valgrind/valgrind ${HOME}/config/_build
-	cp -R ${HOME}/config/src/xmonad ${HOME}/config/_build
+	cp ${HOME}/config/src/xmonad/xmonad.hs ${HOME}/config/_build/xmonad
+	ln -sf ${HOME}/config/src/clang-format/clang-format ${HOME}/.clang-format
 	ln -sf ${HOME}/config/_build/bashrc ${HOME}/.bashrc
 	ln -sf ${HOME}/config/_build/emacs ${HOME}/.emacs
 	if [ ! -L ${HOME}/.emacs.d ]; then ln -s ${HOME}/config/_build/emacs.d ${HOME}/.emacs.d; fi
