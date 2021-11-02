@@ -44,7 +44,7 @@ editorCmd = "emacs"
 
 -- File explorer to launch
 fileExplorerCmd :: String
-fileExplorerCmd = "caja --new-window"
+fileExplorerCmd = "caja ~"
 
 -- Screenshot
 screenshotCmd :: String
