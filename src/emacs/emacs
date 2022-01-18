@@ -288,6 +288,12 @@ started from a shell."
 
 (my-keys-minor-mode t)
 
+;; Sorting lines ignoring case
+(defun sort-ilines ()
+  (interactive)
+  (let ((sort-fold-case t))
+    (call-interactively 'sort-lines)))
+
 
 ;; =============================== Development ===============================
 
