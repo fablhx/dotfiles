@@ -464,6 +464,49 @@ started from a shell."
 (add-hook 'c++-mode-hook 'my-cc-clang-format-keys)
 (add-hook 'c-mode-hook 'my-cc-clang-format-keys)
 
+;; Basic ACSL mode
+
+(defconst acsl-keywords
+  '("assert" "assigns" "ensures" "slevel" "requires")
+  "List of ACSL keywords to highlight.")
+
+(defun acsl-comment ()
+  "If we are in a C comment beginning with @."
+  (and (nth 4 (syntax-ppss))
+       (eq (char-after (+ (nth 8 (syntax-ppss)) 2)) ?@)))
+
+(defvar acsl-font-lock-keywords
+  (let ((pre-match-form (lambda ()
+                          (goto-char (match-beginning 0))
+                          (match-end 0)))
+        (find-annot (lambda (limit)
+                      ;; skip comments
+                      (if (and (looking-at "//") (acsl-comment))
+                          (re-search-forward "\n" limit 'e))
+                      (while (and (not (acsl-comment)) (< (point) limit))
+                        (re-search-forward "/[*/]" limit 'e))
+                      (if (>= (point) limit)
+                          nil
+                        (let ((b (save-excursion
+                                   (re-search-backward "/[*/]" (- (point) 2) t)
+                                   (point))))
+                          (re-search-forward "[*/]/\\|\n" limit 'e)
+                          (re-search-backward "//" (- (point) 2) t) ; don't recolor comments
+                          (set-match-data (list b (point) (nth 2 (match-data t))))
+                          t)))))
+    (list
+     `(,find-annot
+       (0 'font-lock-doc-face t)
+       (,(concat (regexp-opt acsl-keywords 'words) "") (,pre-match-form) nil
+        (0 '(font-lock-doc-face :inherit bold) t))
+       )))
+  "Default highlighting for ACSL mode")
+
+(add-hook 'c-mode-hook
+          (lambda ()
+            (font-lock-add-keywords nil acsl-font-lock-keywords)))
+
+
 ;; ================================= PYTHON ==================================
 
 (setq flycheck-python-pylint-executable "pylint3")
@@ -513,6 +556,7 @@ started from a shell."
 (add-to-list 'auto-mode-alist `(,(expand-file-name "~/config/.*/bashrc\\'") . shell-script-mode))
 (add-to-list 'auto-mode-alist `(,(expand-file-name "~/config/.*/zshrc\\'") . shell-script-mode))
 (add-to-list 'auto-mode-alist `(,(expand-file-name "~/config/.*/tmux\\'") . shell-script-mode))
+(add-to-list 'auto-mode-alist '("\\.tsx\\'" . typescript-mode))
 
 
 ;; =================================== TIS ====================================
