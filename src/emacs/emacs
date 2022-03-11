@@ -502,9 +502,11 @@ started from a shell."
        )))
   "Default highlighting for ACSL mode")
 
-(add-hook 'c-mode-hook
-          (lambda ()
-            (font-lock-add-keywords nil acsl-font-lock-keywords)))
+(defun my-acsl-mode ()
+  (font-lock-add-keywords nil acsl-font-lock-keywords))
+
+(add-hook 'c++-mode-hook 'my-acsl-mode)
+(add-hook 'c-mode-hook 'my-acsl-mode)
 
 
 ;; ================================= PYTHON ==================================
