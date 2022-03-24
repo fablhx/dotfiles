@@ -413,8 +413,8 @@ started from a shell."
 (define-key dumb-jump-mode-map (kbd "C-M-p") nil)
 (define-key dumb-jump-mode-map (kbd "C-M-q") nil)
 ;; Add my own
-(define-key dumb-jump-mode-map (kbd "C-c C-l") 'dumb-jump-go-other-window)
-(define-key dumb-jump-mode-map (kbd "C-c C-b") 'dumb-jump-back)
+(define-key dumb-jump-mode-map (kbd "C-c C-l") 'xref-find-definitions)
+(define-key dumb-jump-mode-map (kbd "C-c C-b") 'xref-pop-marker-stack)
 ;; Speed up in C: I just want functions
 (defun my-dumb-jump-c-mode-hook ()
   (setq dumb-jump-force-searcher 'ag)
