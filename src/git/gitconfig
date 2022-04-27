@@ -24,6 +24,7 @@
 	cshow = show --color-words=.
 	oops = commit --amend --no-edit
 	sync = fetch origin --prune --force 'refs/pull-requests/*:refs/pr/*'
+	hardclean = !git clean -xfd && git submodule foreach --recursive git clean -xfd && git reset --hard && git submodule foreach --recursive git reset --hard && git submodule update --init --recursive && :
 [format]
 	# Format used for the log
 	pretty = %Cred%h%Creset -%C(auto)%d%Creset %s %Cgreen(%cr, %cd) %C(bold blue)<%an>%Creset
