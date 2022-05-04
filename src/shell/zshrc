@@ -95,11 +95,20 @@ alias stop_emacs='emacsclient -e "(kill-emacs)"'
 
 __git_prompt() {
     local git_status
-    git_status=("${(f)$(LANG=en_US git -C "$PWD" status --branch --porcelain 2>/dev/null)}")
+    git_status=("${(f)$(LANG=en_US timeout 0.2s git -C "$PWD" symbolic-ref --short -q HEAD 2>/dev/null)}")
 
+    # Workaround too large repo. WIP
     if [[ -z "${git_status[1]}" ]]
     then
-        return
+        git_status=("${(f)$(LANG=en_US git -C "$PWD" symbolic-ref --short -q HEAD 2>/dev/null)}")
+        if [[ -z "${git_status[1]}" ]]
+        then
+            return
+        else
+            # Just display the branch name
+            echo " ⎇  ${git_status[1]}"
+            return
+        fi
     fi
 
     local branch detached behind ahead
