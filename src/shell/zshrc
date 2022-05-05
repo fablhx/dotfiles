@@ -105,7 +105,7 @@ __git_prompt() {
         if [[ -z "${git_status[1]}" ]]
         then
             # Just display the branch name
-            echo " ⎇  ${fast_status[1]}"
+            echo " %{\033[38;5;3m%}⎇  ${fast_status[1]}%{\033[0m%}"
             return
         fi
     fi
