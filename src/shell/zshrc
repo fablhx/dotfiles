@@ -79,6 +79,10 @@ alias ocaml='rlwrap -pMagenta ocaml'
 alias pretty_py='autopep8 --in-place --aggressive --aggressive'
 
 function __emacs() {
+    # TODO
+    #     if [[ "$#" -eq 1 && "$1" =~ "(.*):([0-9]+)$" ]]; then
+    #       emacsclient -c -n "+${match[2]}" "${match[1]}"
+
     # This check if I have already run an emacsclient --create-frame,
     # if yes, use the current frame, if no create a new frame.
     if emacsclient -n -e "(if (> (length (frame-list)) 1) 't)" | grep -q t;
