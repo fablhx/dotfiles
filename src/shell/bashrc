@@ -41,18 +41,42 @@ alias xopen='xdg-open'
 
 alias ocaml='rlwrap -pMagenta ocaml'
 
-function __emacs() {
+function __emacs_client() {
+    split_file_line=()
+    for p in "$@"; do
+        if [[ "$p" =~ "(.*):([0-9]+)$" ]]; then
+            split_file_line+="+${BASH_REMATCH[2]}"
+            split_file_line+="${BASH_REMATCH[1]}"
+        else
+            split_file_line+="$p"
+        fi
+    done
     # This check if I have already run an emacsclient --create-frame,
     # if yes, use the current frame, if no create a new frame.
     if emacsclient -n -e "(if (> (length (frame-list)) 1) 't)" | grep -q t;
     then
-        emacsclient -n "$@"
+        emacsclient -n "${split_file_line[@]}"
     else
-        emacsclient -c -n "$@"
+        emacsclient -c -n "${split_file_line[@]}"
     fi
 }
+
+function __emacs() {
+    split_file_line=()
+    for p in "$@"; do
+        if [[ "$p" =~ "(.*):([0-9]+)$" ]]; then
+            split_file_line+="+${BASH_REMATCH[2]}"
+            split_file_line+="${BASH_REMATCH[1]}"
+        else
+            split_file_line+="$p"
+        fi
+    done
+    emacs "${split_file_line[@]}"
+}
+
 alias cedit='emacsclient -c -nw'
-alias wedit='__emacs'
+alias wedit='__emacs_client'
+alias emacs='__emacs'
 alias start_emacs='emacs --daemon'
 alias stop_emacs='emacsclient -e "(kill-emacs)"'
 
