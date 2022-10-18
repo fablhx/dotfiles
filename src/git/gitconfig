@@ -23,8 +23,10 @@
 	cdiff = diff --color-words=.
 	cshow = show --color-words=.
 	oops = commit --amend --no-edit
+	subdate = submodule update --init --recursive --remote
 	sync = fetch origin --prune --force 'refs/pull-requests/*:refs/pr/*'
 	hardclean = !git clean -xfd && git submodule foreach --recursive git clean -xfd && git reset --hard && git submodule foreach --recursive git reset --hard && git submodule update --init --recursive && :
+	rl = !git for-each-ref --sort=committerdate refs/heads/ --format='%(HEAD) %(color:red)%(objectname:short)%(color:reset) - %(color:yellow)(%(refname:short))%(color:reset) %(contents:subject) %(color:green)(%(committerdate:relative))%(color:reset) %(color:bold blue)<%(authorname)>%(color:reset)'
 [format]
 	# Format used for the log
 	pretty = %Cred%h%Creset -%C(auto)%d%Creset %s %Cgreen(%cr, %cd) %C(bold blue)<%an>%Creset
