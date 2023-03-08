@@ -546,6 +546,15 @@ started from a shell."
 (add-to-list 'auto-mode-alist '("\\.md\\'" . markdown-mode))
 
 
+;; ================================== JSON ===================================
+
+(defun my-pp-json ()
+  (local-set-key (kbd "C-M-\\") 'json-reformat-region))
+
+(add-hook 'json-mode-hook 'my-pp-json)
+
+
+
 ;; ========================== Various convinent mode ===========================
 
 (add-to-list 'auto-mode-alist '("Makefile.inc\\'" . makefile-mode))
@@ -559,7 +568,6 @@ started from a shell."
 
 
 ;; =================================== TIS ====================================
-(add-to-list 'auto-mode-alist '("\\tis.*.config\\'" . json-mode))
 
 (defun my-tis-prepare-mode ()
   (when (string-match "tis-prepare" buffer-file-name)
