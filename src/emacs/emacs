@@ -294,6 +294,8 @@ started from a shell."
   (let ((sort-fold-case t))
     (call-interactively 'sort-lines)))
 
+(global-set-key (kbd "C-c C-s") 'sort-ilines)
+
 
 ;; =============================== Development ===============================
 
@@ -552,7 +554,6 @@ started from a shell."
   (local-set-key (kbd "C-M-\\") 'json-reformat-region))
 
 (add-hook 'json-mode-hook 'my-pp-json)
-
 
 
 ;; ========================== Various convinent mode ===========================
