@@ -264,6 +264,13 @@ started from a shell."
                  'inherit-input-method)))
   (insert (shell-command-to-string cmd)))
 
+;; Sorting lines ignoring case
+(defun sort-ilines ()
+  (interactive)
+  (defvar sort-fold-case)
+  (let ((sort-fold-case t))
+    (call-interactively 'sort-lines)))
+
 (defvar my-keys-minor-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "M-<left>") 'windmove-left)
@@ -278,6 +285,8 @@ started from a shell."
 
     (define-key map (kbd "C-<delete>") 'join-next-line)
 
+    (define-key map (kbd "C-c C-s") 'sort-ilines)
+
     map)
   "my-keys-minor-mode keymap.")
 
@@ -287,14 +296,6 @@ started from a shell."
   :lighter " my-keys")
 
 (my-keys-minor-mode t)
-
-;; Sorting lines ignoring case
-(defun sort-ilines ()
-  (interactive)
-  (let ((sort-fold-case t))
-    (call-interactively 'sort-lines)))
-
-(global-set-key (kbd "C-c C-s") 'sort-ilines)
 
 
 ;; =============================== Development ===============================
