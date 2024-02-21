@@ -601,7 +601,8 @@ started from a shell."
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
    (quote
-    (clang-format phi-search yaml-mode xterm-color web-mode
-     smartparens multiple-cursors markdown-mode lua-mode
-     json-mode haskell-mode flycheck-pycheckers flycheck-mypy
-     elpy dumb-jump blacken ag))))
+    (ag blacken clang-format dumb-jump elpy flycheck-mypy
+     flycheck-pycheckers haskell-mode highlight json-mode
+     lua-mode markdown-mode multiple-cursors phi-search rust-mode
+     smartparens typescript-mode web-mode xterm-color
+     yaml-mode))))
