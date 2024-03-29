@@ -470,7 +470,7 @@ started from a shell."
 ;; Basic ACSL mode
 
 (defconst acsl-keywords
-  '("assert" "assigns" "ensures" "slevel" "requires")
+  '("assert" "assigns" "ensures" "slevel" "slevel_merge" "requires")
   "List of ACSL keywords to highlight.")
 
 (defun acsl-comment ()
