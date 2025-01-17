@@ -30,7 +30,7 @@ winMask = mod4Mask
 altMask = mod1Mask
 
 -- Default terminal
-myTerminal = "terminator"
+myTerminal = "warp-terminal"
 
 -- Browser to launch
 browserCmd :: String

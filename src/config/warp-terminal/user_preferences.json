@@ -1,0 +1,27 @@
+{
+  "prefs": {
+    "Shortcuts": "false",
+    "ExperimentId": "7b5e89fa-de8a-46dc-a75c-6c27138e456f",
+    "ReceivedReferralTheme": "\"Inactive\"",
+    "EmacsBindingsBannerState": "\"Dismissed\"",
+    "AgentModeOnboardingBlockShown": "true",
+    "InputMode": "\"Waterfall\"",
+    "CrashReportingEnabled": "false",
+    "AIAssistantRequestLimitInfo": "{\"limit\":100,\"num_requests_used_since_refresh\":0,\"next_refresh_time\":\"2024-09-08T06:22:43.827811Z\",\"is_unlimited\":false}",
+    "SystemTheme": "false",
+    "ChangelogVersions": "{\"v0.2024.02.20.08.01.stable_01\":true,\"v0.2024.02.20.08.01.stable_02\":true,\"v0.2024.02.27.08.01.stable_03\":true,\"v0.2024.03.05.08.02.stable_00\":true,\"v0.2024.03.05.08.02.stable_01\":true,\"v0.2024.03.12.08.02.stable_01\":true,\"v0.2024.03.12.08.02.stable_02\":true,\"v0.2024.03.19.08.01.stable_01\":true,\"v0.2024.03.26.08.02.stable_02\":true,\"v0.2024.04.02.08.02.stable_01\":true,\"v0.2024.04.09.08.01.stable_01\":true,\"v0.2024.04.16.08.02.stable_00\":true,\"v0.2024.04.16.08.02.stable_01\":true,\"v0.2024.04.16.08.02.stable_03\":true,\"v0.2024.04.23.08.01.stable_03\":true,\"v0.2024.04.30.08.02.stable_02\":true,\"v0.2024.05.07.08.02.stable_02\":true,\"v0.2024.05.14.08.01.stable_04\":true,\"v0.2024.05.21.16.09.stable_01\":true,\"v0.2024.05.21.16.09.stable_02\":true,\"v0.2024.05.28.08.02.stable_00\":true,\"v0.2024.06.04.08.02.stable_02\":true,\"v0.2024.06.04.08.02.stable_04\":true,\"v0.2024.06.11.08.02.stable_02\":true,\"v0.2024.06.11.08.02.stable_03\":true,\"v0.2024.06.18.08.02.stable_03\":true,\"v0.2024.06.25.08.02.stable_01\":true,\"v0.2024.07.09.08.01.stable_00\":true,\"v0.2024.07.16.08.02.stable_02\":true,\"v0.2024.07.16.08.02.stable_03\":true,\"v0.2024.07.23.08.02.stable_01\":true,\"v0.2024.07.30.08.02.stable_01\":true,\"v0.2024.08.06.08.01.stable_00\":true,\"v0.2024.08.13.08.02.stable_03\":true,\"v0.2024.08.13.08.02.stable_04\":true,\"v0.2024.08.20.08.02.stable_00\":true,\"v0.2024.08.27.08.02.stable_02\":true,\"v0.2024.09.03.08.02.stable_03\":true,\"v0.2024.09.10.08.02.stable_01\":true,\"v0.2024.09.17.08.02.stable_01\":true,\"v0.2024.09.24.08.02.stable_01\":true,\"v0.2024.10.08.08.02.stable_01\":true,\"v0.2024.10.08.08.02.stable_02\":true,\"v0.2024.10.15.08.02.stable_03\":true,\"v0.2024.10.15.08.02.stable_04\":true,\"v0.2024.10.23.14.49.stable_00\":true,\"v0.2024.10.29.08.02.stable_02\":true,\"v0.2024.11.05.08.02.stable_02\":true,\"v0.2024.11.12.08.02.stable_02\":true,\"v0.2024.11.19.08.02.stable_01\":true,\"v0.2024.11.19.08.02.stable_03\":true}",
+    "HasAutoOpenedWelcomeFolder": "true",
+    "Theme": "\"SolarizedDark\"",
+    "TelemetryEnabled": "false",
+    "Notifications": "{\"mode\":\"Enabled\",\"is_long_running_enabled\":true,\"long_running_threshold\":{\"secs\":30,\"nanos\":0},\"is_password_prompt_enabled\":true}",
+    "FontSize": "15.0",
+    "AutosuggestionAcceptedCount": "2",
+    "AltScreenPadding": "{\"Custom\":{\"uniform_padding\":0.0}}",
+    "WelcomeTipsFeaturesUsed": "[{\"Hint\":\"BlockAction\"},{\"Hint\":\"BlockSelect\"},{\"Action\":\"ThemePicker\"},{\"Action\":\"CommandPalette\"},{\"Action\":\"SplitPane\"},{\"Hint\":\"CreateBlock\"},{\"Action\":\"SaveNewLaunchConfig\"},{\"Action\":\"CommandSearch\"}]",
+    "AIRequestLimitInfo": "{\"limit\":100,\"num_requests_used_since_refresh\":0,\"next_refresh_time\":\"2024-12-07T09:36:39.017484Z\",\"is_unlimited\":false}",
+    "LaunchNotebookShown": "true",
+    "HonorPS1": "true",
+    "AliasExpansionBannerSeen": "true",
+    "SameLinePromptBlockState": "\"Shown\""
+  }
+}
