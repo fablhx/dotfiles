@@ -1,201 +1,31 @@
-;; =========================== Automatic packages ============================
+;; =============================================================================
+;;                             Package Management
+;; =============================================================================
 
-;; Packages
-(setq package-list '(ag blacken clang-format company dumb-jump
-      elpy flycheck flycheck-mypy haskell-mode json-mode lua-mode
-      markdown-mode multiple-cursors phi-search smartparens
-      web-mode whitespace xterm-color yaml-mode))
-
-;; Repository containing the packages
-(setq package-archives '(("melpa" . "http://melpa.org/packages/")))
-
-;; Activate all the packages
 (require 'package)
+(add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
 (package-initialize)
 
-;; Fetch the list of packages available
-(unless package-archive-contents (package-refresh-contents))
+;; Bootstrap use-package
+(unless (package-installed-p 'use-package)
+  (package-refresh-contents)
+  (package-install 'use-package))
+(require 'use-package)
+(setq use-package-always-ensure t)
 
-;; Install the missing packages
-(dolist (package package-list)
-  (unless (package-installed-p package)
-    (package-install package)))
+;; =============================================================================
+;;                           Custom Functions
+;; =============================================================================
 
-
-;; ============================= Generic options =============================
-
-;; Update search path
-(setq-default
- load-path (cons (expand-file-name "~/.emacs.d/elpa") load-path))
-
-;; No startup message
-(setq inhibit-startup-message t inhibit-startup-echo-area-message t)
-
-;; Display line, column
-(line-number-mode t)
-(column-number-mode t)
-
-;; Display menubar but not tool bar
-(menu-bar-mode t)
-(tool-bar-mode -1)
-
-;; Highlight while search/replace
-(setq search-highlight t query-replace-highlight t)
-
-;; If search for 2 spaces, then really search 2 spaces
-(setq search-whitespace-regexp -1)
-
-;; Highlight selection
-(transient-mark-mode t)
-
-;; Delete selected text
-(delete-selection-mode t)
-
-;; Replace all yes-no questions into y-n
-(fset 'yes-or-no-p 'y-or-n-p)
-
-;; Copy/paste insert at the cursor point
-(setq mouse-yank-at-point -1)
-
-;; No backup files
-(setq make-backup-files nil)
-
-;; Don't save abbrevs
-(setq save-abbrevs nil)
-
-;; Case insensitive completing file name
-(setq read-file-name-completion-ignore-case t)
-
-;; Filling paragraph for French
-(setq fill-nobreak-predicate '(fill-french-nobreak-p))
-
-;; Width buffer list
-(setq Buffer-menu-name-width 30)
-
-;; End file with new line
-(setq require-final-newline t)
-
-;; Replace tab with spaces
-(setq-default indent-tabs-mode nil)
-
-;; Auto reload
-(global-auto-revert-mode t)
-
-;; Turn off alarms
-(setq ring-bell-function 'ignore)
-
-;; Show parenthesis
-(require 'paren)
-(show-paren-mode t)
-(setq blink-matching-paren t)
-(setq blink-matching-paren-on-screen t)
-(setq show-paren-style 'expression)
-(setq blink-matching-paren-dont-ignore-comments t)
-
-;; Workaround for dead-accent key
-(require 'iso-transl)
-
-;; Spelling
-(when (executable-find "hunspell")
-  (setq-default ispell-program-name "hunspell")
-  (setq ispell-really-hunspell t))
-
-(defun custom-ispell ()
-  "Skip regions from spell checking."
-  (make-local-variable 'ispell-skip-region-alist)
-  (add-to-list 'ispell-skip-region-alist '("`" . "`"))
-  (add-to-list 'ispell-skip-region-alist '("^```" . "```$")))
-
-(add-hook 'markdown-mode-hook 'custom-ispell)
-
-
-;; ========================= Configuration for Mac ===========================
-
-;; To type \{}[] with the normal keyboard combination
-(defun mac_keyboard ()
-  (interactive)
-  (custom-set-variables
-   '(ns-alternate-modifier (quote none))
-   '(ns-command-modifier (quote meta))
-   '(ns-control-modifier (quote none))
-   '(ns-function-modifier (quote control)))
-
-  ;; C-up/C-down to change paragraphs
-  ;; Redefinition of the old commands
-  (define-key
-    (current-global-map) [remap scroll-up-command] 'forward-paragraph)
-  (define-key
-    (current-global-map) [remap scroll-down-command] 'backward-paragraph)
-
-  ;; Redefinition of C-left/C-right for backward/forwad word
-  (global-set-key (kbd "<home>") 'backward-word)
-  (global-set-key (kbd "<end>") 'forward-word))
-
-;; By OPAM user-setup for emacs
-;; Tweak for problem on OS X where Emacs.app doesn't run the right
-;; init scripts when invoking a sub-shell
-(defun set-exec-path-from-shell-PATH ()
-  "Set up Emacs' `exec-path' and PATH environment variable to
-  match that used by the user's shell.
-
-This is particularly useful under Mac OSX, where GUI apps are not
-started from a shell."
-  (interactive)
-  (let ((path-from-shell
-         (replace-regexp-in-string
-          "[ \t\n]*$" ""
-          (shell-command-to-string "$SHELL --login -i -c 'echo $PATH'"))
-         ))
-    (setenv "PATH" path-from-shell)
-    (setq exec-path (split-string path-from-shell path-separator))))
-
-;; Auto load conf if on mac
-(cond
- ((string-equal system-type "darwin")
-  ;; Open emacs on top of the terminal
-  (when window-system (x-focus-frame nil))
-  (set-exec-path-from-shell-PATH)
-  (mac_keyboard)))
-
-
-;; =========================== Personal Shortcuts ============================
-
+;; Navigation Functions
 (defun my-pop-local-mark-ring ()
+  "Pop to the local mark ring."
   (interactive)
   (set-mark-command t))
 
-(defun my-wrap-next-error ()
-  (interactive)
-  (condition-case nil (next-error)
-    (error (next-error 1 t))))
-
-(global-unset-key (kbd "C-z"))
-
-(global-set-key [f1] 'comment-dwim)
-(global-set-key [f2] 'whitespace-mode)
-(global-set-key [f3] 'ag)
-(global-set-key [(shift f3)] 'ag-project)
-(global-set-key [f4] 'my-pop-local-mark-ring)
-(global-set-key [(shift f4)] 'pop-global-mark)
-
-(global-set-key [f5] 'compile)
-(global-set-key [f6] 'interrupt-and-recompile)
-(global-set-key [f7] 'next-error)
-(global-set-key [f8] 'flycheck-mode)
-
-(global-set-key [f12] 'enlarge-window)
-
-;; Automatically resize window when splitting
-(global-set-key
- (kbd "C-x 2") (lambda () (interactive) (split-window-below) (balance-windows)))
-(global-set-key
- (kbd "C-x 3") (lambda () (interactive) (split-window-right) (balance-windows)))
-(global-set-key
- (kbd "C-x 0") (lambda () (interactive) (delete-window) (balance-windows)))
-
-;; Kill the last opened window, e.g. after a grep.
-(defun kill-last-opened-buffer ()
-  "Kill the last opened buffer"
+;; Window Management Functions
+(defun my-kill-last-opened-buffer ()
+  "Kill the last opened buffer and its window (useful after grep)."
   (interactive)
   (let ((win-curr (selected-window))
         (win-other (next-window)))
@@ -203,195 +33,11 @@ started from a shell."
     (kill-buffer-and-window)
     (select-window win-curr)))
 
-;; Insert symbol left-bracket/right-bracket around word
-(defun gen-insert-pair (@left-bracket @right-bracket)
-  (if (use-region-p)
-      (progn
-        (let (($p1 (region-beginning))
-              ($p2 (region-end)))
-          (goto-char $p2)
-          (insert @right-bracket)
-          (goto-char $p1)
-          (insert @left-bracket)
-          (goto-char (+ $p2 2))))
-    (progn
-      (let ($p1 $p2)
-        (progn
-          (skip-chars-backward "-_[:alnum:]")
-          (setq $p1 (point))
-          (skip-chars-forward "-_[:alnum:]")
-          (setq $p2 (point))
-          (goto-char $p2)
-          (insert @right-bracket)
-          (goto-char $p1)
-          (insert @left-bracket)
-          (goto-char (+ $p2 (length @left-bracket))))))))
-
-;; Handles the symbols I want
-(defvar gen-quote-history nil)
-(defun gen-quote-word (x)
-  (interactive
-   (list
-    (read-string (format "Quote symbol (default %s): "
-                         (or (car gen-quote-history) ""))
-                 nil 'gen-quote-history
-                 (car gen-quote-history)
-                 'inherit-input-method)))
-  (cond ((string-equal "(" x)  (gen-insert-pair "(" ")"))
-        ((string-equal "[" x)  (gen-insert-pair "[" "]"))
-        ((string-equal "{" x)  (gen-insert-pair "{" "}"))
-        ((string-equal "<" x)  (gen-insert-pair "<" ">"))
-        ((string-equal "{{" x) (gen-insert-pair "{{" "}}"))
-        (t (gen-insert-pair x x))))
-
-;; Join next line to the end of current line
-(defun join-next-line ()
-  (interactive)
-  (save-excursion
-    (move-end-of-line nil)
-    (kill-line)
-    (just-one-space)))
-
-;; Insert output of shell command at point
-(defvar my-insert-shell-command-history nil)
-(defun my-insert-shell-command (cmd)
-  (interactive
-   (list
-    (read-string (format "Run command (default %s): "
-                         (or (car my-insert-shell-command-history) ""))
-                 nil 'my-insert-shell-command-history
-                 (car my-insert-shell-command-history)
-                 'inherit-input-method)))
-  (insert (shell-command-to-string cmd)))
-
-;; Sorting lines ignoring case
-(defun sort-ilines ()
-  (interactive)
-  (defvar sort-fold-case)
-  (let ((sort-fold-case t))
-    (call-interactively 'sort-lines)))
-
-(defvar my-keys-minor-mode-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "M-<left>") 'windmove-left)
-    (define-key map (kbd "M-<right>") 'windmove-right)
-    (define-key map (kbd "M-<up>") 'windmove-up)
-    (define-key map (kbd "M-<down>") 'windmove-down)
-
-    (define-key map (kbd "C-c w d") 'delete-trailing-whitespace)
-    (define-key map (kbd "C-x C-k") 'kill-last-opened-buffer)
-
-    (define-key map (kbd "C-c C-q") 'gen-quote-word)
-
-    (define-key map (kbd "C-<delete>") 'join-next-line)
-
-    (define-key map (kbd "C-c C-s") 'sort-ilines)
-
-    map)
-  "my-keys-minor-mode keymap.")
-
-(define-minor-mode my-keys-minor-mode
-  "A minor mode so that my key settings override annoying major modes."
-  :init-value t
-  :lighter " my-keys")
-
-(my-keys-minor-mode t)
-
-
-;; =============================== Development ===============================
-
-;; Multiple cursors
-(require 'multiple-cursors)
-(global-set-key (kbd "C-c e l") 'mc/edit-lines)
-(global-set-key (kbd "C->") 'mc/mark-next-like-this)
-(global-set-key (kbd "C-<") 'mc/mark-previous-like-this)
-(global-set-key (kbd "C-c C->") 'mc/mark-all-like-this)
-
-;; Isearch replacement that works with multiple cursors
-(require 'phi-search)
-
-;; Use phi-search only in multiple cursor-mode
-(add-hook 'multiple-cursors-mode-enabled-hook
-          (lambda ()
-            (interactive)
-            (global-set-key (kbd "C-s") 'phi-search)
-            (global-set-key (kbd "C-r") 'phi-search-backward)))
-(add-hook 'multiple-cursors-mode-disabled-hook
-          (lambda ()
-            (interactive)
-            (global-set-key (kbd "C-s") 'isearch-forward)
-            (global-set-key (kbd "C-r") 'isearch-backward)))
-
-;; Whitespace
-(require 'whitespace)
-(setq whitespace-style '(face trailing empty lines-tail tabs tab-mark))
-(setq whitespace-space 'whitespace-hspace)
-(setq whitespace-line-column 80)
-(add-hook 'prog-mode-hook 'whitespace-mode)
-;(global-whitespace-mode 1)
-
-;; Autocomplete
-(add-hook 'after-init-hook 'global-company-mode)
-(autoload 'company-mode "company" nil t)
-(require 'company)
-;(global-set-key (kbd "C-/") 'company-complete)
-(global-set-key [C-tab] 'company-complete-common)
-(setq company-dabbrev-downcase nil)
-
-;; Delete spaces when saving in manual non programming mode
-(defun my-txt-trailing-whitespace ()
-  (unless (derived-mode-p 'prog-mode)
-    (delete-trailing-whitespace)))
-(add-hook 'before-save-hook 'my-txt-trailing-whitespace)
-
-;; Auto-kill compilation process and recompile
-(defun interrupt-and-recompile ()
-  "Interrupt old compilation, if any, and recompile."
-  (interactive)
-  (ignore-errors
-    (process-kill-without-query
-     (get-buffer-process
-      (get-buffer "*compilation*"))))
-  (ignore-errors
-    (kill-buffer "*compilation*"))
-  (recompile))
-
-;; Always open a new compilation window to easily close it
-(defun new-compilation-window-hook ()
-  (progn
-    (if (not (get-buffer-window "*compilation*"))
-        (progn (split-window-vertically)))))
-
-(add-hook 'compilation-mode-hook 'new-compilation-window-hook)
-
-;; Close the compilation window if there was no error
-(setq compilation-exit-message-function
-      (lambda (status code msg)
-        (when (and (eq status 'exit) (zerop code))
-          (bury-buffer "*compilation*")
-          (delete-window (get-buffer-window (get-buffer "*compilation*"))))
-        ;; Always return the anticipated result of compilation-exit-message-function
-        (cons msg code)))
-
-;; Auto-scroll in the compilation buffer
-(setq compilation-scroll-output 'first-error)
-
-;; When compilation uses color, apply them if possible
-(require 'ansi-color)
-(defun colorize-compilation-buffer ()
-  (toggle-read-only)
-  (ansi-color-apply-on-region (point-min) (point-max))
-  (toggle-read-only))
-
-(add-hook 'compilation-filter-hook 'colorize-compilation-buffer)
-
-;; Ediff
-(setq ediff-split-window-function 'split-window-horizontally)
-
+;; Text Manipulation Functions
 (defun renumber-list (start end &optional num)
   "Renumber the list items in the current START..END region.
-   If optional prefix arg NUM is given, start numbering from that number
-   instead of 1."
+If optional prefix arg NUM is given, start numbering from that number
+instead of 1."
   (interactive "*r\np")
   (save-excursion
     (goto-char start)
@@ -401,209 +47,448 @@ started from a shell."
         (replace-match (concat (match-string 1) (number-to-string num)))
         (setq num (1+ num))))))
 
-;; Custom vc-annotate to omit the file path
-;; Can't make my mind if I want it or not
-;;(defadvice vc-git-annotate-command (around vc-git-annotate-command activate)
-;;  "Suppress Relative Path Of File From Git Blame Output"
-;;  (let (name (file-relative-name file))
-;;    (vc-git-command buf 'async nil "blame" "--date=short" rev "--" name)))
+;; Line Operations
+(defun join-next-line ()
+  "Join next line to the end of current line."
+  (interactive)
+  (save-excursion
+    (move-end-of-line nil)
+    (kill-line)
+    (just-one-space)))
 
-;; Dumb jump setup
-(dumb-jump-mode t)
-(add-hook 'xref-backend-functions #'dumb-jump-xref-activate)
-;; Remove all dumb-jump default key bindings
-(define-key dumb-jump-mode-map (kbd "C-M-g") nil)
-(define-key dumb-jump-mode-map (kbd "C-M-p") nil)
-(define-key dumb-jump-mode-map (kbd "C-M-q") nil)
-;; Add my own
-(define-key dumb-jump-mode-map (kbd "C-c C-l") 'xref-find-definitions)
-(define-key dumb-jump-mode-map (kbd "C-c C-b") 'xref-pop-marker-stack)
-;; Speed up in C: I just want functions
-(defun my-dumb-jump-c-mode-hook ()
-  (setq dumb-jump-force-searcher 'ag)
-  (setq dumb-jump-functions-only t))
-(add-hook 'c-mode-hook 'my-dumb-jump-c-mode-hook)
-;; Do not consider Makefile as possible project-denoters
-(setq dumb-jump-project-denoters '(".dumbjump" ".projectile" ".git" ".hg"
-                                   ".fslckout" ".bzr" "_darcs" ".svn"
-                                   "PkgInfo" "-pkg.el"))
+;; Text Processing
+(defun sort-ilines ()
+  "Sort lines ignoring case."
+  (interactive)
+  (defvar sort-fold-case)
+  (let ((sort-fold-case t))
+    (call-interactively 'sort-lines)))
 
+;; =============================================================================
+;;                           Core Emacs Settings
+;; =============================================================================
 
-;; =================================== BASH ==================================
+(use-package emacs
+  :ensure nil
+  :init
+  ;; Unset unwanted keybinding
+  (global-unset-key (kbd "C-z"))
 
-(setq-default sh-basic-offset 2)
-(setq-default sh-indentation 2)
+  :bind
+  ;; Function key bindings
+  ([f1] . comment-dwim)
+  ([f2] . whitespace-mode)
+  ;; [f3] => see ag
+  ([f4] . my-pop-local-mark-ring)
+  ([(shift f4)] . pop-global-mark)
+  ([f5] . compile)
+  ([f6] . interrupt-and-recompile)
+  ([f7] . next-error)
+  ([f8] . flycheck-mode)
+  ([f12] . enlarge-window)
 
+  ;; Window management with auto-balancing
+  ("C-x 2" . (lambda ()
+               (interactive)
+               (split-window-below)
+               (balance-windows)))
+  ("C-x 3" . (lambda ()
+               (interactive)
+               (split-window-right)
+               (balance-windows)))
+  ("C-x 0" . (lambda ()
+               (interactive)
+               (delete-window)
+               (balance-windows)))
 
-;; ================================== C/C++ ==================================
+  :config
+  ;; Path configuration
+  (setq-default
+   load-path (cons (expand-file-name "~/.emacs.d/elpa") load-path))
 
-(add-to-list 'auto-mode-alist '("\\.ipp\\'" . c++-mode))
+  ;; Editor behavior
+  (setq-default indent-tabs-mode nil)  ; Use spaces instead of tabs
+  (line-number-mode t)                 ; Show line numbers
+  (column-number-mode t)               ; Show column numbers
+  (menu-bar-mode t)                    ; Show menu bar
+  (tool-bar-mode -1)                   ; Hide tool bar
+  (transient-mark-mode t)              ; Highlight selection
+  (delete-selection-mode t)            ; Delete selected text
+  (fset 'yes-or-no-p 'y-or-n-p)        ; Use y/n instead of yes/no
+  (global-auto-revert-mode t)          ; Auto reload changed files
 
-(setq-default c-default-style "linux")
-(setq-default c-basic-offset 4)
+  ;; Various settings
+  (setq
+   Buffer-menu-name-width 30
+   fill-nobreak-predicate '(fill-french-nobreak-p)
+   mouse-yank-at-point -1
+   read-file-name-completion-ignore-case t
+   require-final-newline t
+   search-whitespace-regexp -1
+   query-replace-highlight t)
 
-(require 'cc-mode)
+  ;; Custom variables
+  (custom-set-variables
+   '(inhibit-startup-echo-area-message t)
+   '(inhibit-startup-message t)
+   '(make-backup-files nil)
+   '(ring-bell-function 'ignore)
+   '(save-abbrevs nil)
+   '(search-highlight t))
 
-(defun my-cc-style()
-  (c-set-style "linux")
-  (c-set-offset 'innamespace '0)
-  (c-set-offset 'inextern-lang '0)
-  (c-set-offset 'inline-open '0)
-  (c-set-offset 'label '*)
-  (c-set-offset 'case-label '*)
-  (c-set-offset 'access-label '/)
-  (setq c-basic-offset 4))
+  ;; Custom keybindings through minor mode
+  (defvar my-keys-minor-mode-map
+    (let ((map (make-sparse-keymap)))
+      ;; Window movement
+      (define-key map (kbd "M-<left>") 'windmove-left)
+      (define-key map (kbd "M-<right>") 'windmove-right)
+      (define-key map (kbd "M-<up>") 'windmove-up)
+      (define-key map (kbd "M-<down>") 'windmove-down)
 
-(add-hook 'c++-mode-hook 'my-cc-style)
-(add-hook 'c-mode-hook 'my-cc-style)
+      ;; Text operations
+      (define-key map (kbd "C-c w d") 'delete-trailing-whitespace)
+      (define-key map (kbd "C-x C-k") 'my-kill-last-opened-buffer)
+      (define-key map (kbd "C-c C-q") 'gen-quote-word)
+      (define-key map (kbd "C-<delete>") 'join-next-line)
+      (define-key map (kbd "C-c C-s") 'sort-ilines)
 
-(require 'clang-format)
+      map)
+    "my-keys-minor-mode keymap.")
 
-(setq clang-format-style (expand-file-name "~/.clang-format"))
+  (define-minor-mode my-keys-minor-mode
+    "A minor mode so that my key settings override annoying major modes."
+    :init-value t
+    :lighter " my-keys")
 
-(defun my-cc-clang-format-keys ()
-  (local-set-key (kbd "C-M-\\") 'clang-format-region))
+  (my-keys-minor-mode t)
 
-(add-hook 'c++-mode-hook 'my-cc-clang-format-keys)
-(add-hook 'c-mode-hook 'my-cc-clang-format-keys)
+  (define-globalized-minor-mode global-my-keys-minor-mode my-keys-minor-mode
+    (lambda () (my-keys-minor-mode 1)))
+  (global-my-keys-minor-mode 1))
 
-;; Basic ACSL mode
+;; =============================================================================
+;;                           Search and Navigation
+;; =============================================================================
 
-(defconst acsl-keywords
-  '("assert" "assigns" "ensures" "slevel" "slevel_merge" "requires")
-  "List of ACSL keywords to highlight.")
+;; Silver Searcher integration
+(use-package ag
+  :ensure t
+  :bind
+  ([f3] . ag)
+  ([(shift f3)] . ag-project))
 
-(defun acsl-comment ()
-  "If we are in a C comment beginning with @."
-  (and (nth 4 (syntax-ppss))
-       (eq (char-after (+ (nth 8 (syntax-ppss)) 2)) ?@)))
+;; Parenthesis handling
+(use-package paren
+  :ensure t
+  :config
+  (show-paren-mode t)
+  (custom-set-variables
+   '(blink-matching-paren t)
+   '(blink-matching-paren-on-screen t)
+   '(show-paren-style 'expression)
+   '(blink-matching-paren-dont-ignore-comments t)))
 
-(defvar acsl-font-lock-keywords
-  (let ((pre-match-form (lambda ()
-                          (goto-char (match-beginning 0))
-                          (match-end 0)))
-        (find-annot (lambda (limit)
-                      ;; skip comments
-                      (if (and (looking-at "//") (acsl-comment))
-                          (re-search-forward "\n" limit 'e))
-                      (while (and (not (acsl-comment)) (< (point) limit))
-                        (re-search-forward "/[*/]" limit 'e))
-                      (if (>= (point) limit)
-                          nil
-                        (let ((b (save-excursion
-                                   (re-search-backward "/[*/]" (- (point) 2) t)
-                                   (point))))
-                          (re-search-forward "[*/]/\\|\n" limit 'e)
-                          (re-search-backward "//" (- (point) 2) t) ; don't recolor comments
-                          (set-match-data (list b (point) (nth 2 (match-data t))))
-                          t)))))
-    (list
-     `(,find-annot
-       (0 'font-lock-doc-face t)
-       (,(concat (regexp-opt acsl-keywords 'words) "") (,pre-match-form) nil
-        (0 '(font-lock-doc-face :inherit bold) t))
-       )))
-  "Default highlighting for ACSL mode")
+;; Multiple cursors
+(use-package multiple-cursors
+  :ensure t
+  :bind (("C-c e l" . mc/edit-lines)
+         ("C->" . mc/mark-next-like-this)
+         ("C-<" . mc/mark-previous-like-this)
+         ("C-c C->" . mc/mark-all-like-this)))
 
-(defun my-acsl-mode ()
-  (font-lock-add-keywords nil acsl-font-lock-keywords))
+;; Search with multiple cursors
+(use-package phi-search
+  :ensure t
+  :config
+  (add-hook 'multiple-cursors-mode-enabled-hook
+            (lambda ()
+              (interactive)
+              (global-set-key (kbd "C-s") 'phi-search)
+              (global-set-key (kbd "C-r") 'phi-search-backward)))
+  (add-hook 'multiple-cursors-mode-disabled-hook
+            (lambda ()
+              (interactive)
+              (global-set-key (kbd "C-s") 'isearch-forward)
+              (global-set-key (kbd "C-r") 'isearch-backward))))
 
-(add-hook 'c++-mode-hook 'my-acsl-mode)
-(add-hook 'c-mode-hook 'my-acsl-mode)
+;; Jump to definitions
+(use-package dumb-jump
+  :ensure t
+  :config
+  (setq dumb-jump-project-denoters
+        '(".dumbjump" ".projectile" ".git" ".hg" ".fslckout"
+          ".bzr" "_darcs" ".svn" "PkgInfo" "-pkg.el"))
+  (setq dumb-jump-prefer-searcher 'ag)
+  (add-hook 'xref-backend-functions #'dumb-jump-xref-activate)
+  :hook (c-mode . (lambda ()
+                    (setq-local dumb-jump-force-searcher 'ag
+                               dumb-jump-functions-only t)))
+  :bind (:map dumb-jump-mode-map
+              ("C-M-g" . nil)
+              ("C-M-p" . nil)
+              ("C-M-q" . nil)
+              ("C-c C-l" . xref-find-definitions)
+              ("C-c C-b" . xref-pop-marker-stack)))
 
+;; =============================================================================
+;;                           Development Tools
+;; =============================================================================
 
-;; ================================= PYTHON ==================================
+;; Completion
+(use-package company
+  :ensure t
+  :hook (after-init . global-company-mode)
+  :bind ([C-tab] . company-complete-common)
+  :custom
+  (company-minimum-prefix-length 2)
+  (company-idle-delay 0.2)
+  (company-dabbrev-downcase nil))
 
-(setq flycheck-python-pylint-executable "pylint3")
-(setq flycheck-python-mypy-cache-dir "/dev/null")
+;; Compilation
+(use-package compile
+  :ensure nil
+  :custom
+  (compilation-scroll-output 'first-error)
+  :functions (interrupt-and-recompile new-compilation-window-hook)
+  :bind (("C-c c" . interrupt-and-recompile)
+         ("C-c r" . recompile))
+  :hook (compilation-mode . new-compilation-window-hook)
+  :config
+  (defun interrupt-and-recompile ()
+    "Interrupt old compilation, if any, and recompile."
+    (interactive)
+    (let ((compilation-buffer (get-buffer "*compilation*")))
+      (when compilation-buffer
+        (ignore-errors
+          (process-kill-without-query
+           (get-buffer-process compilation-buffer)))
+        (ignore-errors
+          (kill-buffer compilation-buffer))))
+    (recompile))
 
-(add-hook 'python-mode-hook 'flycheck-mode)
+  (defun new-compilation-window-hook ()
+    "Create a new window for compilation buffer if not already visible."
+    (unless (get-buffer-window "*compilation*")
+      (let ((compilation-window-height 15))
+        (split-window-vertically (- (window-height) compilation-window-height)))))
 
-;; ================================== OCAML ==================================
+  (setq compilation-exit-message-function
+        (lambda (status code msg)
+          (when (and (eq status 'exit) (zerop code))
+            (let ((compilation-buffer (get-buffer "*compilation*")))
+              (when compilation-buffer
+                (bury-buffer compilation-buffer)
+                (when-let ((window (get-buffer-window compilation-buffer)))
+                  (delete-window window)))))
+          (cons msg code))))
 
-(let ((opam-share (ignore-errors (car (process-lines "opam" "var" "share")))))
-  (when (and opam-share (file-directory-p opam-share))
-    (add-to-list 'load-path (expand-file-name "emacs/site-lisp" opam-share))
-    (autoload 'merlin-mode "merlin" nil t nil)
-    (add-hook 'caml-mode-hook 'merlin-mode t)))
+;; ANSI color support in compilation
+(use-package ansi-color
+  :ensure t
+  :hook (compilation-filter . ansi-color-compilation-filter))
 
-(require 'caml-font)
-(require 'merlin)
+;; Ediff configuration
+(setq ediff-split-window-function 'split-window-horizontally)
 
-(with-eval-after-load 'company
-  (add-to-list 'company-backends 'merlin-company-backend))
-(add-hook 'merlin-mode-hook 'company-mode)
-(setq merlin-command 'opam)
+;; =============================================================================
+;;                           Programming Languages
+;; =============================================================================
 
-(setq auto-mode-alist (cons '("\\.ml[iylp]?$" . caml-mode) auto-mode-alist))
-(autoload 'caml-mode "caml" "Major mode for editing Caml code." t)
-(autoload 'camldebug "camldebug" (interactive) "Debug caml mode")
-(autoload 'run-caml "inf-caml" "Run an inferior Caml process." t)
+;; Shell scripting
+(setq-default sh-basic-offset 2
+              sh-indentation 2)
 
+;; C/C++
+(use-package cc-mode
+  :ensure t
+  :config
+  (setq c-default-style "linux"
+        c-basic-offset 4)
 
-;; ================================ Markdown =================================
+  (defun my-cc-style ()
+    "Set custom C/C++ style."
+    (c-set-style "linux")
+    (c-set-offset 'innamespace 0)
+    (c-set-offset 'inextern-lang 0)
+    (c-set-offset 'inline-open 0)
+    (c-set-offset 'label '*)
+    (c-set-offset 'case-label '*)
+    (c-set-offset 'access-label '/)
+    (setq c-basic-offset 4))
 
-(autoload 'markdown-mode "markdown-mode"
-  "Major mode for editing Markdown files" t)
-(add-to-list 'auto-mode-alist '("\\.markdown\\'" . markdown-mode))
-(add-to-list 'auto-mode-alist '("\\.md\\'" . markdown-mode))
+  (defun my-cc-clang-format-keys ()
+    "Set custom keybindings for clang-format."
+    (local-set-key (kbd "C-M-\\") 'clang-format-region))
 
+  (defun my-cc-mode-setup ()
+    "Setup function for C/C++ modes."
+    (my-cc-style)
+    (my-cc-clang-format-keys)
+    (my-acsl-mode))
 
-;; ================================== JSON ===================================
+  ;; ACSL mode configuration
+  (defconst acsl-keywords
+    '("assert" "assigns" "ensures" "slevel" "slevel_merge" "requires")
+    "List of ACSL keywords to highlight.")
 
-(defun my-pp-json ()
-  (local-set-key (kbd "C-M-\\") 'json-reformat-region))
+  (defface acsl-bold-face
+    '((t (:weight bold)))
+    "Face for highlighting ACSL keywords in bold.")
 
-(add-hook 'json-mode-hook 'my-pp-json)
+  (defun acsl-comment-p ()
+    "Return non-nil if the current comment starts with `/*@` or `//@`."
+    (save-excursion
+      (let ((beg (nth 8 (syntax-ppss))))
+        (when beg
+          (goto-char beg)
+          (or (looking-at "/*@")
+              (looking-at "//@"))))))
 
+  (defun my-acsl-mode ()
+    "Highlight ACSL keywords in C/C++ comments that start with `/*@` or `//@` in bold."
+    (font-lock-add-keywords nil
+                           `((,(concat "\\<\\(" (regexp-opt acsl-keywords 'words) "\\)\\>")
+                              (0 'acsl-bold-face prepend
+                                 (lambda ()
+                                   (when (acsl-comment-p)
+                                     t)))))))
 
-;; ========================== Various convinent mode ===========================
+  ;; Additional file associations
+  (add-to-list 'auto-mode-alist '("\\.ipp\\'" . c++-mode))
 
-(add-to-list 'auto-mode-alist '("Makefile.inc\\'" . makefile-mode))
-(add-to-list 'auto-mode-alist `(,(expand-file-name "~/config/.*/emacs\\'") . emacs-lisp-mode))
-(add-to-list 'auto-mode-alist `(,(expand-file-name "~/config/.*/config\\'") . shell-script-mode))
-(add-to-list 'auto-mode-alist `(,(expand-file-name "~/config/.*/gitconfig\\'") . shell-script-mode))
-(add-to-list 'auto-mode-alist `(,(expand-file-name "~/config/.*/bashrc\\'") . shell-script-mode))
-(add-to-list 'auto-mode-alist `(,(expand-file-name "~/config/.*/zshrc\\'") . shell-script-mode))
-(add-to-list 'auto-mode-alist `(,(expand-file-name "~/config/.*/tmux\\'") . shell-script-mode))
-(add-to-list 'auto-mode-alist '("\\.tsx\\'" . typescript-mode))
+  :hook ((c++-mode . my-cc-mode-setup)
+         (c-mode . my-cc-mode-setup)))
 
+(use-package clang-format
+  :ensure t
+  :after cc-mode)
 
-;; =================================== TIS ====================================
+;; Python Configuration
+(use-package flycheck
+  :ensure t
+  :hook (python-mode-hook . flycheck-mode)
+  :config
+  (when (executable-find "pylint3")
+    (setq flycheck-python-pylint-executable "pylint3"))
+  (setq flycheck-python-mypy-cache-dir "/dev/null"))
 
-(defun my-tis-prepare-mode ()
-  (when (string-match "tis-prepare" buffer-file-name)
-    (python-mode)))
-(add-hook 'find-file-hook #'my-tis-prepare-mode)
+;; OCaml Configuration
+(use-package tuareg
+  :ensure t
+  :mode ("\\.ocamlinit\\'" . tuareg-mode))
 
+(use-package dune
+  :ensure t)
 
-;; ========================== CUSTOM FACES/VARIABLES ==========================
+(use-package merlin
+  :ensure t
+  :hook ((tuareg-mode-hook . merlin-mode)
+         (merlin-mode-hook . company-mode))
+  :config (setq merlin-error-after-save nil))
 
-(set-face-attribute 'region nil :background "SlateGray1")
-(custom-set-faces
- ;; custom-set-faces was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- '(whitespace-empty ((t (:foreground "firebrick" :background "SlateGray1"))))
- '(whitespace-hspace ((t (:foreground "white" :background "red"))))
- '(whitespace-indentation ((t (:foreground "firebrick" :background "beige"))))
- '(whitespace-line ((t (:foreground "black" :background "red"))))
- '(whitespace-newline ((t (:foreground "orange" :background "blue"))))
- '(whitespace-space ((t (:bold t :foreground "gray75"))))
- '(whitespace-space-after-tab ((t (:foreground "black" :background "green"))))
- '(whitespace-space-before-tab ((t (:foreground "black" :background "DarkOrange"))))
- '(whitespace-tab ((t (:foreground "red"))))
- '(whitespace-trailing ((t (:foreground "red" :background "yellow")))))
-(custom-set-variables
- ;; custom-set-variables was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- '(package-selected-packages
-   (quote
-    (ag blacken clang-format dumb-jump elpy flycheck-mypy
-     flycheck-pycheckers haskell-mode highlight json-mode
-     lua-mode markdown-mode multiple-cursors phi-search rust-mode
-     smartparens typescript-mode web-mode xterm-color
-     yaml-mode))))
+(use-package merlin-eldoc
+  :ensure t
+  :hook (tuareg-mode . merlin-eldoc-setup))
+
+(use-package flycheck-ocaml
+  :ensure t
+  :config (flycheck-ocaml-setup))
+
+;; =============================================================================
+;;                           Markup and Config Languages
+;; =============================================================================
+
+;; Markdown
+(use-package markdown-mode
+  :ensure t
+  :mode (("\\.md\\'" . markdown-mode)
+         ("\\.markdown\\'" . markdown-mode))
+  :init
+  (setq markdown-command "multimarkdown"))
+
+;; JSON
+(use-package json-mode
+  :ensure t
+  :mode "\\.json\\'"
+  :bind (:map json-mode-map
+              ("C-M-\\" . json-reformat-region)))
+
+;; Configuration files
+(use-package conf-mode
+  :ensure nil
+  :mode
+  (("/\\.[^/]*rc\\'" . conf-unix-mode)
+   ("/config\\'" . conf-unix-mode)
+   ("/gitconfig\\'" . conf-unix-mode)
+   ("/tmux\\'" . conf-unix-mode)))
+
+;; JavaScript/TypeScript
+(use-package typescript-mode
+  :ensure t
+  :mode "\\.tsx\\'")
+
+;; Makefile
+(use-package make-mode
+  :ensure nil
+  :mode "Makefile\\.inc\\'")
+
+;; =============================================================================
+;;                           Text and Spelling
+;; =============================================================================
+
+;; Spelling configuration
+(use-package ispell
+  :ensure nil
+  :config
+  (when (executable-find "hunspell")
+    (setq-default ispell-program-name "hunspell")
+    (setq ispell-really-hunspell t))
+
+  (defun custom-ispell ()
+    "Skip regions from spell checking."
+    (make-local-variable 'ispell-skip-region-alist)
+    (add-to-list 'ispell-skip-region-alist '("`" . "`"))
+    (add-to-list 'ispell-skip-region-alist '("^```" . "```$")))
+
+  (add-hook 'markdown-mode-hook 'custom-ispell))
+
+;; =============================================================================
+;;                           Visual Enhancement
+;; =============================================================================
+
+;; Whitespace visualization
+(use-package whitespace
+  :ensure nil
+  :hook (prog-mode . whitespace-mode)
+  :custom
+  (whitespace-style '(face trailing empty lines-tail tabs tab-mark))
+  (whitespace-space 'whitespace-hspace)
+  (whitespace-line-column 80)
+  :config
+  ;; Set region highlight
+  (set-face-attribute 'region nil :background "SlateGray1")
+
+  ;; Custom whitespace faces
+  (custom-set-faces
+   '(whitespace-empty ((t (:foreground "firebrick" :background "SlateGray1"))))
+   '(whitespace-hspace ((t (:foreground "white" :background "red"))))
+   '(whitespace-indentation ((t (:foreground "firebrick" :background "beige"))))
+   '(whitespace-line ((t (:foreground "black" :background "red"))))
+   '(whitespace-newline ((t (:foreground "orange" :background "blue"))))
+   '(whitespace-space ((t (:bold t :foreground "gray75"))))
+   '(whitespace-space-after-tab ((t (:foreground "black" :background "green"))))
+   '(whitespace-space-before-tab ((t (:foreground "black" :background "DarkOrange"))))
+   '(whitespace-tab ((t (:foreground "red"))))
+   '(whitespace-trailing ((t (:foreground "red" :background "yellow"))))))
+
+;; =============================================================================
+;;                           Final Configuration
+;; =============================================================================
+
+;; Move custom-set-variables to a separate file
+(setq custom-file (expand-file-name "custom.el" user-emacs-directory))
+(when (file-exists-p custom-file)
+  (load custom-file))
+
+(provide 'init)
+;;; init.el ends here
