@@ -321,7 +321,7 @@ instead of 1."
       (let ((beg (nth 8 (syntax-ppss))))
         (when beg
           (goto-char beg)
-          (or (looking-at "/*@")
+          (or (looking-at "/\\*@")
               (looking-at "//@"))))))
 
   (defun my-acsl-mode ()
