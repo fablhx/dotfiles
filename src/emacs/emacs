@@ -311,27 +311,40 @@ instead of 1."
     '("assert" "assigns" "ensures" "slevel" "slevel_merge" "requires")
     "List of ACSL keywords to highlight.")
 
-  (defface acsl-bold-face
-    '((t (:weight bold)))
-    "Face for highlighting ACSL keywords in bold.")
+  (defun acsl-comment ()
+    "Return non-nil if we are in a C comment beginning with /*@ or //@."
+    (and (nth 4 (syntax-ppss)) ; Inside a comment
+         (or (and (eq (char-after (+ (nth 8 (syntax-ppss)) 2)) ?@)) ; Check for /*@
+             (and (eq (char-after (+ (nth 8 (syntax-ppss)) 2)) ?@))))) ; Check for //@
 
-  (defun acsl-comment-p ()
-    "Return non-nil if the current comment starts with `/*@` or `//@`."
-    (save-excursion
-      (let ((beg (nth 8 (syntax-ppss))))
-        (when beg
-          (goto-char beg)
-          (or (looking-at "/\\*@")
-              (looking-at "//@"))))))
+  (defvar acsl-font-lock-keywords
+    (let ((pre-match-form (lambda ()
+                            (goto-char (match-beginning 0))
+                            (match-end 0)))
+          (find-annot (lambda (limit)
+                        ;; Skip non-ACSL comments
+                        (if (and (looking-at "//") (acsl-comment))
+                            (re-search-forward "\n" limit 'e))
+                        (while (and (not (acsl-comment)) (< (point) limit))
+                          (re-search-forward "/[*/]" limit 'e))
+                        (if (>= (point) limit)
+                            nil
+                          (let ((b (save-excursion
+                                     (re-search-backward "/[*/]" (- (point) 2) t)
+                                     (point))))
+                            (re-search-forward "[*/]/\\|\n" limit 'e)
+                            (re-search-backward "//" (- (point) 2) t) ; Don't recolor comments
+                            (set-match-data (list b (point) (nth 2 (match-data t))))
+                            t)))))
+      (list
+       `(,find-annot
+         (0 'font-lock-doc-face t)
+         (,(concat (regexp-opt acsl-keywords 'words) "") (,pre-match-form) nil
+          (0 '(font-lock-doc-face :inherit bold) t)))))
+    "Default highlighting for ACSL mode")
 
   (defun my-acsl-mode ()
-    "Highlight ACSL keywords in C/C++ comments that start with `/*@` or `//@` in bold."
-    (font-lock-add-keywords nil
-                           `((,(concat "\\<\\(" (regexp-opt acsl-keywords 'words) "\\)\\>")
-                              (0 'acsl-bold-face prepend
-                                 (lambda ()
-                                   (when (acsl-comment-p)
-                                     t)))))))
+    (font-lock-add-keywords nil acsl-font-lock-keywords))
 
   (defun my-cc-style ()
     "Set custom C/C++ style."
@@ -354,7 +367,6 @@ instead of 1."
     (my-cc-clang-format-keys)
     (my-acsl-mode))
 
-  ;; Additional file associations
   (add-to-list 'auto-mode-alist '("\\.ipp\\'" . c++-mode))
 
   :hook ((c++-mode . my-cc-mode-setup)
