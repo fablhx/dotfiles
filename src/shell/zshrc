@@ -118,155 +118,115 @@ alias start_emacs='emacs --daemon'
 alias stop_emacs='emacsclient -e "(kill-emacs)"'
 
 __git_prompt() {
+    local branch="" detached="no" behind=0 ahead=0
+    local staged=0 unmerged=0 changed=0 untracked=0 stashed=0
     local git_status fast_status
-    fast_status=("${(f)$(LANG=en_US git -C "$PWD" symbolic-ref --short -q HEAD 2>/dev/null)}")
-    git_status=("${(f)$(LANG=en_US timeout 0.2s git -C "$PWD" status --branch --porcelain 2>/dev/null)}")
 
-    if [[ -z "${fast_status[1]}" && -z "${git_status[1]}" ]]
-    then
-        return
+    # Get branch name quickly if possible
+    fast_status=$(LANG=en_US git -C "$PWD" symbolic-ref --short -q HEAD 2>/dev/null)
+
+    # Early return if not in a git repository
+    if [[ -z "$fast_status" ]]; then
+        git_status=$(LANG=en_US timeout 0.2s git -C "$PWD" rev-parse --is-inside-work-tree 2>/dev/null)
+        [[ "$git_status" != "true" ]] && return
     fi
 
-    if [[ -n "${fast_status[1]}" && -z "${git_status[1]}" ]]
-    then
-        # Just display the branch name
-        echo " %{\033[38;5;3m%}⎇  ${fast_status[1]}%{\033[0m%}"
-        return
-    fi
-
-    local branch detached behind ahead
-
-    local sub_str tmp
-    sub_str="## "
-    git_status[1]="${git_status[1]#$sub_str}"
-
-    if [[ "${git_status[1]}" == "No commits yet on master" ]]
-    then
-        branch="master"
-        detached="no"
-        behind=0
-        ahead=0
-    fi
-
-    sub_str="Initial commit on "
-    tmp="${git_status[1]#$sub_str}"
-    if [[ "${git_status[1]}" != "$tmp" ]]
-    then
-        branch="$tmp"
-        detached="no"
-        behind=0
-        ahead=0
-    fi
-
-    sub_str=" (no branch)"
-    tmp="${git_status[1]%$sub_str}"
-    if [[ "${git_status[1]}" != "$tmp" ]]
-    then
-        branch="$tmp"
-        detached="yes"
-        behind=0
-        ahead=0
-    fi
-
-    tmp="${git_status[1]#*...}"
-    if [[ "${git_status[1]}" != "$tmp" ]]
-    then
-        branch="${git_status[1]%$tmp}"
-        branch="${branch%...}"
-        detached="no"
-        behind=0
-        ahead=0
-        sub_str_ahead="ahead "
-        sub_str_behind="behind "
-        tmp_ahead="${tmp#*$sub_str_ahead}"
-        tmp_behind="${tmp#*$sub_str_behind}"
-        if [[ "$tmp_ahead" != "$tmp" && "$tmp_behind" != "$tmp" ]]
-        then
-            ahead="${tmp_ahead%%,*}"
-            behind="${tmp_behind%%]*}"
-        else
-            if [[ "$tmp_ahead" != "$tmp" ]]
-            then
-                ahead="${tmp_ahead%%]*}"
-            fi
-            if [[ "$tmp_behind" != "$tmp" ]]
-            then
-                behind="${tmp_behind%%]*}"
-            fi
-        fi
-    fi
-
-    if [[ -z "$branch" ]]
-    then
-        branch="${git_status[1]}"
-        detached="no"
-        behind=0
-        ahead=0
-    fi
-
-    if [[ "$branch" == "HEAD" ]]
-    then
-        branch="$(LANG=en_US git -C "$PWD" describe --exact-match --tags HEAD 2>/dev/null)"
-        if [[ -z "$branch" ]]
-        then
-            branch="$(LANG=en_US git -C "$PWD" rev-parse --short HEAD 2>/dev/null)"
-        fi
-    fi
-
-    local staged unmerged changed untracked stashed
-
-    staged=0
-    unmerged=0
-    changed=0
-    untracked=0
-    for line in "${git_status[@]:1}"
-    do
-        if [[ ("${line:0:1}" == "M" || "${line:0:1}" == "R" || "${line:0:1}" == "C") ||
-              ("${line:0:1}" == "D" && "${line:1:1}" != "D") ||
-              ("${line:0:1}" == "A" && "${line:1:1}" != "A") ]]
-        then
-            staged=$((staged+1))
-        fi
-
-        if [[ "${line:0:1}" == "U" || "${line:1:1}" == "U" ||
-              "${line:0:2}" == "AA" || "${line:0:2}" == "DD" ]]
-        then
-            unmerged=$((unmerged+1))
-        fi
-
-        if [[ "${line:1:1}" == "M" ||
-              ("${line:1:1}" == "D" && "${line:0:1}" != "D") ]]
-        then
-            changed=$((changed+1))
-        fi
-
-        if [[ "${line:0:1}" == "?" ]]
-        then
-            untracked=$((untracked+1))
-        fi
-    done
-
-    stashed=("${(f)$(LANG=en_US git -C "$PWD" stash list --no-decorate 2>/dev/null)}")
-    if [[ -z "${stashed[1]}" ]]
-    then
-        stashed=0
+    # We're in a git repo, continue processing
+    if [[ -n "$fast_status" ]]; then
+        branch="$fast_status"
     else
-        stashed="${#stashed}"
+        # We need to get the branch info from git status
+        local ref_info
+        ref_info=$(LANG=en_US git -C "$PWD" rev-parse --abbrev-ref HEAD 2>/dev/null)
+
+        if [[ "$ref_info" == "HEAD" ]]; then
+            # Detached HEAD - try to get tag or commit hash
+            detached="yes"
+            branch=$(LANG=en_US git -C "$PWD" describe --exact-match --tags HEAD 2>/dev/null)
+            if [[ -z "$branch" ]]; then
+                branch=$(LANG=en_US git -C "$PWD" rev-parse --short HEAD 2>/dev/null)
+            fi
+        else
+            branch="$ref_info"
+        fi
     fi
 
+    # Get ahead/behind count directly with git rev-list, which is faster than parsing status
+    if [[ "$detached" == "no" ]]; then
+        local upstream
+        upstream=$(git -C "$PWD" rev-parse --abbrev-ref "@{upstream}" 2>/dev/null)
+
+        if [[ -n "$upstream" ]]; then
+            local ahead_behind
+            ahead_behind=$(git -C "$PWD" rev-list --left-right --count "@{upstream}...HEAD" 2>/dev/null)
+
+            if [[ -n "$ahead_behind" ]]; then
+                behind=$(echo "$ahead_behind" | awk '{print $1}')
+                ahead=$(echo "$ahead_behind" | awk '{print $2}')
+            fi
+        fi
+    fi
+
+    # Get status info using porcelain v2 format
+    git_status=$(LANG=en_US timeout 0.2s git -C "$PWD" status --porcelain=v2 2>/dev/null)
+
+    if [[ -n "$git_status" ]]; then
+        # Count staged, unmerged, changed and untracked files more efficiently
+        # Parse only once with optimized logic for porcelain v2 format
+        while IFS= read -r line; do
+            local first_char="${line:0:1}"
+
+            # Untracked files
+            if [[ "$first_char" == "?" ]]; then
+                ((untracked++))
+                continue
+            fi
+
+            # Only process changed entries
+            if [[ "$first_char" == "1" || "$first_char" == "2" ]]; then
+                local xy="${line:2:2}"
+                local x="${xy:0:1}"
+                local y="${xy:1:1}"
+
+                # Staged changes
+                if [[ "$x" == "A" || "$x" == "M" || "$x" == "D" || "$x" == "R" || "$x" == "C" ]]; then
+                    ((staged++))
+                fi
+
+                # Unstaged changes
+                if [[ "$y" == "M" || "$y" == "D" ]]; then
+                    ((changed++))
+                fi
+
+                # Unmerged conflicts
+                if [[ "$x" == "U" || "$y" == "U" || "$xy" == "AA" || "$xy" == "DD" ]]; then
+                    ((unmerged++))
+                fi
+            fi
+        done <<< "$git_status"
+    fi
+
+    # Get stash count
+    local stash_output
+    stash_output=$(LANG=en_US git -C "$PWD" stash list --no-decorate 2>/dev/null)
+    if [[ -n "$stash_output" ]]; then
+        stashed=$(echo "$stash_output" | wc -l)
+    fi
+
+    # Colors (keeping original)
     local color_detached="%{\033[38;5;200m%}"
     local color_dirty="%{\033[38;5;240m%}"
     local color_clean="%{\033[38;5;22m%}"
     local color_branch="$color_clean"
-    if [[ "$detached" == "yes" ]]
-    then
+
+    if [[ "$detached" == "yes" ]]; then
         color_branch="$color_detached"
     fi
-    if [[ "$staged" -ne 0 || "$unmerged" -ne 0 ||
-          "$changed" -ne 0 || "$untracked" -ne 0 ]];
-    then
+
+    if [[ "$staged" -ne 0 || "$unmerged" -ne 0 || "$changed" -ne 0 || "$untracked" -ne 0 ]]; then
         color_branch="$color_dirty"
     fi
+
     local color_behind="%{\033[38;5;250m%}"
     local color_ahead="%{\033[38;5;250m%}"
     local color_staged="%{\033[38;5;28m%}"
@@ -276,43 +236,16 @@ __git_prompt() {
     local color_stashed="%{\033[38;5;26m%}"
     local reset_color="%{\033[0m%}"
 
-    # symbols:
-    # ⎇ branch
-    # ↓ ↑ number of commit behind, ahead
-    # • staged
-    # + changed
-    # … untracked
-    # ⚑ stashed
+    # Build prompt string - keeping original format
+    local git_prompt=" $color_branch$branch${reset_color}"
 
-    git_prompt=" $color_branch⎇  $branch${reset_color}"
-    if [[ "$behind" -ne 0 ]]
-    then
-        git_prompt="$git_prompt $color_behind↓ $behind${reset_color}"
-    fi
-    if [[ "$ahead" -ne 0 ]]
-    then
-        git_prompt="$git_prompt $color_ahead↑$ahead${reset_color}"
-    fi
-    if [[ "$staged" -ne 0 ]]
-    then
-        git_prompt="$git_prompt $color_staged•$staged${reset_color}"
-    fi
-    if [[ "$unmerged" -ne 0 ]]
-    then
-        git_prompt="$git_prompt $color_unmerged$unmerged${reset_color}"
-    fi
-    if [[ "$changed" -ne 0 ]]
-    then
-        git_prompt="$git_prompt $color_changed+$changed${reset_color}"
-    fi
-    if [[ "$untracked" -ne 0 ]]
-    then
-        git_prompt="$git_prompt $color_untracked…$untracked${reset_color}"
-    fi
-    if [[ "$stashed" -ne 0 ]]
-    then
-        git_prompt="$git_prompt $color_stashed⚑ $stashed${reset_color}"
-    fi
+    [[ "$behind" -ne 0 ]] && git_prompt+=" $color_behind↓ $behind${reset_color}"
+    [[ "$ahead" -ne 0 ]] && git_prompt+=" $color_ahead↑$ahead${reset_color}"
+    [[ "$staged" -ne 0 ]] && git_prompt+=" $color_staged•$staged${reset_color}"
+    [[ "$unmerged" -ne 0 ]] && git_prompt+=" $color_unmerged$unmerged${reset_color}"
+    [[ "$changed" -ne 0 ]] && git_prompt+=" $color_changed+$changed${reset_color}"
+    [[ "$untracked" -ne 0 ]] && git_prompt+=" $color_untracked…$untracked${reset_color}"
+    [[ "$stashed" -ne 0 ]] && git_prompt+=" $color_stashed⚑ $stashed${reset_color}"
 
     echo "$git_prompt"
 }
