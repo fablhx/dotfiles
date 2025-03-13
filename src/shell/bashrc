@@ -80,131 +80,41 @@ alias emacs='__emacs'
 alias start_emacs='emacs --daemon'
 alias stop_emacs='emacsclient -e "(kill-emacs)"'
 
+# Optimized Git Prompt Function for Bash
 __git_prompt() {
-    local branch="" detached="no" behind=0 ahead=0
-    local staged=0 unmerged=0 changed=0 untracked=0 stashed=0
+    local CACHE_DIR="/tmp/git_prompt_cache_$$"
+    local CACHE_FILE="${CACHE_DIR}/${PWD//\//_}"
+    local CACHE_TIMEOUT=2  # seconds
 
-    # Quick check if in a git repository
-    local fast_status
-    fast_status=$(LANG=en_US git -C "$PWD" symbolic-ref --short -q HEAD 2>/dev/null)
+    # Create cache directory if it doesn't exist
+    [[ ! -d "$CACHE_DIR" ]] && mkdir -p "$CACHE_DIR" 2>/dev/null
 
-    # If fast check didn't find a branch, see if we're in a repo at all
-    if [[ -z "$fast_status" ]]; then
-        local git_repo
-        git_repo=$(LANG=en_US git -C "$PWD" rev-parse --is-inside-work-tree 2>/dev/null)
-        [[ "$git_repo" != "true" ]] && return
-    fi
+    # Check if cache is fresh (bash compatible stat command)
+    if [[ -f "$CACHE_FILE" ]]; then
+        local cache_time file_time current_time
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+            # macOS
+            file_time=$(stat -f %m "$CACHE_FILE" 2>/dev/null)
+        else
+            # Linux and others
+            file_time=$(stat -c %Y "$CACHE_FILE" 2>/dev/null)
+        fi
+        current_time=$(date +%s)
 
-    # We're in a git repo, continue processing
-    if [[ -n "$fast_status" ]]; then
-        # Got branch name quickly, but need status info
-        branch="$fast_status"
-        local git_status
-        git_status=$(LANG=en_US timeout 0.2s git -C "$PWD" status --branch --porcelain 2>/dev/null)
-
-        # If status command failed or timed out, just return branch name
-        if [[ -z "$git_status" ]]; then
-            echo " \[\033[38;5;3m\]${branch}\[\033[0m\]"
+        if (( current_time - file_time < CACHE_TIMEOUT )); then
+            cat "$CACHE_FILE"
             return
         fi
-    else
-        # Need to get all info from status command
-        local git_status
-        git_status=$(LANG=en_US timeout 0.2s git -C "$PWD" status --branch --porcelain 2>/dev/null)
-        [[ -z "$git_status" ]] && return
     fi
 
-    # Read the status output into an array, faster than multiple pipe operations
-    local status_lines
-    readarray -t status_lines <<< "$git_status"
+    # Quick check if we're in a git repo
+    local git_dir
+    git_dir=$(git rev-parse --git-dir 2>/dev/null) || return
 
-    # Extract branch info from first line
-    local first_line="${status_lines[0]#\#\# }"
-
-    # Handle special cases for branch info
-    if [[ "$first_line" == "No commits yet on master" ]]; then
-        branch="master"
-        detached="no"
-    elif [[ "$first_line" == *"Initial commit on "* ]]; then
-        branch="${first_line#Initial commit on }"
-        detached="no"
-    elif [[ "$first_line" == *" (no branch)"* ]]; then
-        branch="${first_line% (no branch)}"
-        detached="yes"
-    elif [[ "$first_line" == *"..."* ]]; then
-        # Extract branch name and ahead/behind count
-        branch="${first_line%%...*}"
-        local tracking_info="${first_line#*...}"
-
-        # Extract ahead/behind counts more efficiently
-        if [[ "$tracking_info" == *"ahead "* && "$tracking_info" == *"behind "* ]]; then
-            ahead=$(echo "$tracking_info" | sed -n 's/.*ahead \([0-9]*\).*/\1/p')
-            behind=$(echo "$tracking_info" | sed -n 's/.*behind \([0-9]*\).*/\1/p')
-        elif [[ "$tracking_info" == *"ahead "* ]]; then
-            ahead=$(echo "$tracking_info" | sed -n 's/.*ahead \([0-9]*\).*/\1/p')
-        elif [[ "$tracking_info" == *"behind "* ]]; then
-            behind=$(echo "$tracking_info" | sed -n 's/.*behind \([0-9]*\).*/\1/p')
-        fi
-    else
-        branch="$first_line"
-        detached="no"
-    fi
-
-    # Handle HEAD situation (detached HEAD)
-    if [[ "$branch" == "HEAD" ]]; then
-        detached="yes"
-        branch=$(LANG=en_US git -C "$PWD" describe --exact-match --tags HEAD 2>/dev/null)
-        [[ -z "$branch" ]] && branch=$(LANG=en_US git -C "$PWD" rev-parse --short HEAD 2>/dev/null)
-    fi
-
-    # Process file statuses - loop only once through all lines
-    for ((i=1; i<${#status_lines[@]}; i++)); do
-        local line="${status_lines[i]}"
-        local first_char="${line:0:1}"
-        local second_char="${line:1:1}"
-
-        # Count staged files
-        if [[ ("$first_char" == "M" || "$first_char" == "R" || "$first_char" == "C") ||
-              ("$first_char" == "D" && "$second_char" != "D") ||
-              ("$first_char" == "A" && "$second_char" != "A") ]]; then
-            ((staged++))
-        fi
-
-        # Count unmerged files
-        if [[ "$first_char" == "U" || "$second_char" == "U" ||
-              "${line:0:2}" == "AA" || "${line:0:2}" == "DD" ]]; then
-            ((unmerged++))
-        fi
-
-        # Count changed files
-        if [[ "$second_char" == "M" ||
-              ("$second_char" == "D" && "$first_char" != "D") ]]; then
-            ((changed++))
-        fi
-
-        # Count untracked files
-        if [[ "$first_char" == "?" ]]; then
-            ((untracked++))
-        fi
-    done
-
-    # Get stash count - do this only once
-    local stash_output
-    stash_output=$(LANG=en_US git -C "$PWD" stash list --no-decorate 2>/dev/null)
-    [[ -n "$stash_output" ]] && stashed=$(echo "$stash_output" | wc -l)
-
-    # Colors (unchanged from original)
+    # Colors for bash (different from zsh format)
     local color_detached="\[\033[38;5;200m\]"
     local color_dirty="\[\033[38;5;240m\]"
     local color_clean="\[\033[38;5;22m\]"
-    local color_branch="$color_clean"
-
-    [[ "$detached" == "yes" ]] && color_branch="$color_detached"
-
-    if [[ "$staged" -ne 0 || "$unmerged" -ne 0 || "$changed" -ne 0 || "$untracked" -ne 0 ]]; then
-        color_branch="$color_dirty"
-    fi
-
     local color_behind="\[\033[38;5;250m\]"
     local color_ahead="\[\033[38;5;250m\]"
     local color_staged="\[\033[38;5;28m\]"
@@ -214,19 +124,100 @@ __git_prompt() {
     local color_stashed="\[\033[38;5;26m\]"
     local reset_color="\[\033[0m\]"
 
-    # Build prompt string using more efficient string concatenation
+    # Set GIT_DIR to avoid repeated path resolution
+    export GIT_DIR="$git_dir"
+    local GIT_WORK_TREE="${git_dir%/.git}"
+    [[ "$GIT_WORK_TREE" == "$git_dir" ]] && GIT_WORK_TREE="$(dirname "$git_dir")"
+    export GIT_WORK_TREE
+
+    # Initialize variables
+    local branch="" detached="no" behind=0 ahead=0
+    local staged=0 unmerged=0 changed=0 untracked=0 stashed=0
+
+    # Get branch name fast
+    branch=$(git symbolic-ref --short -q HEAD 2>/dev/null)
+
+    if [[ -z "$branch" ]]; then
+        # We're in detached HEAD state
+        detached="yes"
+        branch=$(git describe --exact-match --tags HEAD 2>/dev/null || git rev-parse --short HEAD 2>/dev/null)
+    else
+        # Get ahead/behind count in one command
+        local upstream
+        upstream=$(git for-each-ref --format='%(upstream:short)' "$(git symbolic-ref -q HEAD)" 2>/dev/null)
+
+        if [[ -n "$upstream" ]]; then
+            local ahead_behind
+            ahead_behind=$(git rev-list --left-right --count "$upstream...HEAD" 2>/dev/null)
+
+            if [[ -n "$ahead_behind" ]]; then
+                # Parse ahead_behind differently for bash
+                behind=$(echo "$ahead_behind" | awk '{print $1}')
+                ahead=$(echo "$ahead_behind" | awk '{print $2}')
+            fi
+        fi
+    fi
+
+    # Get status information - use timeout to prevent hanging
+    # Note: Use timeout if available, otherwise fall back
+    local git_status
+    if command -v timeout >/dev/null 2>&1; then
+        git_status=$(timeout 0.2s git status --porcelain=v2 2>/dev/null)
+    else
+        # Fallback if timeout command is not available
+        git_status=$(git status --porcelain=v2 2>/dev/null)
+    fi
+
+    # Process status with optimized counting
+    if [[ -n "$git_status" ]]; then
+        # Count staged, unstaged, and untracked files efficiently
+        staged=$(echo "$git_status" | grep -c "^[12] [MADRCT].")
+        unmerged=$(echo "$git_status" | grep -c "^[12] [U].\|^[12] .U\|^[12] AA\|^[12] DD")
+        changed=$(echo "$git_status" | grep -c "^[12] .[MD]")
+        untracked=$(echo "$git_status" | grep -c "^\?")
+    fi
+
+    # Get stash count directly
+    stashed=$(git stash list --no-decorate 2>/dev/null | wc -l)
+    # Trim whitespace for bash
+    stashed=$(echo "$stashed" | tr -d '[:space:]')
+
+    # Set branch color based on repository state
+    local color_branch
+    if [[ "$detached" == "yes" ]]; then
+        color_branch="$color_detached"
+    elif [[ "$staged" -ne 0 || "$unmerged" -ne 0 || "$changed" -ne 0 || "$untracked" -ne 0 ]]; then
+        color_branch="$color_dirty"
+    else
+        color_branch="$color_clean"
+    fi
+
+    # Build prompt string efficiently
     local git_prompt=" $color_branch$branch${reset_color}"
 
-    [[ "$behind" -ne 0 ]] && git_prompt+=" $color_behind↓ $behind${reset_color}"
-    [[ "$ahead" -ne 0 ]] && git_prompt+=" $color_ahead↑$ahead${reset_color}"
-    [[ "$staged" -ne 0 ]] && git_prompt+=" $color_staged•$staged${reset_color}"
-    [[ "$unmerged" -ne 0 ]] && git_prompt+=" $color_unmerged$unmerged${reset_color}"
-    [[ "$changed" -ne 0 ]] && git_prompt+=" $color_changed+$changed${reset_color}"
-    [[ "$untracked" -ne 0 ]] && git_prompt+=" $color_untracked…$untracked${reset_color}"
-    [[ "$stashed" -ne 0 ]] && git_prompt+=" $color_stashed⚑ $stashed${reset_color}"
+    [[ "$behind" -gt 0 ]] && git_prompt+=" $color_behind↓$behind${reset_color}"
+    [[ "$ahead" -gt 0 ]] && git_prompt+=" $color_ahead↑$ahead${reset_color}"
+    [[ "$staged" -gt 0 ]] && git_prompt+=" $color_staged•$staged${reset_color}"
+    [[ "$unmerged" -gt 0 ]] && git_prompt+=" $color_unmerged$unmerged${reset_color}"
+    [[ "$changed" -gt 0 ]] && git_prompt+=" $color_changed+$changed${reset_color}"
+    [[ "$untracked" -gt 0 ]] && git_prompt+=" $color_untracked…$untracked${reset_color}"
+    [[ "$stashed" -gt 0 ]] && git_prompt+=" $color_stashed⚑$stashed${reset_color}"
 
-    echo "$git_prompt"
+    # Save to cache and output
+    echo "$git_prompt" | tee "$CACHE_FILE"
+
+    # Clean up environment variables
+    unset GIT_DIR GIT_WORK_TREE
 }
+
+# Function to clear git prompt cache when changing directories
+__git_prompt_cd() {
+    \cd "$@" || return
+    rm -f "/tmp/git_prompt_cache_$$/${PWD//\//_}" 2>/dev/null
+}
+
+# Create alias to override cd with our custom function
+alias cd="__git_prompt_cd"
 
 __build_prompt() {
     local exit_code="$?"
