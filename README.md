@@ -4,13 +4,14 @@ Latest try on Ubuntu Mate 24.04
 
 
 ```bash
-sudo apt update && sudo apt install afl++ bear btop cloc emacs git htop hunspell hunspell-en-us hunspell-fr hunspell-fr-classical hyperfine icdiff ncdu parallel ripgrep silversearcher-ag ssh tree xclip xmonad zsh
+sudo apt update && sudo apt install afl++ bat bear btop cloc exa emacs git htop hunspell hunspell-en-us hunspell-fr hunspell-fr-classical hyperfine icdiff ncdu parallel ripgrep silversearcher-ag ssh tree xclip xmonad zsh
 ```
 
 TODO
 
 ```bash
-broot tokei
+https://github.com/Canop/broot
+https://github.com/XAMPPRocky/tokei
 ```
 
 
