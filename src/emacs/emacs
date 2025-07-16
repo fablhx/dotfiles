@@ -64,6 +64,60 @@ instead of 1."
   (let ((sort-fold-case t))
     (call-interactively 'sort-lines)))
 
+(defvar open-error-location--pattern
+  "\\([^:\n]+\\):\\([0-9]+\\)\\(?::\\([0-9]+\\)\\)?"
+  "Regex pattern to extract filename, line, and optional column.")
+
+(defun open-error-location--parse (text)
+  "Parse TEXT of form filename:line[:col[:]] and return (filename line col)."
+  (when (string-match open-error-location--pattern (string-trim text))
+    (let* ((file (match-string 1 text))
+           (line (string-to-number (match-string 2 text)))
+           (col-str (match-string 3 text))
+           (col (when col-str (string-to-number col-str))))
+      (list file line col))))
+
+(defun open-error-location-at-point ()
+  "Open file:line:column at point. Path is resolved relative to current buffer's directory."
+  (interactive)
+  (let* ((line-text (thing-at-point 'line t))
+         (parsed (open-error-location--parse line-text)))
+    (if parsed
+        (let* ((rel-file (nth 0 parsed))
+               (line (nth 1 parsed))
+               (col (nth 2 parsed))
+               (base-dir (file-name-directory (or (buffer-file-name) default-directory)))
+               (full-path (expand-file-name rel-file base-dir)))
+          (if (file-exists-p full-path)
+              (let ((target-window (get-window-with-predicate
+                                    (lambda (win)
+                                      (not (eq win (selected-window)))))))
+                (when target-window
+                  (select-window target-window))
+                ;; Let advice handle positioning
+                (find-file (format "%s:%d:%d" full-path line (or col 1))))
+            (message "File not found: %s" full-path)))
+      (message "No valid filename:line[:column] pattern found at point."))))
+
+(defun find-file-noselect--advice-with-line-and-column (orig-fun filename &rest args)
+  "Advice to allow find-file to open FILENAME at specific line and column."
+  (save-match-data
+    (let* ((parsed (open-error-location--parse filename))
+           (clean-file (if parsed (nth 0 parsed) filename))
+           (line (and parsed (nth 1 parsed)))
+           (col  (and parsed (nth 2 parsed)))
+           (buf (if (file-exists-p clean-file)
+                    (apply orig-fun clean-file args)
+                  (user-error "File not found: %s" clean-file))))
+      (when (and (buffer-live-p buf) line (> line 0))
+        (with-current-buffer buf
+          (goto-char (point-min))
+          (forward-line (1- line))
+          (when (and col (> col 0))
+            (move-to-column (1- col)))))
+      buf)))
+
+
 ;; =============================================================================
 ;;                           Core Emacs Settings
 ;; =============================================================================
@@ -152,6 +206,9 @@ instead of 1."
       (define-key map (kbd "C-<delete>") 'join-next-line)
       (define-key map (kbd "C-c C-s") 'sort-ilines)
 
+      ;; Open file from log
+      (define-key map (kbd "C-c C-f") #'open-error-location-at-point)
+
       map)
     "my-keys-minor-mode keymap.")
 
@@ -164,7 +221,9 @@ instead of 1."
 
   (define-globalized-minor-mode global-my-keys-minor-mode my-keys-minor-mode
     (lambda () (my-keys-minor-mode 1)))
-  (global-my-keys-minor-mode 1))
+  (global-my-keys-minor-mode 1)
+
+  (advice-add 'find-file-noselect :around #'find-file-noselect--advice-with-line-and-column))
 
 ;; =============================================================================
 ;;                           Search and Navigation
