@@ -17,6 +17,15 @@
 ;;                           Custom Functions
 ;; =============================================================================
 
+;; Multiple cursors search functions
+(defun my-enable-phi-search ()
+  (global-set-key (kdb "C-s") #'phi-search)
+  (global-set-key (kdb "C-r") #'phi-search-backward))
+
+(defun my-disable-phi-search ()
+  (global-set-key (kdb "C-s") #'isearch-forward)
+  (global-set-key (kdb "C-r") #'isearch-backward))
+
 ;; Navigation Functions
 (defun my-pop-local-mark-ring ()
   "Pop to the local mark ring."
@@ -34,21 +43,21 @@
     (select-window win-curr)))
 
 ;; Text Manipulation Functions
-(defun renumber-list (start end &optional num)
+(defun my-renumber-list (start end &optional num)
   "Renumber the list items in the current START..END region.
 If optional prefix arg NUM is given, start numbering from that number
 instead of 1."
   (interactive "*r\np")
   (save-excursion
     (goto-char start)
-    (setq num (or num 1))
+    (let ((num (or num 1)))
     (save-match-data
       (while (re-search-forward "^\\(-* *\\)\\([0-9]+\\)" end t)
         (replace-match (concat (match-string 1) (number-to-string num)))
-        (setq num (1+ num))))))
+        (setq num (1+ num)))))))
 
 ;; Line Operations
-(defun join-next-line ()
+(defun my-join-next-line ()
   "Join next line to the end of current line."
   (interactive)
   (save-excursion
@@ -57,31 +66,30 @@ instead of 1."
     (just-one-space)))
 
 ;; Text Processing
-(defun sort-ilines ()
+(defun my-sort-ilines ()
   "Sort lines ignoring case."
   (interactive)
-  (defvar sort-fold-case)
   (let ((sort-fold-case t))
-    (call-interactively 'sort-lines)))
+    (call-interactively #'sort-lines)))
 
-(defvar open-error-location--pattern
+(defvar my-open-error-location--pattern
   "\\([^:\n]+\\):\\([0-9]+\\)\\(?::\\([0-9]+\\)\\)?"
   "Regex pattern to extract filename, line, and optional column.")
 
-(defun open-error-location--parse (text)
+(defun my-open-error-location--parse (text)
   "Parse TEXT of form filename:line[:col[:]] and return (filename line col)."
-  (when (string-match open-error-location--pattern (string-trim text))
+  (when (string-match my-open-error-location--pattern (string-trim text))
     (let* ((file (match-string 1 text))
            (line (string-to-number (match-string 2 text)))
            (col-str (match-string 3 text))
            (col (when col-str (string-to-number col-str))))
       (list file line col))))
 
-(defun open-error-location-at-point ()
+(defun my-open-error-location-at-point ()
   "Open file:line:column at point. Path is resolved relative to current buffer's directory."
   (interactive)
   (let* ((line-text (thing-at-point 'line t))
-         (parsed (open-error-location--parse line-text)))
+         (parsed (my-open-error-location--parse line-text)))
     (if parsed
         (let* ((rel-file (nth 0 parsed))
                (line (nth 1 parsed))
@@ -99,10 +107,10 @@ instead of 1."
             (message "File not found: %s" full-path)))
       (message "No valid filename:line[:column] pattern found at point."))))
 
-(defun find-file-noselect--advice-with-line-and-column (orig-fun filename &rest args)
+(defun my-find-file-noselect--advice-with-line-and-column (orig-fun filename &rest args)
   "Advice to allow find-file to open FILENAME at specific line and column."
   (save-match-data
-    (let* ((parsed (open-error-location--parse filename))
+    (let* ((parsed (my-open-error-location--parse filename))
            (clean-file (if parsed (nth 0 parsed) filename))
            (line (and parsed (nth 1 parsed)))
            (col  (and parsed (nth 2 parsed)))
@@ -194,20 +202,20 @@ instead of 1."
   (defvar my-keys-minor-mode-map
     (let ((map (make-sparse-keymap)))
       ;; Window movement
-      (define-key map (kbd "M-<left>") 'windmove-left)
-      (define-key map (kbd "M-<right>") 'windmove-right)
-      (define-key map (kbd "M-<up>") 'windmove-up)
-      (define-key map (kbd "M-<down>") 'windmove-down)
+      (define-key map (kbd "M-<left>") #'windmove-left)
+      (define-key map (kbd "M-<right>") #'windmove-right)
+      (define-key map (kbd "M-<up>") #'windmove-up)
+      (define-key map (kbd "M-<down>") #'windmove-down)
 
       ;; Text operations
-      (define-key map (kbd "C-c w d") 'delete-trailing-whitespace)
-      (define-key map (kbd "C-x C-k") 'my-kill-last-opened-buffer)
-      (define-key map (kbd "C-c C-q") 'gen-quote-word)
-      (define-key map (kbd "C-<delete>") 'join-next-line)
-      (define-key map (kbd "C-c C-s") 'sort-ilines)
+      (define-key map (kbd "C-c w d") #'delete-trailing-whitespace)
+      (define-key map (kbd "C-x C-k") #'my-kill-last-opened-buffer)
+      (define-key map (kbd "C-c C-q") #'gen-quote-word)
+      (define-key map (kbd "C-<delete>") #'my-join-next-line)
+      (define-key map (kbd "C-c C-s") #'my-sort-ilines)
 
       ;; Open file from log
-      (define-key map (kbd "C-c C-f") #'open-error-location-at-point)
+      (define-key map (kbd "C-c C-f") #'my-open-error-location-at-point)
 
       map)
     "my-keys-minor-mode keymap.")
@@ -223,7 +231,8 @@ instead of 1."
     (lambda () (my-keys-minor-mode 1)))
   (global-my-keys-minor-mode 1)
 
-  (advice-add 'find-file-noselect :around #'find-file-noselect--advice-with-line-and-column))
+  (when (fboundp 'find-file-noselect)
+    (advice-add 'find-file-noselect :around #'my-find-file-noselect--advice-with-line-and-column))
 
 ;; =============================================================================
 ;;                           Search and Navigation
@@ -259,16 +268,8 @@ instead of 1."
 (use-package phi-search
   :ensure t
   :config
-  (add-hook 'multiple-cursors-mode-enabled-hook
-            (lambda ()
-              (interactive)
-              (global-set-key (kbd "C-s") 'phi-search)
-              (global-set-key (kbd "C-r") 'phi-search-backward)))
-  (add-hook 'multiple-cursors-mode-disabled-hook
-            (lambda ()
-              (interactive)
-              (global-set-key (kbd "C-s") 'isearch-forward)
-              (global-set-key (kbd "C-r") 'isearch-backward))))
+  (add-hook 'multiple-cursors-mode-enabled-hook #'my-enable-phi-search)
+  (add-hook 'multiple-cursors-mode-disabled-hook #'my-disable-phi-search))
 
 ;; Jump to definitions
 (use-package dumb-jump
@@ -522,7 +523,7 @@ instead of 1."
     (add-to-list 'ispell-skip-region-alist '("`" . "`"))
     (add-to-list 'ispell-skip-region-alist '("^```" . "```$")))
 
-  (add-hook 'markdown-mode-hook 'custom-ispell))
+  (add-hook 'markdown-mode-hook #'custom-ispell))
 
 ;; =============================================================================
 ;;                           Visual Enhancement
