@@ -19,12 +19,12 @@
 
 ;; Multiple cursors search functions
 (defun my-enable-phi-search ()
-  (global-set-key (kdb "C-s") #'phi-search)
-  (global-set-key (kdb "C-r") #'phi-search-backward))
+  (global-set-key (kbd "C-s") #'phi-search)
+  (global-set-key (kbd "C-r") #'phi-search-backward))
 
 (defun my-disable-phi-search ()
-  (global-set-key (kdb "C-s") #'isearch-forward)
-  (global-set-key (kdb "C-r") #'isearch-backward))
+  (global-set-key (kbd "C-s") #'isearch-forward)
+  (global-set-key (kbd "C-r") #'isearch-backward))
 
 ;; Navigation Functions
 (defun my-pop-local-mark-ring ()
@@ -279,8 +279,8 @@ instead of 1."
         '(".dumbjump" ".projectile" ".git" ".hg" ".fslckout"
           ".bzr" "_darcs" ".svn" "PkgInfo" "-pkg.el"))
   (setq dumb-jump-prefer-searcher 'ag)
-  (add-hook 'xref-backend-functions #'dumb-jump-xref-activate)
   :hook ((prog-mode . dumb-jump-mode)
+         ('xref-backend-functions . #'dumb-jump-xref-activate)
          (c-mode . (lambda ()
                     (setq-local dumb-jump-force-searcher 'ag
                                dumb-jump-functions-only t))))
@@ -512,6 +512,8 @@ instead of 1."
 ;; Spelling configuration
 (use-package ispell
   :ensure nil
+  :hook
+  ('markdown-mode-hook . #'custom-ispell)
   :config
   (when (executable-find "hunspell")
     (setq-default ispell-program-name "hunspell")
@@ -521,9 +523,7 @@ instead of 1."
     "Skip regions from spell checking."
     (make-local-variable 'ispell-skip-region-alist)
     (add-to-list 'ispell-skip-region-alist '("`" . "`"))
-    (add-to-list 'ispell-skip-region-alist '("^```" . "```$")))
-
-  (add-hook 'markdown-mode-hook #'custom-ispell))
+    (add-to-list 'ispell-skip-region-alist '("^```" . "```$"))))
 
 ;; =============================================================================
 ;;                           Visual Enhancement
