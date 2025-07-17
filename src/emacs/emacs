@@ -108,22 +108,24 @@ instead of 1."
       (message "No valid filename:line[:column] pattern found at point."))))
 
 (defun my-find-file-noselect--advice-with-line-and-column (orig-fun filename &rest args)
-  "Advice to allow find-file to open FILENAME at specific line and column."
+  "Advice to allow find-file to open FILENAME at specific line and column if applicable."
   (save-match-data
     (let* ((parsed (my-open-error-location--parse filename))
-           (clean-file (if parsed (nth 0 parsed) filename))
+           (file (and parsed (nth 0 parsed)))
            (line (and parsed (nth 1 parsed)))
-           (col  (and parsed (nth 2 parsed)))
-           (buf (if (file-exists-p clean-file)
-                    (apply orig-fun clean-file args)
-                  (user-error "File not found: %s" clean-file))))
-      (when (and (buffer-live-p buf) line (> line 0))
-        (with-current-buffer buf
-          (goto-char (point-min))
-          (forward-line (1- line))
-          (when (and col (> col 0))
-            (move-to-column (1- col)))))
-      buf)))
+           (col  (and parsed (nth 2 parsed))))
+      ;; Only parse line/col if file part exists
+      (if (and file (file-exists-p file))
+          (let ((buf (apply orig-fun file args)))
+            (when (and (buffer-live-p buf) line (> line 0))
+              (with-current-buffer buf
+                (goto-char (point-min))
+                (forward-line (1- line))
+                (when (and col (> col 0))
+                  (move-to-column (1- col)))))
+            buf)
+        ;; fallback to original if no valid existing file or no match
+        (apply orig-fun filename args)))))
 
 
 ;; =============================================================================
