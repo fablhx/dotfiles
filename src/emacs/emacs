@@ -1,5 +1,3 @@
-;;; init.el --- Emacs configuration -*- lexical-binding: t; -*-
-
 ;; =============================================================================
 ;;                             Package Management
 ;; =============================================================================
@@ -12,7 +10,6 @@
 (unless (package-installed-p 'use-package)
   (package-refresh-contents)
   (package-install 'use-package))
-
 (require 'use-package)
 (setq use-package-always-ensure t)
 
@@ -22,12 +19,10 @@
 
 ;; Multiple cursors search functions
 (defun my-enable-phi-search ()
-  "Enable phi-search for multiple cursors mode."
   (global-set-key (kbd "C-s") #'phi-search)
   (global-set-key (kbd "C-r") #'phi-search-backward))
 
 (defun my-disable-phi-search ()
-  "Disable phi-search and restore default search."
   (global-set-key (kbd "C-s") #'isearch-forward)
   (global-set-key (kbd "C-r") #'isearch-backward))
 
@@ -43,10 +38,9 @@
   (interactive)
   (let ((win-curr (selected-window))
         (win-other (next-window)))
-    (when (and win-other (not (eq win-curr win-other)))
-      (select-window win-other)
-      (kill-buffer-and-window)
-      (select-window win-curr))))
+    (select-window win-other)
+    (kill-buffer-and-window)
+    (select-window win-curr)))
 
 ;; Text Manipulation Functions
 (defun my-renumber-list (start end &optional num)
@@ -57,10 +51,10 @@ instead of 1."
   (save-excursion
     (goto-char start)
     (let ((num (or num 1)))
-      (save-match-data
-        (while (re-search-forward "^\\(-* *\\)\\([0-9]+\\)" end t)
-          (replace-match (concat (match-string 1) (number-to-string num)))
-          (setq num (1+ num)))))))
+    (save-match-data
+      (while (re-search-forward "^\\(-* *\\)\\([0-9]+\\)" end t)
+        (replace-match (concat (match-string 1) (number-to-string num)))
+        (setq num (1+ num)))))))
 
 ;; Line Operations
 (defun my-join-next-line ()
@@ -78,15 +72,6 @@ instead of 1."
   (let ((sort-fold-case t))
     (call-interactively #'sort-lines)))
 
-;; Specific spelling for markdown
-(defun my-ispell-setup ()
-  "Setup ispell skip regions for various modes."
-  (make-local-variable 'ispell-skip-region-alist)
-  (add-to-list 'ispell-skip-region-alist '("`" . "`"))
-  (add-to-list 'ispell-skip-region-alist '("^```" . "```$"))
-  (add-to-list 'ispell-skip-region-alist '("^#+BEGIN_SRC" . "^#+END_SRC")))
-
-;; Error location parsing and navigation
 (defvar my-open-error-location--pattern
   "\\([^:\n]+\\):\\([0-9]+\\)\\(?::\\([0-9]+\\)\\)?"
   "Regex pattern to extract filename, line, and optional column.")
@@ -112,10 +97,10 @@ instead of 1."
                (base-dir (file-name-directory (or (buffer-file-name) default-directory)))
                (full-path (expand-file-name rel-file base-dir)))
           (if (file-exists-p full-path)
-              (progn
-                (when-let ((target-window (get-window-with-predicate
-                                          (lambda (win)
-                                            (not (eq win (selected-window)))))))
+              (let ((target-window (get-window-with-predicate
+                                    (lambda (win)
+                                      (not (eq win (selected-window)))))))
+                (when target-window
                   (select-window target-window))
                 ;; Let advice handle positioning
                 (find-file (format "%s:%d:%d" full-path line (or col 1))))
@@ -140,24 +125,6 @@ instead of 1."
             (move-to-column (1- col)))))
       buf)))
 
-;; Smart window splitting
-(defun my-split-window-below-and-balance ()
-  "Split window below and balance all windows."
-  (interactive)
-  (split-window-below)
-  (balance-windows))
-
-(defun my-split-window-right-and-balance ()
-  "Split window right and balance all windows."
-  (interactive)
-  (split-window-right)
-  (balance-windows))
-
-(defun my-delete-window-and-balance ()
-  "Delete window and balance remaining windows."
-  (interactive)
-  (delete-window)
-  (balance-windows))
 
 ;; =============================================================================
 ;;                           Core Emacs Settings
@@ -183,9 +150,18 @@ instead of 1."
   ([f12] . enlarge-window)
 
   ;; Window management with auto-balancing
-  ("C-x 2" . my-split-window-below-and-balance)
-  ("C-x 3" . my-split-window-right-and-balance)
-  ("C-x 0" . my-delete-window-and-balance)
+  ("C-x 2" . (lambda ()
+               (interactive)
+               (split-window-below)
+               (balance-windows)))
+  ("C-x 3" . (lambda ()
+               (interactive)
+               (split-window-right)
+               (balance-windows)))
+  ("C-x 0" . (lambda ()
+               (interactive)
+               (delete-window)
+               (balance-windows)))
 
   :config
   ;; Path configuration
@@ -247,12 +223,12 @@ instead of 1."
   (define-minor-mode my-keys-minor-mode
     "A minor mode so that my key settings override annoying major modes."
     :init-value t
-    :lighter " my-keys"
-    :keymap my-keys-minor-mode-map)
+    :lighter " my-keys")
+
+  (my-keys-minor-mode t)
 
   (define-globalized-minor-mode global-my-keys-minor-mode my-keys-minor-mode
     (lambda () (my-keys-minor-mode 1)))
-
   (global-my-keys-minor-mode 1)
 
   (when (fboundp 'find-file-noselect)
@@ -291,7 +267,6 @@ instead of 1."
 ;; Search with multiple cursors
 (use-package phi-search
   :ensure t
-  :after multiple-cursors
   :config
   (add-hook 'multiple-cursors-mode-enabled-hook #'my-enable-phi-search)
   (add-hook 'multiple-cursors-mode-disabled-hook #'my-disable-phi-search))
@@ -302,8 +277,8 @@ instead of 1."
   :config
   (setq dumb-jump-project-denoters
         '(".dumbjump" ".projectile" ".git" ".hg" ".fslckout"
-          ".bzr" "_darcs" ".svn" "PkgInfo" "-pkg.el")
-        dumb-jump-prefer-searcher 'ag))
+          ".bzr" "_darcs" ".svn" "PkgInfo" "-pkg.el"))
+  (setq dumb-jump-prefer-searcher 'ag)
   :hook ((prog-mode . dumb-jump-mode)
          ('xref-backend-functions . #'dumb-jump-xref-activate)
          (c-mode . (lambda ()
@@ -381,11 +356,8 @@ instead of 1."
 ;; =============================================================================
 
 ;; Shell scripting
-(use-package sh-script
-  :ensure nil
-  :config
-  (setq sh-basic-offset 2
-        sh-indentation 2))
+(setq-default sh-basic-offset 2
+              sh-indentation 2)
 
 ;; C/C++
 (use-package cc-mode
@@ -464,6 +436,15 @@ instead of 1."
   :ensure t
   :after cc-mode)
 
+;; Python Configuration
+(use-package flycheck
+  :ensure t
+  :hook (python-mode . flycheck-mode)
+  :config
+  (when (executable-find "pylint3")
+    (setq flycheck-python-pylint-executable "pylint3"))
+  (setq flycheck-python-mypy-cache-dir "/dev/null"))
+
 ;; OCaml Configuration
 (use-package tuareg
   :ensure t
@@ -474,11 +455,9 @@ instead of 1."
 
 (use-package merlin
   :ensure t
-  :hook ((tuareg-mode . merlin-mode)
-         (merlin-mode . company-mode))
-  :config
-  (setq merlin-error-after-save nil
-        merlin-command 'opam))
+  :hook ((tuareg-mode-hook . merlin-mode)
+         (merlin-mode-hook . company-mode))
+  :config (setq merlin-error-after-save nil))
 
 (use-package merlin-eldoc
   :ensure t
@@ -486,7 +465,6 @@ instead of 1."
 
 (use-package flycheck-ocaml
   :ensure t
-  :after flycheck
   :config (flycheck-ocaml-setup))
 
 ;; =============================================================================
@@ -498,13 +476,8 @@ instead of 1."
   :ensure t
   :mode (("\\.md\\'" . markdown-mode)
          ("\\.markdown\\'" . markdown-mode))
-  :config
-  (setq markdown-command "multimarkdown"
-        markdown-enable-math t
-        markdown-enable-wiki-links t
-        markdown-italic-underscore t
-        markdown-asymmetric-header t
-        markdown-gfm-additional-languages '("sh" "bash" "python" "c" "cpp")))
+  :init
+  (setq markdown-command "multimarkdown"))
 
 ;; JSON
 (use-package json-mode
@@ -512,11 +485,6 @@ instead of 1."
   :mode "\\.json\\'"
   :bind (:map json-mode-map
               ("C-M-\\" . json-reformat-region)))
-
-;; YAML
-(use-package yaml-mode
-  :ensure t
-  :mode "\\.ya?ml\\'")
 
 ;; Configuration files
 (use-package conf-mode
@@ -530,9 +498,7 @@ instead of 1."
 ;; JavaScript/TypeScript
 (use-package typescript-mode
   :ensure t
-  :mode "\\.tsx?\\'"
-  :config
-  (setq typescript-indent-level 2))
+  :mode "\\.tsx\\'")
 
 ;; Makefile
 (use-package make-mode
@@ -547,13 +513,17 @@ instead of 1."
 (use-package ispell
   :ensure nil
   :hook
-  ((text-mode . ispell-minor-mode)
-   (markdown-mode . #'my-ispell-setup))
+  ('markdown-mode-hook . #'custom-ispell)
   :config
   (when (executable-find "hunspell")
-    (setq ispell-program-name "hunspell"
-          ispell-really-hunspell t
-          ispell-dictionary "en_US")))
+    (setq-default ispell-program-name "hunspell")
+    (setq ispell-really-hunspell t))
+
+  (defun custom-ispell ()
+    "Skip regions from spell checking."
+    (make-local-variable 'ispell-skip-region-alist)
+    (add-to-list 'ispell-skip-region-alist '("`" . "`"))
+    (add-to-list 'ispell-skip-region-alist '("^```" . "```$"))))
 
 ;; =============================================================================
 ;;                           Visual Enhancement
@@ -584,19 +554,11 @@ instead of 1."
    '(whitespace-tab ((t (:foreground "red"))))
    '(whitespace-trailing ((t (:foreground "red" :background "yellow"))))))
 
-;; Line numbers
-(use-package display-line-numbers
-  :ensure nil
-  :hook (prog-mode . display-line-numbers-mode)
-  :config
-  (setq display-line-numbers-width 4
-        display-line-numbers-widen t))
-
 ;; =============================================================================
 ;;                           Final Configuration
 ;; =============================================================================
 
-;; Keep custom variables separate
+;; Move custom-set-variables to a separate file
 (setq custom-file (expand-file-name "custom.el" user-emacs-directory))
 (when (file-exists-p custom-file)
   (load custom-file))
