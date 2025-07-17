@@ -17,7 +17,7 @@ export HISTFILESIZE=50000
 shopt -s histappend
 
 export ALTERNATE_EDITOR=""
-export EDITOR='emacs';
+export EDITOR='emacs'
 export LESS="-RFX"
 
 alias ls='ls --color=auto -v'
@@ -42,36 +42,19 @@ alias xopen='xdg-open'
 alias ocaml='rlwrap -pMagenta ocaml'
 
 function __emacs_client() {
-    split_file_line=()
-    for p in "$@"; do
-        if [[ "$p" =~ "(.*):([0-9]+)$" ]]; then
-            split_file_line+="+${BASH_REMATCH[2]}"
-            split_file_line+="${BASH_REMATCH[1]}"
-        else
-            split_file_line+="$p"
-        fi
-    done
+    # Since emacs advice handles file:line:column parsing, we can pass arguments directly
     # This check if I have already run an emacsclient --create-frame,
     # if yes, use the current frame, if no create a new frame.
-    if emacsclient -n -e "(if (> (length (frame-list)) 1) 't)" | grep -q t;
-    then
-        emacsclient -n "${split_file_line[@]}"
+    if emacsclient -n -e "(if (> (length (frame-list)) 1) 't)" 2>/dev/null | grep -q t; then
+        emacsclient -n "$@"
     else
-        emacsclient -c -n "${split_file_line[@]}"
+        emacsclient -c -n "$@"
     fi
 }
 
 function __emacs() {
-    split_file_line=()
-    for p in "$@"; do
-        if [[ "$p" =~ "(.*):([0-9]+)$" ]]; then
-            split_file_line+="+${BASH_REMATCH[2]}"
-            split_file_line+="${BASH_REMATCH[1]}"
-        else
-            split_file_line+="$p"
-        fi
-    done
-    emacs "${split_file_line[@]}"
+    # Since emacs advice handles file:line:column parsing, we can pass arguments directly
+    emacs "$@"
 }
 
 alias cedit='emacsclient -c -nw'
@@ -81,9 +64,11 @@ alias start_emacs='emacs --daemon'
 alias stop_emacs='emacsclient -e "(kill-emacs)"'
 
 # Optimized Git Prompt Function for Bash
-__git_prompt() {
-    local CACHE_DIR="/tmp/git_prompt_cache_$$"
-    local CACHE_FILE="${CACHE_DIR}/${PWD//\//_}"
+function __git_prompt() {
+    local CACHE_DIR="/tmp/git_prompt_cache_$UID"
+    local key
+    key=$(echo "$PWD" | md5sum | cut -d' ' -f1)
+    local CACHE_FILE="${CACHE_DIR}/${key}"
     local CACHE_TIMEOUT=2  # seconds
 
     # Create cache directory if it doesn't exist
@@ -91,7 +76,7 @@ __git_prompt() {
 
     # Check if cache is fresh (bash compatible stat command)
     if [[ -f "$CACHE_FILE" ]]; then
-        local cache_time file_time current_time
+        local file_time current_time
         if [[ "$OSTYPE" == "darwin"* ]]; then
             # macOS
             file_time=$(stat -f %m "$CACHE_FILE" 2>/dev/null)
@@ -101,7 +86,7 @@ __git_prompt() {
         fi
         current_time=$(date +%s)
 
-        if (( current_time - file_time < CACHE_TIMEOUT )); then
+        if [[ -n "$file_time" && -n "$current_time" ]] && (( current_time - file_time < CACHE_TIMEOUT )); then
             cat "$CACHE_FILE"
             return
         fi
@@ -151,9 +136,7 @@ __git_prompt() {
             ahead_behind=$(git rev-list --left-right --count "$upstream...HEAD" 2>/dev/null)
 
             if [[ -n "$ahead_behind" ]]; then
-                # Parse ahead_behind differently for bash
-                behind=$(echo "$ahead_behind" | awk '{print $1}')
-                ahead=$(echo "$ahead_behind" | awk '{print $2}')
+                read -r behind ahead <<< "$ahead_behind"
             fi
         fi
     fi
@@ -171,14 +154,14 @@ __git_prompt() {
     # Process status with optimized counting
     if [[ -n "$git_status" ]]; then
         # Count staged, unstaged, and untracked files efficiently
-        staged=$(echo "$git_status" | grep -c "^[12] [MADRCT].")
-        unmerged=$(echo "$git_status" | grep -c "^[12] [U].\|^[12] .U\|^[12] AA\|^[12] DD")
-        changed=$(echo "$git_status" | grep -c "^[12] .[MD]")
-        untracked=$(echo "$git_status" | grep -c "^\?")
+        staged=$(echo "$git_status" | grep -c "^[12] [MADRCT]." || echo 0)
+        unmerged=$(echo "$git_status" | grep -c "^[12] [U].\|^[12] .U\|^[12] AA\|^[12] DD" || echo 0)
+        changed=$(echo "$git_status" | grep -c "^[12] .[MD]" || echo 0)
+        untracked=$(echo "$git_status" | grep -c "^\?" || echo 0)
     fi
 
     # Get stash count directly
-    stashed=$(git stash list --no-decorate 2>/dev/null | wc -l)
+    stashed=$(git stash list --no-decorate 2>/dev/null | wc -l || echo 0)
     # Trim whitespace for bash
     stashed=$(echo "$stashed" | tr -d '[:space:]')
 
@@ -204,28 +187,33 @@ __git_prompt() {
     [[ "$stashed" -gt 0 ]] && git_prompt+=" $color_stashed⚑$stashed${reset_color}"
 
     # Save to cache and output
-    echo "$git_prompt" | tee "$CACHE_FILE"
+    echo "$git_prompt" | tee "$CACHE_FILE" 2>/dev/null
 
     # Clean up environment variables
     unset GIT_DIR GIT_WORK_TREE
 }
 
 # Function to clear git prompt cache when changing directories
-__git_prompt_cd() {
+function __git_prompt_cd() {
     \cd "$@" || return
-    rm -f "/tmp/git_prompt_cache_$$/${PWD//\//_}" 2>/dev/null
+    local CACHE_DIR="/tmp/git_prompt_cache_$UID"
+    local key
+    key=$(echo "$PWD" | md5sum | cut -d' ' -f1)
+    rm -f "${CACHE_DIR}/${key}" 2>/dev/null
 }
 
 # Create alias to override cd with our custom function
 alias cd="__git_prompt_cd"
 
-__build_prompt() {
+function __build_prompt() {
     local exit_code="$?"
     PS1="\[\033[38;5;135m\]\u@\h\[\033[0m\] \w"
     test -z "$TIS_CHOOSE" || PS1+=$' \[\033[00;36m\]{${TIS_CHOOSE##*/}}\[\033[0m\]'
-    PS1+="$(__git_prompt) "
-    test "$exit_code" -eq 0 || PS1+="\[\033[38;5;196m\][$exit_code]\[\033[0m\] "
-    PS1+="\$ "
+    PS1+="$(__git_prompt)"
+    if [[ "$exit_code" -ne 0 ]]; then
+        PS1+=" \[\033[38;5;196m\][$exit_code]\[\033[0m\]"
+    fi
+    PS1+=" \$ "
 }
 
 PROMPT_DIRTRIM=3

@@ -79,53 +79,21 @@ alias ocaml='rlwrap -pMagenta ocaml'
 alias pretty_py='autopep8 --in-place --aggressive --aggressive'
 
 function __emacs_client() {
-    local -a args=()
-
-    for p in "$@"; do
-        if [[ "$p" =~ ^(.*):([0-9]+)(:([0-9]+))?$ ]]; then
-            # Make sure the file part exists before adding line/column numbers
-            if [[ -f "${match[1]}" ]]; then
-                args+="+${match[2]}"
-                [[ -n "${match[4]}" ]] && args+="+${match[4]}" # Add column if present
-                args+="${match[1]}"
-            else
-                # If file doesn't exist, treat the whole thing as a single argument
-                args+="$p"
-            fi
-        else
-            args+="$p"
-        fi
-    done
-
-    # Check if Emacs frame exists
-    if [ "$(emacsclient -n -e '(> (length (frame-list)) 1)')" = "t" ]; then
-        emacsclient -n "${args[@]}"
+    # Since emacs advice handles file:line:column parsing, we can pass arguments directly
+    # This check if I have already run an emacsclient --create-frame,
+    # if yes, use the current frame, if no create a new frame.
+    if emacsclient -n -e "(if (> (length (frame-list)) 1) 't)" 2>/dev/null | grep -q t; then
+        emacsclient -n "$@"
     else
-        emacsclient -c -n "${args[@]}"
+        emacsclient -c -n "$@"
     fi
 }
 
 function __emacs() {
-    local -a args=()
-
-    for p in "$@"; do
-        if [[ "$p" =~ ^(.*):([0-9]+)(:([0-9]+))?$ ]]; then
-            # Make sure the file part exists before adding line/column numbers
-            if [[ -f "${match[1]}" ]]; then
-                args+="+${match[2]}"
-                [[ -n "${match[4]}" ]] && args+="+${match[4]}" # Add column if present
-                args+="${match[1]}"
-            else
-                # If file doesn't exist, treat the whole thing as a single argument
-                args+="$p"
-            fi
-        else
-            args+="$p"
-        fi
-    done
-
-    emacs "${args[@]}"
+    # Since emacs advice handles file:line:column parsing, we can pass arguments directly
+    emacs "$@"
 }
+
 
 alias cedit='emacsclient -c -nw'
 alias wedit='__emacs_client'
