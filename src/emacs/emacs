@@ -232,7 +232,7 @@ instead of 1."
   (global-my-keys-minor-mode 1)
 
   (when (fboundp 'find-file-noselect)
-    (advice-add 'find-file-noselect :around #'my-find-file-noselect--advice-with-line-and-column))
+    (advice-add 'find-file-noselect :around #'my-find-file-noselect--advice-with-line-and-column)))
 
 ;; =============================================================================
 ;;                           Search and Navigation
