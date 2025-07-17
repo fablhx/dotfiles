@@ -78,7 +78,7 @@ alias ocaml='rlwrap -pMagenta ocaml'
 
 alias pretty_py='autopep8 --in-place --aggressive --aggressive'
 
-function __emacs_client() {
+__emacs_client() {
     # Since emacs advice handles file:line:column parsing, we can pass arguments directly
     # This check if I have already run an emacsclient --create-frame,
     # if yes, use the current frame, if no create a new frame.
@@ -89,7 +89,7 @@ function __emacs_client() {
     fi
 }
 
-function __emacs() {
+__emacs() {
     # Since emacs advice handles file:line:column parsing, we can pass arguments directly
     emacs "$@"
 }
