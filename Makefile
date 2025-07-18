@@ -1,48 +1,182 @@
-.PHONY: usage
-usage:
-	@echo 'Run `make build` to generate the files and the links in {HOME}'
+# Configuration
+CONFIG_DIR := $(shell pwd)
+BUILD_DIR := $(CONFIG_DIR)/_build
+
+# Colors for status output
+GREEN := \033[0;32m
+ORANGE := \033[0;33m
+RED := \033[0;31m
+NC := \033[0m
+
+# File mappings and lists
+SOURCE_FILES := clang-format/clang-format emacs/emacs git/gitconfig git/gitignore shell/bashrc shell/zshrc tmux/tmux
+XMONAD_FILES := xmonad/xmobarrc xmonad/xmonad.hs
+VALGRIND_FILES := valgrind/valgrindrc
+BUILD_DIRS := emacs.d valgrind xmonad config
+LINK_DIRS := emacs.d
+LINK_FILES := bashrc clang-format emacs emacs.elc gitconfig gitignore tmux.conf valgrindrc zshrc
+CONFIG_ITEMS := gtk-3.0 terminator warp-terminal
+ALL_DOTFILES := $(LINK_FILES) $(LINK_DIRS)
+
+# Default target when running 'make' without arguments
+.DEFAULT_GOAL := usage
+
+.PHONY: usage help
+usage help:
+	@echo "Config files Management"
+	@echo ""
+	@echo "Usage:"
+	@echo "  make build     - Build and install config files"
+	@echo "  make clean     - Remove installed config files"
+	@echo "  make status    - Show current config files status"
+	@echo ""
+	@echo "Configuration:"
+	@echo "  CONFIG_DIR = $(CONFIG_DIR)"
+	@echo "  BUILD_DIR  = $(BUILD_DIR)"
 
 .PHONY: build
-build: SHELL := /bin/bash
 build:
-	mkdir -p ${HOME}/config/_build
-	mkdir -p ${HOME}/config/_build/emacs.d
-	mkdir -p ${HOME}/config/_build/xmonad
-	cp ${HOME}/config/src/emacs/emacs ${HOME}/config/_build
-	cp ${HOME}/config/src/git/gitconfig ${HOME}/config/_build
-	cp ${HOME}/config/src/git/gitignore ${HOME}/config/_build
-	cp ${HOME}/config/src/shell/bashrc ${HOME}/config/_build
-	cp ${HOME}/config/src/shell/zshrc ${HOME}/config/_build
-	cp ${HOME}/config/src/tmux/tmux ${HOME}/config/_build
-	cp ${HOME}/config/src/valgrind/valgrindrc ${HOME}/config/_build
-	cp -R ${HOME}/config/src/valgrind/valgrind ${HOME}/config/_build
-	cp ${HOME}/config/src/xmonad/xmonad.hs ${HOME}/config/_build/xmonad
-	ln -sf ${HOME}/config/src/clang-format/clang-format ${HOME}/.clang-format
-	ln -sf ${HOME}/config/_build/bashrc ${HOME}/.bashrc
-	ln -sf ${HOME}/config/_build/emacs ${HOME}/.emacs
-	if [ ! -L ${HOME}/.emacs.d ]; then ln -s ${HOME}/config/_build/emacs.d ${HOME}/.emacs.d; fi
-	ln -sf ${HOME}/work/git/extern/gdb-dashboard/.gdbinit ${HOME}/.gdbinit
-	ln -sf ${HOME}/config/_build/gitconfig ${HOME}/.gitconfig
-	ln -sf ${HOME}/config/_build/gitignore ${HOME}/.gitignore
-	ln -sf ${HOME}/config/_build/tmux ${HOME}/.tmux.conf
-	ln -sf ${HOME}/config/_build/valgrindrc ${HOME}/.valgrindrc
-	ln -sf ${HOME}/config/_build/zshrc ${HOME}/.zshrc
-	ln -sf ${HOME}/config/_build/xmonad/xmonad.hs ${HOME}/.xmonad.hs
-	ln -sf ${HOME}/config/_build/xmonad/xmobarrc ${HOME}/.xmobarrc
-	if [ ! -L ${HOME}/.xmonad ]; then ln -s ${HOME}/config/_build/xmonad ${HOME}/.xmonad; fi
+	@echo "Building config files..."
+	@mkdir -p $(BUILD_DIR)
+	@$(foreach dir,$(BUILD_DIRS),mkdir -p $(BUILD_DIR)/$(dir);)
+
+	# Copy source files
+	@$(foreach file,$(SOURCE_FILES), \
+		if [ -f "src/$(file)" ]; then \
+			cp "src/$(file)" "$(BUILD_DIR)/$(notdir $(file))"; \
+		fi;)
+
+	@$(foreach file,$(XMONAD_FILES), \
+		if [ -f "src/$(file)" ]; then \
+			cp "src/$(file)" "$(BUILD_DIR)/$(file)"; \
+		fi;)
+
+	@$(foreach file,$(VALGRIND_FILES), \
+		if [ -f "src/$(file)" ]; then \
+			cp "src/$(file)" "$(BUILD_DIR)/$(notdir $(file))"; \
+		fi;)
+
+	# Handle tmux naming
+	@if [ -f "$(BUILD_DIR)/tmux" ]; then \
+		mv "$(BUILD_DIR)/tmux" "$(BUILD_DIR)/tmux.conf"; \
+	fi
+
+	# Copy valgrind directory if it exists
+	@if [ -d "src/valgrind/valgrind" ]; then \
+		cp -r "src/valgrind/valgrind" "$(BUILD_DIR)/"; \
+	fi
+
+	# Copy config directory structures
+	@if [ -d "src/config" ]; then \
+		$(foreach item,$(CONFIG_ITEMS), \
+			if [ -e "src/config/$(item)" ]; then \
+				cp -r "src/config/$(item)" "$(BUILD_DIR)/config"; \
+			fi;) \
+	fi
+
+	# Compile Emacs configuration
+	@if [ -f "$(BUILD_DIR)/emacs" ] && command -v emacs >/dev/null 2>&1; then \
+		emacs --batch --eval "(byte-compile-file \"$(BUILD_DIR)/emacs\")" 2>/dev/null || echo "Warning: Emacs compilation failed"; \
+	else \
+		echo "Warning: emacs not found, skipping compilation"; \
+	fi
+
+	# Compile XMonad configuration
+	@if [ -f "$(BUILD_DIR)/xmonad/xmonad.hs" ] && command -v xmonad >/dev/null 2>&1; then \
+		cd "$(BUILD_DIR)/xmonad" && xmonad --recompile 2>/dev/null || echo "Warning: XMonad compilation failed"; \
+	else \
+		echo "Warning: xmonad not found, skipping compilation"; \
+	fi
+
+	# Create symlinks
+	@mkdir -p $(HOME)/.config
+
+	# Link files
+	@$(foreach file,$(LINK_FILES), \
+		if [ -f "$(BUILD_DIR)/$(file)" ]; then \
+			ln -sf "$(BUILD_DIR)/$(file)" "$(HOME)/.$(file)"; \
+		fi;)
+
+	# Link directories
+	@$(foreach dir,$(LINK_DIRS), \
+		if [ -d "$(BUILD_DIR)/$(dir)" ]; then \
+			ln -sf "$(BUILD_DIR)/$(dir)" "$(HOME)/.$(dir)"; \
+		fi;)
+
+	# Link config items
+	@$(foreach item,$(CONFIG_ITEMS), \
+		if [ -e "$(BUILD_DIR)/$(item)" ]; then \
+			ln -sf "$(BUILD_DIR)/config/$(item)" "$(HOME)/.config/$(item)"; \
+		fi;)
+
+	# Setup git and gsettings if this is a fresh build
+	@if [ ! -d "$(BUILD_DIR)/.git" ]; then \
+		echo "First-time setup: creating .git directory..."; \
+		git init "$(BUILD_DIR)"; \
+		echo "bin" > "$(BUILD_DIR)/.gitignore"; \
+		echo "emacs.elc" >> "$(BUILD_DIR)/.gitignore"; \
+		echo "emacs.d" >> "$(BUILD_DIR)/.gitignore"; \
+		echo "xmonad/xmonad.errors" >> "$(BUILD_DIR)/.gitignore"; \
+		echo "xmonad/xmonad.hi" >> "$(BUILD_DIR)/.gitignore"; \
+		echo "xmonad/xmonad.o" >> "$(BUILD_DIR)/.gitignore"; \
+		echo "xmonad/xmonad.state" >> "$(BUILD_DIR)/.gitignore"; \
+		echo "xmonad/xmonad-x86_64-linux" >> "$(BUILD_DIR)/.gitignore"; \
+		echo "Configuring gsettings..."; \
+		pushd "$(BUILD_DIR)"; \
+		git add .; \
+		git commit -m "Initial commit"; \
+		popd; \
+		gsettings set org.mate.session.required-components windowmanager xmonad || echo "Warning: gsettings 1 failed"; \
+		gsettings set org.mate.session required-components-list "['windowmanager', 'panel']" || echo "Warning: gsettings 2 failed"; \
+		gsettings set org.mate.mate-menu hot-key '' || echo "Warning: gsettings 3 failed"; \
+		gsettings set com.solus-project.brisk-menu hot-key '' || echo "Warning: gsettings 4 failed"; \
+	fi
+
+	@echo "Build complete!"
+
+.PHONY: status
+status:
+	@echo "Config symlinks status:"
+	@$(foreach file,$(ALL_DOTFILES), \
+		if [ -L "$(HOME)/.$(file)" ]; then \
+			echo "  $(GREEN)✓$(NC) .$(file) -> $$(readlink $(HOME)/.$(file))"; \
+		elif [ -e "$(HOME)/.$(file)" ]; then \
+			echo "  $(ORANGE)⚠$(NC) .$(file) (exists but not a symlink)"; \
+		else \
+			echo "  $(RED)✗$(NC) .$(file) (missing)"; \
+		fi;)
+	@echo ""
+	@echo "Config symlinks:"
+	@$(foreach item,$(CONFIG_ITEMS), \
+		if [ -L "$(HOME)/.config/$(item)" ]; then \
+			echo "  $(GREEN)✓$(NC) .config/$(item) -> $$(readlink $(HOME)/.config/$(item))"; \
+		elif [ -e "$(HOME)/.config/$(item)" ]; then \
+			echo "  $(ORANGE)⚠$(NC) .config/$(item) (exists but not a symlink)"; \
+		else \
+			echo "  $(RED)✗$(NC) .config/$(item) (missing)"; \
+		fi;)
 
 .PHONY: clean
-clean: SHELL := /bin/bash
 clean:
-	rm -f ${HOME}/.bashrc
-	rm -f ${HOME}/.emacs
-	rm -rf ${HOME}/.emacs.d
-	rm -f ${HOME}/.gdbinit
-	rm -f ${HOME}/.gitconfig
-	rm -f ${HOME}/.gitignore
-	rm -f ${HOME}/.tmux.conf
-	rm -f ${HOME}/.valgrindrc
-	rm -f ${HOME}/.zshrc
-	rm -f ${HOME}/.xmonad.hs
-	rm -f ${HOME}/.xmobarrc
-	rm -rf ${HOME}/.xmonad
+	@echo "Removing config files..."
+	@$(foreach file,$(ALL_DOTFILES), \
+		if [ -L "$(HOME)/.$(file)" ]; then \
+			rm -f "$(HOME)/.$(file)"; \
+			echo "Removed link: .$(file)"; \
+		elif [ -e "$(HOME)/.$(file)" ]; then \
+			echo "Warning: $(HOME)/.$(file) exists but is not a symlink - skipping"; \
+		fi;)
+
+	@$(foreach item,$(CONFIG_ITEMS), \
+		if [ -L "$(HOME)/.config/$(item)" ]; then \
+			rm -f "$(HOME)/.config/$(item)"; \
+			echo "Removed link: .config/$(item)"; \
+		elif [ -e "$(HOME)/.config/$(item)" ]; then \
+			echo "Warning: $(HOME)/.config/$(item) exists but is not a symlink - skipping"; \
+		fi;)
+
+	@if [ -d "$(BUILD_DIR)" ]; then \
+		rm -rf "$(BUILD_DIR)"; \
+		echo "Removed build directory"; \
+	fi
+	@echo "Clean complete"

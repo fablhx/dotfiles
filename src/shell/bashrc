@@ -64,8 +64,8 @@ alias stop_emacs='emacsclient -e "(kill-emacs)"'
 
 # Optimized Git Prompt Function for Bash
 __git_prompt() {
-    local CACHE_DIR="/tmp/git_prompt_cache_$$"
-    local CACHE_FILE="${CACHE_DIR}/${PWD//\//_}"
+    local CACHE_DIR="${TMPDIR:-/tmp}/git_prompt_cache_${USER}_$$"
+    local CACHE_FILE="${CACHE_DIR}/${PWD//\/__}"
     local CACHE_TIMEOUT=2  # seconds
 
     # Create cache directory if it doesn't exist
@@ -73,15 +73,9 @@ __git_prompt() {
 
     # Check if cache is fresh (bash compatible stat command)
     if [[ -f "$CACHE_FILE" ]]; then
-        local cache_time file_time current_time
-        if [[ "$OSTYPE" == "darwin"* ]]; then
-            # macOS
-            file_time=$(stat -f %m "$CACHE_FILE" 2>/dev/null)
-        else
-            # Linux and others
-            file_time=$(stat -c %Y "$CACHE_FILE" 2>/dev/null)
-        fi
+        local file_time current_time
         current_time=$(date +%s)
+        file_time=$(stat -c %Y "$CACHE_FILE" 2>/dev/null) || return
 
         if (( current_time - file_time < CACHE_TIMEOUT )); then
             cat "$CACHE_FILE"
@@ -152,17 +146,20 @@ __git_prompt() {
 
     # Process status with optimized counting
     if [[ -n "$git_status" ]]; then
-        # Count staged, unstaged, and untracked files efficiently
-        staged=$(echo "$git_status" | grep -c "^[12] [MADRCT].")
-        unmerged=$(echo "$git_status" | grep -c "^[12] [U].\|^[12] .U\|^[12] AA\|^[12] DD")
-        changed=$(echo "$git_status" | grep -c "^[12] .[MD]")
-        untracked=$(echo "$git_status" | grep -c "^\?")
+        # Count staged, unstaged, and untracked files efficiently with single awk
+        local counts
+        counts=$(echo "$git_status" | awk '
+            /^[12] [MADRCT]./ { staged++ }
+            /^[12] [U].|^[12] .U|^[12] AA|^[12] DD/ { unmerged++ }
+            /^[12] .[MD]/ { changed++ }
+            /^\?/ { untracked++ }
+            END { print staged+0, unmerged+0, changed+0, untracked+0 }
+        ')
+        read staged unmerged changed untracked <<< "$counts"
     fi
 
     # Get stash count directly
     stashed=$(git stash list --no-decorate 2>/dev/null | wc -l)
-    # Trim whitespace for bash
-    stashed=$(echo "$stashed" | tr -d '[:space:]')
 
     # Set branch color based on repository state
     local color_branch
@@ -195,7 +192,7 @@ __git_prompt() {
 # Function to clear git prompt cache when changing directories
 __git_prompt_cd() {
     \cd "$@" || return
-    rm -f "/tmp/git_prompt_cache_$$/${PWD//\//_}" 2>/dev/null
+    rm -f "${TMPDIR:-/tmp}/git_prompt_cache_${USER}_$$/${PWD//\/__}" 2>/dev/null
 }
 
 # Create alias to override cd with our custom function

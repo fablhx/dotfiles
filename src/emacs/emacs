@@ -127,7 +127,6 @@ instead of 1."
         ;; fallback to original if no valid existing file or no match
         (apply orig-fun filename args)))))
 
-
 ;; =============================================================================
 ;;                           Core Emacs Settings
 ;; =============================================================================
@@ -171,15 +170,28 @@ instead of 1."
    load-path (cons (expand-file-name "~/.emacs.d/elpa") load-path))
 
   ;; Editor behavior
-  (setq-default indent-tabs-mode nil)  ; Use spaces instead of tabs
-  (line-number-mode t)                 ; Show line numbers
-  (column-number-mode t)               ; Show column numbers
-  (menu-bar-mode t)                    ; Show menu bar
-  (tool-bar-mode -1)                   ; Hide tool bar
-  (transient-mark-mode t)              ; Highlight selection
-  (delete-selection-mode t)            ; Delete selected text
-  (fset 'yes-or-no-p 'y-or-n-p)        ; Use y/n instead of yes/no
-  (global-auto-revert-mode t)          ; Auto reload changed files
+  (setq-default
+   indent-tabs-mode nil          ; Use spaces instead of tabs
+   tab-width 4                   ; Set tab width
+   fill-column 80)               ; Set fill column
+
+  ;; UI settings
+  (line-number-mode t)            ; Show line numbers
+  (column-number-mode t)          ; Show column numbers
+  (menu-bar-mode t)               ; Show menu bar
+  (tool-bar-mode -1)              ; Hide tool bar
+  (scroll-bar-mode -1)            ; Hide scroll bar
+  (transient-mark-mode t)         ; Highlight selection
+  (delete-selection-mode t)       ; Delete selected text
+  (fset 'yes-or-no-p 'y-or-n-p)   ; Use y/n instead of yes/no
+  (global-auto-revert-mode t)     ; Auto reload changed files
+  (save-place-mode t)             ; Remember cursor position
+
+  ;; Scrolling behavior
+  (setq scroll-conservatively 10000
+        scroll-margin 3
+        scroll-step 1
+        auto-window-vscroll nil)
 
   ;; Various settings
   (setq
@@ -189,7 +201,8 @@ instead of 1."
    read-file-name-completion-ignore-case t
    require-final-newline t
    search-whitespace-regexp nil
-   query-replace-highlight t)
+   query-replace-highlight t
+   vc-follow-symlinks t)           ; Follow symlinks without asking
 
   ;; Custom variables
   (custom-set-variables
@@ -305,13 +318,20 @@ instead of 1."
   :custom
   (company-minimum-prefix-length 2)
   (company-idle-delay 0.2)
-  (company-dabbrev-downcase nil))
+  (company-dabbrev-downcase nil)
+  (company-tooltip-align-annotations t)
+  (company-tooltip-limit 10)
+  :config
+  ;; Improved completion cycling
+  (define-key company-active-map (kbd "C-n") #'company-select-next)
+  (define-key company-active-map (kbd "C-p") #'company-select-previous))
 
 ;; Compilation
 (use-package compile
   :ensure nil
   :custom
   (compilation-scroll-output 'first-error)
+  (compilation-window-height 15)
   :commands (interrupt-and-recompile new-compilation-window-hook)
   :bind (("C-c c" . interrupt-and-recompile)
          ("C-c r" . recompile))
@@ -322,27 +342,29 @@ instead of 1."
     (interactive)
     (let ((compilation-buffer (get-buffer "*compilation*")))
       (when compilation-buffer
-        (ignore-errors
-          (process-kill-without-query
-           (get-buffer-process compilation-buffer)))
-        (ignore-errors
-          (kill-buffer compilation-buffer))))
+        (with-current-buffer compilation-buffer
+          (when (get-buffer-process compilation-buffer)
+            (interrupt-process (get-buffer-process compilation-buffer))
+            (sleep-for 0.1)))  ; Brief pause to allow clean shutdown
+        (ignore-errors (kill-buffer compilation-buffer))))
     (recompile))
 
   (defun new-compilation-window-hook ()
     "Create a new window for compilation buffer if not already visible."
     (unless (get-buffer-window "*compilation*")
-      (let ((compilation-window-height 15))
-        (split-window-vertically (- (window-height) compilation-window-height)))))
+      (split-window-vertically (- (window-height) compilation-window-height))))
 
   (setq compilation-exit-message-function
         (lambda (status code msg)
           (when (and (eq status 'exit) (zerop code))
             (let ((compilation-buffer (get-buffer "*compilation*")))
               (when compilation-buffer
-                (bury-buffer compilation-buffer)
-                (when-let ((window (get-buffer-window compilation-buffer)))
-                  (delete-window window)))))
+                (run-with-timer 1 nil
+                  (lambda ()
+                    (when (get-buffer "*compilation*")
+                      (bury-buffer "*compilation*")
+                      (when-let ((window (get-buffer-window "*compilation*")))
+                        (delete-window window))))))))
           (cons msg code))))
 
 ;; ANSI color support in compilation
@@ -351,7 +373,8 @@ instead of 1."
   :hook (compilation-filter . ansi-color-compilation-filter))
 
 ;; Ediff configuration
-(setq ediff-split-window-function 'split-window-horizontally)
+(setq ediff-split-window-function 'split-window-horizontally
+      ediff-window-setup-function 'ediff-setup-windows-plain)
 
 ;; =============================================================================
 ;;                           Programming Languages
@@ -439,6 +462,12 @@ instead of 1."
   :after cc-mode)
 
 ;; Python Configuration
+(use-package python
+  :ensure nil
+  :config
+  (setq python-indent-offset 4
+        python-indent-guess-indent-offset-verbose nil))
+
 (use-package flycheck
   :ensure t
   :hook (python-mode . flycheck-mode)
@@ -457,8 +486,8 @@ instead of 1."
 
 (use-package merlin
   :ensure t
-  :hook ((tuareg-mode-hook . merlin-mode)
-         (merlin-mode-hook . company-mode))
+  :hook ((tuareg-mode . merlin-mode)
+         (merlin-mode . company-mode))
   :config (setq merlin-error-after-save nil))
 
 (use-package merlin-eldoc
@@ -514,8 +543,7 @@ instead of 1."
 ;; Spelling configuration
 (use-package ispell
   :ensure nil
-  :hook
-  ('markdown-mode-hook . #'custom-ispell)
+  :hook (markdown-mode . custom-ispell)
   :config
   (when (executable-find "hunspell")
     (setq-default ispell-program-name "hunspell")
