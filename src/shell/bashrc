@@ -65,27 +65,39 @@ alias stop_emacs='emacsclient -e "(kill-emacs)"'
 # Optimized Git Prompt Function for Bash
 __git_prompt() {
     local CACHE_DIR="${TMPDIR:-/tmp}/git_prompt_cache_${USER}_$$"
-    local CACHE_FILE="${CACHE_DIR}/${PWD//\/__}"
-    local CACHE_TIMEOUT=2  # seconds
+    local PWD_HASH=$(printf '%s' "$PWD" | md5sum | cut -c1-8)
+    local CACHE_FILE="${CACHE_DIR}/${PWD_HASH}"
+    local CACHE_TIMEOUT=3  # seconds - slightly longer for better performance
 
     # Create cache directory if it doesn't exist
     [[ ! -d "$CACHE_DIR" ]] && mkdir -p "$CACHE_DIR" 2>/dev/null
 
-    # Check if cache is fresh (bash compatible stat command)
+    # Check if cache is fresh and valid
     if [[ -f "$CACHE_FILE" ]]; then
-        local file_time current_time
+        local file_time current_time git_head_time=0
         current_time=$(date +%s)
         file_time=$(stat -c %Y "$CACHE_FILE" 2>/dev/null) || return
 
-        if (( current_time - file_time < CACHE_TIMEOUT )); then
-            cat "$CACHE_FILE"
-            return
+        # Check if .git/HEAD is newer than cache (more reliable than timeout alone)
+        if [[ -f ".git/HEAD" ]]; then
+            git_head_time=$(stat -c %Y ".git/HEAD" 2>/dev/null || echo 0)
+        elif [[ -f "$(git rev-parse --git-dir 2>/dev/null)/HEAD" ]]; then
+            git_head_time=$(stat -c %Y "$(git rev-parse --git-dir)/HEAD" 2>/dev/null || echo 0)
+        fi
+
+        # Use cache if it's fresh AND newer than git changes
+        if (( current_time - file_time < CACHE_TIMEOUT && file_time >= git_head_time )); then
+            cat "$CACHE_FILE" 2>/dev/null && return
         fi
     fi
 
-    # Quick check if we're in a git repo
+    # Quick check if we're in a git repo (with timeout for hanging repos)
     local git_dir
-    git_dir=$(git rev-parse --git-dir 2>/dev/null) || return
+    if command -v timeout >/dev/null 2>&1; then
+        git_dir=$(timeout 0.1s git rev-parse --git-dir 2>/dev/null) || return
+    else
+        git_dir=$(git rev-parse --git-dir 2>/dev/null) || return
+    fi
 
     # Colors for bash (different from zsh format)
     local color_detached="\[\033[38;5;200m\]"
@@ -134,32 +146,34 @@ __git_prompt() {
         fi
     fi
 
-    # Get status information - use timeout to prevent hanging
-    # Note: Use timeout if available, otherwise fall back
+    # Get status information with optimized timeout and early exit
     local git_status
     if command -v timeout >/dev/null 2>&1; then
-        git_status=$(timeout 0.2s git status --porcelain=v2 2>/dev/null)
+        git_status=$(timeout 0.15s git status --porcelain=v1 -uno --ignored=no 2>/dev/null)
     else
-        # Fallback if timeout command is not available
-        git_status=$(git status --porcelain=v2 2>/dev/null)
+        git_status=$(git status --porcelain=v1 -uno --ignored=no 2>/dev/null)
     fi
 
-    # Process status with optimized counting
+    # Process status with optimized counting - use v1 format for better performance
     if [[ -n "$git_status" ]]; then
-        # Count staged, unstaged, and untracked files efficiently with single awk
         local counts
-        counts=$(echo "$git_status" | awk '
-            /^[12] [MADRCT]./ { staged++ }
-            /^[12] [U].|^[12] .U|^[12] AA|^[12] DD/ { unmerged++ }
-            /^[12] .[MD]/ { changed++ }
-            /^\?/ { untracked++ }
-            END { print staged+0, unmerged+0, changed+0, untracked+0 }
+        counts=$(printf '%s\n' "$git_status" | awk '
+            BEGIN { staged=0; unmerged=0; changed=0; untracked=0 }
+            /^[MADRC]/ { staged++ }
+            /^UU|^AA|^DD/ { unmerged++ }
+            /^.[MD]/ { changed++ }
+            /^\?\?/ { untracked++ }
+            END { printf "%d %d %d %d\n", staged, unmerged, changed, untracked }
         ')
         read staged unmerged changed untracked <<< "$counts"
     fi
 
-    # Get stash count directly
-    stashed=$(git stash list --no-decorate 2>/dev/null | wc -l)
+    # Get stash count with timeout and cache-friendly approach
+    if command -v timeout >/dev/null 2>&1; then
+        stashed=$(timeout 0.1s git rev-list --walk-reflogs --count refs/stash 2>/dev/null || echo 0)
+    else
+        stashed=$(git rev-list --walk-reflogs --count refs/stash 2>/dev/null || echo 0)
+    fi
 
     # Set branch color based on repository state
     local color_branch
@@ -192,7 +206,14 @@ __git_prompt() {
 # Function to clear git prompt cache when changing directories
 __git_prompt_cd() {
     \cd "$@" || return
-    rm -f "${TMPDIR:-/tmp}/git_prompt_cache_${USER}_$$/${PWD//\/__}" 2>/dev/null
+    local CACHE_DIR="${TMPDIR:-/tmp}/git_prompt_cache_${USER}_$$"
+    local PWD_HASH=$(printf '%s' "$PWD" | md5sum | cut -c1-8)
+    rm -f "${CACHE_DIR}/${PWD_HASH}" 2>/dev/null
+
+    # Periodic cleanup of old cache files (every 100th cd)
+    if (( RANDOM % 100 == 0 )); then
+        find "$CACHE_DIR" -type f -mmin +10 -delete 2>/dev/null &
+    fi
 }
 
 # Create alias to override cd with our custom function
