@@ -99,13 +99,6 @@ __git_prompt() {
         git_dir=$(git rev-parse --git-dir 2>/dev/null) || return
     fi
 
-    # Detect git version for compatibility
-    local git_version_major git_version_minor
-    local git_version_string=$(git --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
-    git_version_major=${git_version_string%%.*}
-    local temp=${git_version_string#*.}
-    git_version_minor=${temp%%.*}
-
     # Colors for bash (different from zsh format)
     local color_detached="\[\033[38;5;200m\]"
     local color_dirty="\[\033[38;5;240m\]"
@@ -143,34 +136,22 @@ __git_prompt() {
 
         if [[ -n "$upstream" ]]; then
             local ahead_behind
-            # Use --count for git 2.x, fallback to wc -l for git 1.8
-            if [[ "$git_version_major" -gt 1 ]] || [[ "$git_version_major" -eq 1 && "$git_version_minor" -ge 9 ]]; then
-                ahead_behind=$(git rev-list --left-right --count "$upstream...HEAD" 2>/dev/null)
-                if [[ -n "$ahead_behind" ]]; then
-                    # Parse ahead_behind differently for bash
-                    behind=$(echo "$ahead_behind" | awk '{print $1}')
-                    ahead=$(echo "$ahead_behind" | awk '{print $2}')
-                fi
-            else
-                # Git 1.8 fallback
-                behind=$(git rev-list --left-only "$upstream...HEAD" 2>/dev/null | wc -l)
-                ahead=$(git rev-list --right-only "$upstream...HEAD" 2>/dev/null | wc -l)
+            ahead_behind=$(git rev-list --left-right --count "$upstream...HEAD" 2>/dev/null)
+
+            if [[ -n "$ahead_behind" ]]; then
+                # Parse ahead_behind differently for bash
+                behind=$(echo "$ahead_behind" | awk '{print $1}')
+                ahead=$(echo "$ahead_behind" | awk '{print $2}')
             fi
         fi
     fi
 
     # Get status information with optimized timeout and early exit
     local git_status
-    # Use --porcelain=v1 for git 2.11+, fallback to --porcelain for older versions
-    local porcelain_flag="--porcelain"
-    if [[ "$git_version_major" -gt 2 ]] || [[ "$git_version_major" -eq 2 && "$git_version_minor" -ge 11 ]]; then
-        porcelain_flag="--porcelain=v1"
-    fi
-
     if command -v timeout >/dev/null 2>&1; then
-        git_status=$(timeout 0.15s git status $porcelain_flag -uno --ignored=no 2>/dev/null)
+        git_status=$(timeout 0.15s git status --porcelain=v1 -uno --ignored=no 2>/dev/null)
     else
-        git_status=$(git status $porcelain_flag -uno --ignored=no 2>/dev/null)
+        git_status=$(git status --porcelain=v1 -uno --ignored=no 2>/dev/null)
     fi
 
     # Process status with optimized counting - use v1 format for better performance
@@ -188,20 +169,10 @@ __git_prompt() {
     fi
 
     # Get stash count with timeout and cache-friendly approach
-    # Use --count for git 2.x, fallback to wc -l for git 1.8
-    if [[ "$git_version_major" -gt 1 ]] || [[ "$git_version_major" -eq 1 && "$git_version_minor" -ge 9 ]]; then
-        if command -v timeout >/dev/null 2>&1; then
-            stashed=$(timeout 0.1s git rev-list --walk-reflogs --count refs/stash 2>/dev/null || echo 0)
-        else
-            stashed=$(git rev-list --walk-reflogs --count refs/stash 2>/dev/null || echo 0)
-        fi
+    if command -v timeout >/dev/null 2>&1; then
+        stashed=$(timeout 0.1s git rev-list --walk-reflogs --count refs/stash 2>/dev/null || echo 0)
     else
-        # Git 1.8 fallback
-        if command -v timeout >/dev/null 2>&1; then
-            stashed=$(timeout 0.1s git rev-list --walk-reflogs refs/stash 2>/dev/null | wc -l || echo 0)
-        else
-            stashed=$(git rev-list --walk-reflogs refs/stash 2>/dev/null | wc -l || echo 0)
-        fi
+        stashed=$(git rev-list --walk-reflogs --count refs/stash 2>/dev/null || echo 0)
     fi
 
     # Set branch color based on repository state
