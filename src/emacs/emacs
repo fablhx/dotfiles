@@ -17,6 +17,110 @@
 ;;                           Custom Functions
 ;; =============================================================================
 
+;; Customizable settings
+(defgroup my-ssh nil
+  "SSH remote file management."
+  :group 'convenience)
+
+(defcustom my-remote-file-path "nofile"
+  "Default file to open on remote hosts."
+  :type 'string
+  :group 'my-ssh)
+
+(defcustom my-ssh-config-file "~/.ssh/config"
+  "Path to SSH configuration file."
+  :type 'string
+  :group 'my-ssh)
+
+(defcustom my-ssh-connection-timeout 5
+  "Timeout in seconds for SSH connection tests."
+  :type 'integer
+  :group 'my-ssh)
+
+(defun my-sanitize-ssh-value (value)
+  "Sanitize SSH config values to prevent path injection.
+ Returns VALUE if it contains only safe characters, nil otherwise."
+  (when (and value
+             (stringp value)
+             (not (string-empty-p value))
+             (string-match-p "^[a-zA-Z0-9._-]+$" value))
+    value))
+
+(defun my-test-ssh-connection (host user)
+  "Test if SSH connection is available.
+ Returns t if connection succeeds, nil otherwise."
+  (when (and (my-sanitize-ssh-value host) (my-sanitize-ssh-value user))
+    (eq 0 (call-process "ssh" nil nil nil
+                        "-o" "ConnectTimeout=5"
+                        "-o" "BatchMode=yes"
+                        "-o" "StrictHostKeyChecking=no"
+                        (format "%s@%s" user host)
+                        "true"))))
+
+(defun my-ssh-config-host-alist ()
+  "Parse SSH config file and return an alist of (host . user).
+ Returns nil if config file doesn't exist or isn't readable."
+  (let ((config-file (expand-file-name my-ssh-config-file)))
+    (if (not (file-readable-p config-file))
+        (progn
+          (message "SSH config file not found or not readable: %s" config-file)
+          nil)
+      (condition-case err
+          (let ((lines (split-string (with-temp-buffer
+                                       (insert-file-contents config-file)
+                                       (buffer-string))
+                                     "\n"))
+                current-host
+                result)
+            (dolist (line lines)
+              (let ((trimmed-line (string-trim line)))
+                (cond
+                 ;; Match Host entries (ignore wildcards)
+                 ((string-match "^Host[ \t]+\\([^ *?\n]+\\)" trimmed-line)
+                  (let ((host (match-string 1 trimmed-line)))
+                    (when (my-sanitize-ssh-value host)
+                      (setq current-host host))))
+                 ;; Match User entries
+                 ((and current-host
+                       (string-match "^User\\s-+\\([^ \t\n]+\\)" trimmed-line))
+                  (let ((user (match-string 1 trimmed-line)))
+                    (when (my-sanitize-ssh-value user)
+                      (push (cons current-host user) result)
+                      (setq current-host nil)))))))
+            (nreverse result))
+        (error
+         (message "Error parsing SSH config: %s" (error-message-string err))
+         nil)))))
+
+(defun my-open-remote-nofile (&optional test-connection)
+  "Prompt for an SSH host and open remote file using the correct user from ssh config.
+ With prefix argument TEST-CONNECTION, test SSH connectivity before opening file."
+  (interactive "P")
+  (let* ((host-alist (my-ssh-config-host-alist)))
+    (if (null host-alist)
+        (message "No SSH hosts found in configuration file")
+      (let* ((host (completing-read "SSH host: " (mapcar #'car host-alist) nil t))
+             (user (or (cdr (assoc host host-alist)) (user-login-name))))
+        (unless (my-sanitize-ssh-value host)
+          (error "Invalid host name: %s" host))
+        (unless (my-sanitize-ssh-value user)
+          (error "Invalid user name: %s" user))
+
+        ;; Test connection if requested
+        (when test-connection
+          (message "Testing SSH connection to %s@%s..." user host)
+          (unless (my-test-ssh-connection host user)
+            (error "Cannot connect to %s@%s" user host)))
+
+        (let ((remote-path (format "/ssh:%s@%s:/home/%s/%s"
+                                   user host user my-remote-file-path)))
+          (message "Opening %s" remote-path)
+          (condition-case err
+              (find-file remote-path)
+            (error
+             (message "Failed to open remote file: %s" (error-message-string err)))))))))
+
+
 ;; Multiple cursors search functions
 (defun my-enable-phi-search ()
   (global-set-key (kbd "C-s") #'phi-search)
@@ -232,6 +336,9 @@ instead of 1."
       ;; Open file from log
       (define-key map (kbd "C-c C-f") #'my-open-error-location-at-point)
 
+      ;; Open file from ssh
+      (global-set-key (kbd "C-c o") #'my-open-remote-nofile)
+
       map)
     "my-keys-minor-mode keymap.")
 
@@ -305,6 +412,10 @@ instead of 1."
               ("C-M-q" . nil)
               ("C-c C-l" . xref-find-definitions)
               ("C-c C-b" . xref-pop-marker-stack)))
+
+(use-package cl-lib
+  :ensure nil
+  :demand t)
 
 ;; =============================================================================
 ;;                           Development Tools
