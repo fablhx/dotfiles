@@ -9,7 +9,7 @@ RED := \033[0;31m
 NC := \033[0m
 
 # File mappings and lists
-SOURCE_FILES := clang-format/clang-format emacs/emacs git/gitconfig git/gitignore shell/bashrc shell/zshrc tmux/tmux
+SOURCE_FILES := clang-format/clang-format emacs/emacs emacs/custom.el git/gitconfig git/gitignore shell/bashrc shell/zshrc tmux/tmux
 XMONAD_FILES := xmonad/xmobarrc xmonad/xmonad.hs
 VALGRIND_FILES := valgrind/valgrindrc
 BUILD_DIRS := emacs.d valgrind xmonad config
@@ -105,7 +105,7 @@ build:
 
 	# Link config items
 	@$(foreach item,$(CONFIG_ITEMS), \
-		if [ -e "$(BUILD_DIR)/$(item)" ]; then \
+		if [ -e "$(BUILD_DIR)/config/$(item)" ]; then \
 			ln -sf "$(BUILD_DIR)/config/$(item)" "$(HOME)/.config/$(item)"; \
 		fi;)
 

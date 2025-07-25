@@ -36,9 +36,9 @@
 [diff]
 	# When using --word-diff, assume --word-diff-regex=.
 	wordRegex = .
-        algorithm = histogram
-        colorMoved = default
-        indentHeuristic = true
+	algorithm = histogram
+	colorMoved = default
+	indentHeuristic = true
 [rerere]
 	# If, like me, you like rerere, decomment these
 	autoupdate = true

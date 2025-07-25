@@ -13,7 +13,7 @@ setw -g monitor-activity on
 set -g visual-activity on
 
 # Status bar
-set-window-option -g window-status-current-bg '#dd4814'
+set-window-option -g window-status-current-style bg='#dd4814'
 set -g status-right "%R %d-%b-%Y"
 set-window-option -g window-status-format "#I:#F"
 set-window-option -g window-status-current-format "#I:#F"

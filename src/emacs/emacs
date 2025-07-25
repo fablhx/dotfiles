@@ -271,14 +271,7 @@ instead of 1."
    query-replace-highlight t
    vc-follow-symlinks t)          ; Follow symlinks without asking
 
-  ;; Custom variables
-  (custom-set-variables
-   '(inhibit-startup-echo-area-message t)
-   '(inhibit-startup-message t)
-   '(make-backup-files nil)
-   '(ring-bell-function #'ignore)
-   '(save-abbrevs nil)
-   '(search-highlight t))
+  ;; Custom variables (now handled in custom.el)
 
   ;; Custom keybindings through minor mode
   (defvar my-keys-minor-mode-map
@@ -335,11 +328,7 @@ instead of 1."
   :ensure t
   :config
   (show-paren-mode t)
-  (custom-set-variables
-   '(blink-matching-paren t)
-   '(blink-matching-paren-on-screen t)
-   '(show-paren-style 'expression)
-   '(blink-matching-paren-dont-ignore-comments t)))
+  ;; Paren settings now handled in custom.el)
 
 ;; Multiple cursors
 (use-package multiple-cursors
@@ -645,25 +634,15 @@ instead of 1."
   ;; Set region highlight
   (set-face-attribute 'region nil :background "SlateGray1")
 
-  ;; Custom whitespace faces
-  (custom-set-faces
-   '(whitespace-empty ((t (:foreground "firebrick" :background "SlateGray1"))))
-   '(whitespace-hspace ((t (:foreground "white" :background "red"))))
-   '(whitespace-indentation ((t (:foreground "firebrick" :background "beige"))))
-   '(whitespace-line ((t (:foreground "black" :background "red"))))
-   '(whitespace-newline ((t (:foreground "orange" :background "blue"))))
-   '(whitespace-space ((t (:bold t :foreground "gray75"))))
-   '(whitespace-space-after-tab ((t (:foreground "black" :background "green"))))
-   '(whitespace-space-before-tab ((t (:foreground "black" :background "DarkOrange"))))
-   '(whitespace-tab ((t (:foreground "red"))))
-   '(whitespace-trailing ((t (:foreground "red" :background "yellow"))))))
+  ;; Set whitespace faces programmatically (actual faces are defined in custom.el)
+  ;; This ensures they work properly with the custom file system
 
 ;; =============================================================================
 ;;                           Final Configuration
 ;; =============================================================================
 
 ;; Move custom-set-variables to a separate file
-(setq custom-file (expand-file-name "custom.el" user-emacs-directory))
+(setq custom-file (expand-file-name "custom.el" (file-name-directory load-file-name)))
 (when (file-exists-p custom-file)
   (load custom-file))
 
