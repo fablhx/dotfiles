@@ -100,7 +100,7 @@ build:
 	# Link directories
 	@$(foreach dir,$(LINK_DIRS), \
 		if [ -d "$(BUILD_DIR)/$(dir)" ]; then \
-			ln -sf "$(BUILD_DIR)/$(dir)" "$(HOME)/.$(dir)"; \
+			ln -sfn "$(BUILD_DIR)/$(dir)" "$(HOME)/.$(dir)"; \
 		fi;)
 
 	# Link config items
