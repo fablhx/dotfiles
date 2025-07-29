@@ -63,7 +63,8 @@
          nil)))))
 
 (defun my-open-remote-nofile ()
-  "Prompt for an SSH host and open remote file using the correct user from ssh config."
+  "Prompt for an SSH host and open remote file using the correct user
+from ssh config."
   (interactive)
   (let* ((host-alist (my-ssh-config-host-alist)))
     (if (null host-alist)
@@ -149,7 +150,8 @@ instead of 1."
       (list file line col))))
 
 (defun my-open-error-location-at-point ()
-  "Open file:line:column at point. Path is resolved relative to current buffer's directory."
+  "Open file:line:column at point.
+Path is resolved relative to current buffer's directory."
   (interactive)
   (let* ((line-text (thing-at-point 'line t))
          (parsed (my-open-error-location--parse line-text)))
@@ -171,7 +173,8 @@ instead of 1."
       (message "No valid filename:line[:column] pattern found at point."))))
 
 (defun my-find-file-noselect--advice-with-line-and-column (orig-fun filename &rest args)
-  "Advice to allow find-file to open FILENAME at specific line and column if applicable."
+  "Advice to allow find-file to open FILENAME at specific line and column
+if applicable."
   (save-match-data
     (let* ((parsed (when (string-match "\\([^:\n]+\\):\\([0-9]+\\)\\(?::\\([0-9]+\\)\\)?" (string-trim filename))
                      (list (match-string 1 filename)
@@ -233,8 +236,8 @@ instead of 1."
 
   :config
   ;; Path configuration
-  (setq-default
-   load-path (cons (expand-file-name "~/.emacs.d/elpa") load-path))
+  (add-to-list 'load-path (expand-file-name "~/.emacs.d/elpa"))
+  (add-to-list 'load-path (expand-file-name "~/.emacs.d/melpa"))
 
   ;; Editor behavior
   (setq-default
@@ -271,7 +274,14 @@ instead of 1."
    query-replace-highlight t
    vc-follow-symlinks t)          ; Follow symlinks without asking
 
-  ;; Custom variables (now handled in custom.el)
+  ;; Custom variables
+  (custom-set-variables
+   '(inhibit-startup-echo-area-message t)
+   '(inhibit-startup-message t)
+   '(make-backup-files nil)
+   '(ring-bell-function #'ignore)
+   '(save-abbrevs nil)
+   '(search-highlight t))
 
   ;; Custom keybindings through minor mode
   (defvar my-keys-minor-mode-map
@@ -285,7 +295,6 @@ instead of 1."
       ;; Text operations
       (define-key map (kbd "C-c w d") #'delete-trailing-whitespace)
       (define-key map (kbd "C-x C-k") #'my-kill-last-opened-buffer)
-      (define-key map (kbd "C-c C-q") #'gen-quote-word)
       (define-key map (kbd "C-<delete>") #'my-join-next-line)
       (define-key map (kbd "C-c C-s") #'my-sort-ilines)
 
@@ -303,10 +312,13 @@ instead of 1."
     :init-value t
     :lighter " my-keys")
 
+  (make-variable-buffer-local 'my-keys-minor-mode)
+
   (my-keys-minor-mode t)
 
   (define-globalized-minor-mode global-my-keys-minor-mode my-keys-minor-mode
-    (lambda () (my-keys-minor-mode 1)))
+    (lambda () (my-keys-minor-mode 1))
+    :group 'convenience)
   (global-my-keys-minor-mode 1)
 
   (when (fboundp 'find-file-noselect)
@@ -328,7 +340,11 @@ instead of 1."
   :ensure t
   :config
   (show-paren-mode t)
-  ;; Paren settings now handled in custom.el)
+  (custom-set-variables
+   '(blink-matching-paren t)
+   '(blink-matching-paren-on-screen t)
+   '(show-paren-style 'expression)
+   '(blink-matching-paren-dont-ignore-comments t)))
 
 ;; Multiple cursors
 (use-package multiple-cursors
@@ -362,7 +378,7 @@ instead of 1."
               ("C-M-p" . nil)
               ("C-M-q" . nil)
               ("C-c C-l" . xref-find-definitions)
-              ("C-c C-b" . xref-pop-marker-stack)))
+              ("C-c C-b" . xref-go-back)))
 
 (use-package cl-lib
   :ensure nil
@@ -599,6 +615,22 @@ instead of 1."
   :ensure nil
   :mode "Makefile\\.inc\\'")
 
+;; YAML with tree-sitter
+(use-package yaml-ts-mode
+  :ensure nil
+  :mode "\\.ya?ml\\'"
+  :config
+  (when (treesit-available-p)
+    (add-to-list 'treesit-language-source-alist
+                 '(yaml "https://github.com/ikatyang/tree-sitter-yaml"))
+    (unless (treesit-language-available-p 'yaml)
+      (treesit-install-language-grammar 'yaml))))
+
+;; TCL
+(use-package tcl-mode
+  :ensure nil
+  :mode "\\.tcl\\'")
+
 ;; =============================================================================
 ;;                           Text and Spelling
 ;; =============================================================================
@@ -619,6 +651,27 @@ instead of 1."
     (add-to-list 'ispell-skip-region-alist '("^```" . "```$"))))
 
 ;; =============================================================================
+;;                           Themes and Visual Enhancement
+;; =============================================================================
+
+;; Doom themes
+;(use-package doom-themes
+;  :ensure t
+;  :config
+;  (load-theme 'doom-tomorrow-day t)
+;  (doom-themes-visual-bell-config)
+;  (doom-themes-org-config))
+;
+;(use-package doom-modeline
+;  :ensure t
+;  :hook (after-init . doom-modeline-mode)
+;  :config
+;  (setq doom-modeline-height 25)
+;  (setq doom-modeline-bar-width 3)
+;  (setq doom-modeline-project-detection 'projectile)
+;  (setq doom-modeline-buffer-file-name-style 'truncate-upto-project))
+
+;; =============================================================================
 ;;                           Visual Enhancement
 ;; =============================================================================
 
@@ -634,17 +687,22 @@ instead of 1."
   ;; Set region highlight
   (set-face-attribute 'region nil :background "SlateGray1")
 
-  ;; Set whitespace faces programmatically (actual faces are defined in custom.el)
-  ;; This ensures they work properly with the custom file system
+  ;; Custom whitespace faces
+  (custom-set-faces
+   '(whitespace-empty ((t (:foreground "firebrick" :background "SlateGray1"))))
+   '(whitespace-hspace ((t (:foreground "white" :background "red"))))
+   '(whitespace-indentation ((t (:foreground "firebrick" :background "beige"))))
+   '(whitespace-line ((t (:foreground "black" :background "red"))))
+   '(whitespace-newline ((t (:foreground "orange" :background "blue"))))
+   '(whitespace-space ((t (:bold t :foreground "gray75"))))
+   '(whitespace-space-after-tab ((t (:foreground "black" :background "green"))))
+   '(whitespace-space-before-tab ((t (:foreground "black" :background "DarkOrange"))))
+   '(whitespace-tab ((t (:foreground "red"))))
+   '(whitespace-trailing ((t (:foreground "red" :background "yellow"))))))
 
 ;; =============================================================================
 ;;                           Final Configuration
 ;; =============================================================================
-
-;; Move custom-set-variables to a separate file
-(setq custom-file (expand-file-name "custom.el" (file-name-directory load-file-name)))
-(when (file-exists-p custom-file)
-  (load custom-file))
 
 (provide 'init)
 ;;; init.el ends here

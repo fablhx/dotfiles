@@ -9,11 +9,11 @@ RED := \033[0;31m
 NC := \033[0m
 
 # File mappings and lists
-SOURCE_FILES := clang-format/clang-format emacs/emacs emacs/custom.el git/gitconfig git/gitignore shell/bashrc shell/zshrc tmux/tmux
-XMONAD_FILES := xmonad/xmobarrc xmonad/xmonad.hs
+SOURCE_FILES := clang-format/clang-format emacs/emacs git/gitconfig git/gitignore shell/bashrc shell/zshrc tmux/tmux
+XMONAD_FILES := xmonad/xmonad.hs
 VALGRIND_FILES := valgrind/valgrindrc
 BUILD_DIRS := emacs.d valgrind xmonad config
-LINK_DIRS := emacs.d
+LINK_DIRS := emacs.d xmonad
 LINK_FILES := bashrc clang-format emacs emacs.elc gitconfig gitignore tmux.conf valgrindrc zshrc
 CONFIG_ITEMS := gtk-3.0 terminator warp-terminal
 ALL_DOTFILES := $(LINK_FILES) $(LINK_DIRS)
@@ -74,23 +74,6 @@ build:
 			fi;) \
 	fi
 
-	# Compile Emacs configuration
-	@if [ -f "$(BUILD_DIR)/emacs" ] && command -v emacs >/dev/null 2>&1; then \
-		emacs --batch --eval "(byte-compile-file \"$(BUILD_DIR)/emacs\")" 2>/dev/null || echo "Warning: Emacs compilation failed"; \
-	else \
-		echo "Warning: emacs not found, skipping compilation"; \
-	fi
-
-	# Compile XMonad configuration
-	@if [ -f "$(BUILD_DIR)/xmonad/xmonad.hs" ] && command -v xmonad >/dev/null 2>&1; then \
-		cd "$(BUILD_DIR)/xmonad" && xmonad --recompile 2>/dev/null || echo "Warning: XMonad compilation failed"; \
-	else \
-		echo "Warning: xmonad not found, skipping compilation"; \
-	fi
-
-	# Create symlinks
-	@mkdir -p $(HOME)/.config
-
 	# Link files
 	@$(foreach file,$(LINK_FILES), \
 		if [ -f "$(BUILD_DIR)/$(file)" ]; then \
@@ -109,6 +92,20 @@ build:
 			ln -sf "$(BUILD_DIR)/config/$(item)" "$(HOME)/.config/$(item)"; \
 		fi;)
 
+	# Compile Emacs configuration
+	@if [ -f "$(BUILD_DIR)/emacs" ] && command -v emacs >/dev/null 2>&1; then \
+		cd "$(BUILD_DIR)" && emacs --batch --eval "(byte-compile-file \"$(BUILD_DIR)/emacs\")" 2>/dev/null || echo "Warning: Emacs compilation failed"; \
+	else \
+		echo "Warning: emacs not found, skipping compilation"; \
+	fi
+
+	# Compile XMonad configuration
+	@if [ -f "$(BUILD_DIR)/xmonad/xmonad.hs" ] && command -v xmonad >/dev/null 2>&1; then \
+		cd "$(BUILD_DIR)/xmonad" && xmonad --recompile 2>/dev/null || echo "Warning: XMonad compilation failed"; \
+	else \
+		echo "Warning: xmonad not found, skipping compilation"; \
+	fi
+
 	# Setup git and gsettings if this is a fresh build
 	@if [ ! -d "$(BUILD_DIR)/.git" ]; then \
 		echo "First-time setup: creating .git directory..."; \
@@ -121,11 +118,19 @@ build:
 		echo "xmonad/xmonad.o" >> "$(BUILD_DIR)/.gitignore"; \
 		echo "xmonad/xmonad.state" >> "$(BUILD_DIR)/.gitignore"; \
 		echo "xmonad/xmonad-x86_64-linux" >> "$(BUILD_DIR)/.gitignore"; \
+		if [ ! -f "$(BUILD_DIR)/gitconfig.private" ]; then \
+			echo "Creating gitconfig.private file..."; \
+			read -p "Enter your Git email: " git_email; \
+			read -p "Enter your Git name: " git_name; \
+			echo "[user]" > "$(BUILD_DIR)/gitconfig.private"; \
+			echo "	email = $$git_email" >> "$(BUILD_DIR)/gitconfig.private"; \
+			echo "	name = $$git_name" >> "$(BUILD_DIR)/gitconfig.private"; \
+		fi; \
 		echo "Configuring gsettings..."; \
-		pushd "$(BUILD_DIR)"; \
+		cd "$(BUILD_DIR)"; \
 		git add .; \
 		git commit -m "Initial commit"; \
-		popd; \
+		cd ..; \
 		gsettings set org.mate.session.required-components windowmanager xmonad || echo "Warning: gsettings 1 failed"; \
 		gsettings set org.mate.session required-components-list "['windowmanager', 'panel']" || echo "Warning: gsettings 2 failed"; \
 		gsettings set org.mate.mate-menu hot-key '' || echo "Warning: gsettings 3 failed"; \
