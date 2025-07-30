@@ -19,17 +19,6 @@ Consider installing these additional tools:
 - [broot](https://github.com/Canop/broot) - Interactive directory tree
 - [tokei](https://github.com/XAMPRocky/tokei) - Code statistics tool
 
-### Oh My Zsh Setup
-
-```bash
-wget --output-document=oh-my-zsh-install.sh https://raw.github.com/robbyrussell/oh-my-zsh/master/tools/install.sh
-sed -i'' 's/exec zsh -l/#exec zsh -l/g' oh-my-zsh-install.sh
-sh oh-my-zsh-install.sh
-pushd "${HOME}/.oh-my-zsh/custom/plugins/"
-git clone https://github.com/zsh-users/zsh-syntax-highlighting.git
-popd
-```
-
 ### Configuration Deployment
 
 Clone and deploy the configuration:

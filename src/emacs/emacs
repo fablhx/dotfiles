@@ -298,8 +298,9 @@ if applicable."
       (define-key map (kbd "C-<delete>") #'my-join-next-line)
       (define-key map (kbd "C-c C-s") #'my-sort-ilines)
 
-      ;; Open (jump) file from log
-      (define-key map (kbd "C-c C-j") #'my-open-error-location-at-point)
+      ;; Open (jump) file from log (only when not in prog-mode)
+      (unless (derived-mode-p 'prog-mode)
+        (define-key map (kbd "C-c C-l") #'my-open-error-location-at-point))
 
       ;; Open file from ssh
       (global-set-key (kbd "C-c C-f") #'my-open-remote-nofile)
@@ -649,27 +650,6 @@ if applicable."
     (make-local-variable 'ispell-skip-region-alist)
     (add-to-list 'ispell-skip-region-alist '("`" . "`"))
     (add-to-list 'ispell-skip-region-alist '("^```" . "```$"))))
-
-;; =============================================================================
-;;                           Themes and Visual Enhancement
-;; =============================================================================
-
-;; Doom themes
-;(use-package doom-themes
-;  :ensure t
-;  :config
-;  (load-theme 'doom-tomorrow-day t)
-;  (doom-themes-visual-bell-config)
-;  (doom-themes-org-config))
-;
-;(use-package doom-modeline
-;  :ensure t
-;  :hook (after-init . doom-modeline-mode)
-;  :config
-;  (setq doom-modeline-height 25)
-;  (setq doom-modeline-bar-width 3)
-;  (setq doom-modeline-project-detection 'projectile)
-;  (setq doom-modeline-buffer-file-name-style 'truncate-upto-project))
 
 ;; =============================================================================
 ;;                           Visual Enhancement

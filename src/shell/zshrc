@@ -1,29 +1,21 @@
+# =============================================================================
+#                               Zsh Configuration
+# =============================================================================
+
+# Early exit for dumb terminals
 [[ $TERM == "dumb" ]] && unsetopt zle && PS1='$ ' && return
 
-plugins=(
-    compleat
-    zsh-syntax-highlighting
-    history-substring-search
-)
+# =============================================================================
+#                           Shell Options & Completion
+# =============================================================================
 
-source "${HOME}"/.oh-my-zsh/oh-my-zsh.sh
-
+# Basic shell options
 REPORTTIME=10
-HISTSIZE=50000
-SAVEHIST=50000
-
-setopt append_history
 setopt complete_in_word
-setopt hist_expire_dups_first
-setopt hist_find_no_dups
-setopt hist_ignore_all_dups
-setopt hist_ignore_dups
-setopt hist_save_no_dups
-setopt inc_append_history
 setopt notify
 setopt prompt_subst
-setopt share_history
 
+# Completion configuration
 zstyle ':completion:*' menu select
 zstyle ':completion:*' list-colors ${(s.:.)LS_COLORS}
 zstyle ':completion:*' verbose yes
@@ -33,106 +25,117 @@ zstyle ':completion:*:messages' format '%d'
 zstyle ':completion:*:warnings' format "$fg[red]No matches$reset_color"
 zstyle ':completion:*:corrections' format '%B%d (errors: %e)%b'
 
-# This speeds up pasting w/ autosuggest
-# https://github.com/zsh-users/zsh-autosuggestions/issues/238
-pasteinit() {
-  OLD_SELF_INSERT=${${(s.:.)widgets[self-insert]}[2,3]}
-  zle -N self-insert url-quote-magic # I wonder if you'd need `.url-quote-magic`?
-}
+# =============================================================================
+#                           History Configuration
+# =============================================================================
 
-pastefinish() {
-  zle -N self-insert $OLD_SELF_INSERT
-}
-zstyle :bracketed-paste-magic paste-init pasteinit
-zstyle :bracketed-paste-magic paste-finish pastefinish
+HISTSIZE=50000
+SAVEHIST=50000
+setopt append_history
+setopt hist_expire_dups_first
+setopt hist_find_no_dups
+setopt hist_ignore_all_dups
+setopt hist_ignore_dups
+setopt hist_save_no_dups
+setopt inc_append_history
+setopt share_history
 
-typeset -A ZSH_HIGHLIGHT_STYLES
-ZSH_HIGHLIGHT_STYLES[path]=''
+# =============================================================================
+#                           Environment Variables
+# =============================================================================
 
 export ALTERNATE_EDITOR=""
-export EDITOR='emacs';
+export EDITOR='emacs'
 export LESS="-RFX"
 
-alias ls='ls --color=auto -v'
-alias grep='grep --color=auto'
-alias fgrep='fgrep --color=auto'
-alias egrep='egrep --color=auto'
+# =============================================================================
+#                           Command Aliases
+# =============================================================================
 
-alias tree='tree -C'
+# Enhanced tool detection and alias setup
+__setup_modern_aliases() {
+    # Core command enhancements
+    alias ls='ls --color=auto -v'
+    alias grep='grep --color=auto'
+    alias fgrep='fgrep --color=auto'
+    alias egrep='egrep --color=auto'
 
-alias xclip='xclip -selection clipboard'
+    # Modern tool alternatives (with fallbacks)
+    if command -v bat >/dev/null 2>&1; then
+        alias cat='bat --paging=never --style=plain'
+    fi
 
-alias l='ls -lh'
-alias ll='ls -lh'
-alias lll='ls -lha'
-alias la='ls -lhd .?*'
-alias lt='ls -lht'
+    # Prefer eza if available
+    if command -v eza >/dev/null 2>&1; then
+        alias ls='eza --color=auto --group-directories-first'
+        alias l='eza -lh'
+        alias ll='eza -lh'
+        alias lll='eza -lha'
+        alias la='eza -d .*'
+        alias lt='eza -lht'
+    else
+        # Fallback to standard ls
+        alias l='ls -lh'
+        alias ll='ls -lh'
+        alias lll='ls -lha'
+        alias la='ls -lhd .?*'
+        alias lt='ls -lht'
+    fi
 
-alias rm='rm -i'
+    # ripgrep with fallback
+    command -v rg >/dev/null 2>&1 && alias grep='rg'
 
-alias xopen='xdg-open'
+    # Tree with colors
+    alias tree='tree -C'
 
-alias ocaml='rlwrap -pMagenta ocaml'
+    # Clipboard integration
+    alias xclip='xclip -selection clipboard'
 
-alias pretty_py='autopep8 --in-place --aggressive --aggressive'
+    # Enhanced safety aliases
+    alias rm='rm -I'    # Prompt once if removing 3+ files
 
-function __emacs_client() {
-    # Check if Emacs frame exists
-    if [ "$(emacsclient -n -e '(> (length (frame-list)) 1)')" = "t" ]; then
+    # System integration
+    alias xopen='xdg-open'
+}
+
+# Initialize aliases
+__setup_modern_aliases
+
+# =============================================================================
+#                           Emacs Integration
+# =============================================================================
+
+# Smart emacsclient function
+__emacs_client() {
+    # Check if there's already a frame available, reuse it if so
+    if emacsclient -n -e "(if (> (length (frame-list)) 1) 't)" 2>/dev/null | grep -q t; then
         emacsclient -n "$@"
     else
         emacsclient -c -n "$@"
     fi
 }
 
-function __emacs() {
-    emacs "$@"
-}
+# Emacs client aliases
+alias cedit='emacsclient -c -nw'    # Console edit
+alias wedit='__emacs_client'        # Window edit
+alias start_emacs='emacs --daemon'  # Start daemon
+alias stop_emacs='emacsclient -e "(kill-emacs)"'  # Stop daemon
 
-alias cedit='emacsclient -c -nw'
-alias wedit='__emacs_client'
-alias emacs='__emacs'
-alias start_emacs='emacs --daemon'
-alias stop_emacs='emacsclient -e "(kill-emacs)"'
+# =============================================================================
+#                           Git Prompt
+# =============================================================================
 
-# Optimized Git Prompt Function
+# Optimized Git prompt function with timeouts and performance improvements
 __git_prompt() {
-    local CACHE_DIR="${TMPDIR:-/tmp}/git_prompt_cache_${USER}_$$"
-    local PWD_HASH=$(printf '%s' "$PWD" | md5sum | cut -c1-8)
-    local CACHE_FILE="${CACHE_DIR}/${PWD_HASH}"
-    local CACHE_TIMEOUT=3  # seconds - slightly longer for better performance
-
-    # Create cache directory if it doesn't exist
-    [[ ! -d "$CACHE_DIR" ]] && mkdir -p "$CACHE_DIR" 2>/dev/null
-
-    # Check if cache is fresh and valid
-    if [[ -f "$CACHE_FILE" ]]; then
-        local file_time current_time git_head_time=0
-        current_time=$(date +%s)
-        file_time=$(stat -c %Y "$CACHE_FILE" 2>/dev/null) || return
-
-        # Check if .git/HEAD is newer than cache (more reliable than timeout alone)
-        if [[ -f ".git/HEAD" ]]; then
-            git_head_time=$(stat -c %Y ".git/HEAD" 2>/dev/null || echo 0)
-        elif [[ -f "$(git rev-parse --git-dir 2>/dev/null)/HEAD" ]]; then
-            git_head_time=$(stat -c %Y "$(git rev-parse --git-dir)/HEAD" 2>/dev/null || echo 0)
-        fi
-
-        # Use cache if it's fresh AND newer than git changes
-        if (( current_time - file_time < CACHE_TIMEOUT && file_time >= git_head_time )); then
-            cat "$CACHE_FILE" 2>/dev/null && return
-        fi
-    fi
-
-    # Quick check if we're in a git repo (with timeout for hanging repos)
+    # Quick check if we're in a git repo with timeout
     local git_dir
     if command -v timeout >/dev/null 2>&1; then
-        git_dir=$(timeout 0.1s git rev-parse --git-dir 2>/dev/null) || return
+        git_dir=$(timeout 0.2s git rev-parse --git-dir 2>/dev/null) || return
     else
         git_dir=$(git rev-parse --git-dir 2>/dev/null) || return
     fi
 
-    # Colors
+    # Colors for zsh
     local color_detached="%{\033[38;5;200m%}"
     local color_dirty="%{\033[38;5;240m%}"
     local color_clean="%{\033[38;5;22m%}"
@@ -145,31 +148,41 @@ __git_prompt() {
     local color_stashed="%{\033[38;5;26m%}"
     local reset_color="%{\033[0m%}"
 
-    # Set GIT_DIR to avoid repeated path resolution
-    export GIT_DIR="$git_dir"
-    local GIT_WORK_TREE="${git_dir%/.git}"
-    [[ "$GIT_WORK_TREE" == "$git_dir" ]] && GIT_WORK_TREE="$(dirname "$git_dir")"
-    export GIT_WORK_TREE
-
     # Initialize variables
     local branch="" detached="no" behind=0 ahead=0
     local staged=0 unmerged=0 changed=0 untracked=0 stashed=0
 
-    # Get branch name fast
-    branch=$(git symbolic-ref --short -q HEAD 2>/dev/null)
+    # Get branch name with timeout
+    if command -v timeout >/dev/null 2>&1; then
+        branch=$(timeout 0.1s git symbolic-ref --short -q HEAD 2>/dev/null)
+    else
+        branch=$(git symbolic-ref --short -q HEAD 2>/dev/null)
+    fi
 
     if [[ -z "$branch" ]]; then
-        # We're in detached HEAD state
+        # Detached HEAD state
         detached="yes"
-        branch=$(git describe --exact-match --tags HEAD 2>/dev/null || git rev-parse --short HEAD 2>/dev/null)
+        if command -v timeout >/dev/null 2>&1; then
+            branch=$(timeout 0.1s git describe --exact-match --tags HEAD 2>/dev/null || timeout 0.1s git rev-parse --short HEAD 2>/dev/null)
+        else
+            branch=$(git describe --exact-match --tags HEAD 2>/dev/null || git rev-parse --short HEAD 2>/dev/null)
+        fi
     else
-        # Get ahead/behind count in one command
+        # Get ahead/behind count with timeout
         local upstream
-        upstream=$(git for-each-ref --format='%(upstream:short)' "$(git symbolic-ref -q HEAD)" 2>/dev/null)
+        if command -v timeout >/dev/null 2>&1; then
+            upstream=$(timeout 0.1s git for-each-ref --format='%(upstream:short)' "$(git symbolic-ref -q HEAD)" 2>/dev/null)
+        else
+            upstream=$(git for-each-ref --format='%(upstream:short)' "$(git symbolic-ref -q HEAD)" 2>/dev/null)
+        fi
 
         if [[ -n "$upstream" ]]; then
             local ahead_behind
-            ahead_behind=$(git rev-list --left-right --count "$upstream...HEAD" 2>/dev/null)
+            if command -v timeout >/dev/null 2>&1; then
+                ahead_behind=$(timeout 0.15s git rev-list --left-right --count "$upstream...HEAD" 2>/dev/null)
+            else
+                ahead_behind=$(git rev-list --left-right --count "$upstream...HEAD" 2>/dev/null)
+            fi
 
             if [[ -n "$ahead_behind" ]]; then
                 behind=${ahead_behind%%[[:space:]]*}
@@ -178,15 +191,15 @@ __git_prompt() {
         fi
     fi
 
-    # Get status information with optimized timeout and early exit
+    # Get repository status with timeout
     local git_status
     if command -v timeout >/dev/null 2>&1; then
-        git_status=$(timeout 0.15s git status --porcelain=v1 -uno --ignored=no 2>/dev/null)
+        git_status=$(timeout 0.2s git status --porcelain=v1 2>/dev/null)
     else
-        git_status=$(git status --porcelain=v1 -uno --ignored=no 2>/dev/null)
+        git_status=$(git status --porcelain=v1 2>/dev/null)
     fi
 
-    # Process status with optimized counting - use v1 format for better performance
+    # Process status information
     if [[ -n "$git_status" ]]; then
         local counts
         counts=$(printf '%s\n' "$git_status" | awk '
@@ -204,11 +217,13 @@ __git_prompt() {
         untracked=${count_array[4]}
     fi
 
-    # Get stash count with timeout and cache-friendly approach
-    if command -v timeout >/dev/null 2>&1; then
-        stashed=$(timeout 0.1s git rev-list --walk-reflogs --count refs/stash 2>/dev/null || echo 0)
-    else
-        stashed=$(git rev-list --walk-reflogs --count refs/stash 2>/dev/null || echo 0)
+    # Get stash count only if stashes exist (performance optimization)
+    if [[ -f "$git_dir/refs/stash" ]]; then
+        if command -v timeout >/dev/null 2>&1; then
+            stashed=$(timeout 0.1s git rev-list --walk-reflogs --count refs/stash 2>/dev/null || echo 0)
+        else
+            stashed=$(git rev-list --walk-reflogs --count refs/stash 2>/dev/null || echo 0)
+        fi
     fi
 
     # Set branch color based on repository state
@@ -232,34 +247,29 @@ __git_prompt() {
     [[ "$untracked" -gt 0 ]] && git_prompt+=" $color_untracked…$untracked${reset_color}"
     [[ "$stashed" -gt 0 ]] && git_prompt+=" $color_stashed⚑$stashed${reset_color}"
 
-    # Save to cache and output
-    echo "$git_prompt" | tee "$CACHE_FILE"
-
-    # Clean up environment variables
-    unset GIT_DIR GIT_WORK_TREE
+    echo "$git_prompt"
 }
 
-# Function to clear git prompt cache when changing directories
-__git_prompt_chpwd() {
-    local CACHE_DIR="${TMPDIR:-/tmp}/git_prompt_cache_${USER}_$$"
-    local PWD_HASH=$(printf '%s' "$PWD" | md5sum | cut -c1-8)
-    rm -f "${CACHE_DIR}/${PWD_HASH}" 2>/dev/null
+# =============================================================================
+#                           Prompt Configuration
+# =============================================================================
 
-    # Periodic cleanup of old cache files (every 100th cd)
-    if (( RANDOM % 100 == 0 )); then
-        find "$CACHE_DIR" -type f -mmin +10 -delete 2>/dev/null &
-    fi
-}
-
-# Add hook to clear cache when changing directories
-autoload -U add-zsh-hook
-add-zsh-hook chpwd __git_prompt_chpwd
-
+# Build custom prompt with git information
 __build_prompt() {
+    local exit_code="$?"
+
+    # Base prompt: user@host working_directory
     PROMPT=$'%{\033[38;5;135m%}%n@%m%{\033[0m%} %4(c:…/:)%3c'
-    test -z "$TIS_CHOOSE" || PROMPT+=$' %{\033[00;36m%}{${TIS_CHOOSE##*/}}%{\033[0m%}'
+
+    # Add git information
     PROMPT+="$(__git_prompt)"
-    PROMPT+=$'%(0?.. %{\033[38;5;196m%}[%?]%{\033[0m%}) %# '
+
+    # Add exit code if non-zero
+    test "$exit_code" -eq 0 || PROMPT+=$' %{\033[38;5;196m%}[${exit_code}]%{\033[0m%}'
+
+    # Final prompt character
+    PROMPT+=' %# '
 }
 
+# Set prompt command
 precmd() { __build_prompt; }

@@ -94,7 +94,7 @@ build:
 
 	# Compile Emacs configuration
 	@if [ -f "$(BUILD_DIR)/emacs" ] && command -v emacs >/dev/null 2>&1; then \
-		cd "$(BUILD_DIR)" && emacs --batch --eval "(byte-compile-file \"$(BUILD_DIR)/emacs\")" 2>/dev/null || echo "Warning: Emacs compilation failed"; \
+		cd "$(BUILD_DIR)" && rm -f "emacs.elc" && emacs --batch --eval "(byte-compile-file \"$(BUILD_DIR)/emacs\")" 2>/dev/null || echo "Warning: Emacs compilation failed"; \
 	else \
 		echo "Warning: emacs not found, skipping compilation"; \
 	fi
