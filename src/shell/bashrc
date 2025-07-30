@@ -172,8 +172,7 @@ __git_prompt() {
             fi
 
             if [[ -n "$ahead_behind" ]]; then
-                behind=${ahead_behind%% *}
-                ahead=${ahead_behind##* }
+                read behind ahead <<< "$ahead_behind"
             fi
         fi
     fi
