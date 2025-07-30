@@ -198,10 +198,10 @@ __git_prompt() {
             END { printf "%d %d %d %d\n", staged, unmerged, changed, untracked }
         ')
         local -a count_array=($counts)
-        staged=${count_array[0]}
-        unmerged=${count_array[1]}
-        changed=${count_array[2]}
-        untracked=${count_array[3]}
+        staged=${count_array[0]:-0}
+        unmerged=${count_array[1]:-0}
+        changed=${count_array[2]:-0}
+        untracked=${count_array[3]:-0}
     fi
 
     # Get stash count only if stashes exist (performance optimization)
