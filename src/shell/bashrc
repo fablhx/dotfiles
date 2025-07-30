@@ -172,8 +172,8 @@ __git_prompt() {
             fi
 
             if [[ -n "$ahead_behind" ]]; then
-                behind=$(echo "$ahead_behind" | awk '{print $1}')
-                ahead=$(echo "$ahead_behind" | awk '{print $2}')
+                behind=${ahead_behind%% *}
+                ahead=${ahead_behind##* }
             fi
         fi
     fi
@@ -197,7 +197,11 @@ __git_prompt() {
             /^\?\?/ { untracked++ }
             END { printf "%d %d %d %d\n", staged, unmerged, changed, untracked }
         ')
-        read staged unmerged changed untracked <<< "$counts"
+        local -a count_array=($counts)
+        staged=${count_array[0]}
+        unmerged=${count_array[1]}
+        changed=${count_array[2]}
+        untracked=${count_array[3]}
     fi
 
     # Get stash count only if stashes exist (performance optimization)
