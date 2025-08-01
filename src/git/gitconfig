@@ -37,7 +37,7 @@
 	# When using --word-diff, assume --word-diff-regex=.
 	wordRegex = .
 	algorithm = histogram
-	colorMoved = default
+	colorMoved = dimmed-zebra
 	indentHeuristic = true
 [rerere]
 	# If, like me, you like rerere, decomment these
