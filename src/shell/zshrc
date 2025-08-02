@@ -125,14 +125,30 @@ alias stop_emacs='emacsclient -e "(kill-emacs)"'  # Stop daemon
 #                           Git Prompt
 # =============================================================================
 
-# Optimized Git prompt function with timeouts and performance improvements
+# Highly optimized Git prompt function with advanced performance improvements
 __git_prompt() {
-    # Quick check if we're in a git repo with timeout
+    # Early exits and guards for performance
+    [[ "$PWD" == *"/.git"* ]] && return  # Skip if inside .git directory
+    [[ -d ".git" ]] || git rev-parse --git-dir >/dev/null 2>&1 || return  # Quick git repo check
+
+    # Get git directory for repo size detection
     local git_dir
-    if command -v timeout >/dev/null 2>&1; then
-        git_dir=$(timeout 0.2s git rev-parse --git-dir 2>/dev/null) || return
+    git_dir=$(git rev-parse --git-dir 2>/dev/null) || return
+
+    # Intelligent timeout scaling based on repo size
+    local base_timeout=0.1
+    local fast_timeout=0.05
+    local slow_timeout=0.2
+
+    # Detect large repos by .git directory size (approximate)
+    if [[ -d "$git_dir/objects/pack" ]] && [[ $(find "$git_dir/objects/pack" -name "*.pack" 2>/dev/null | wc -l) -gt 5 ]]; then
+        # Large repo detected - use faster timeouts and skip expensive operations
+        base_timeout=0.05
+        fast_timeout=0.03
+        slow_timeout=0.1
+        local large_repo=true
     else
-        git_dir=$(git rev-parse --git-dir 2>/dev/null) || return
+        local large_repo=false
     fi
 
     # Colors for zsh
@@ -152,89 +168,97 @@ __git_prompt() {
     local branch="" detached="no" behind=0 ahead=0
     local staged=0 unmerged=0 changed=0 untracked=0 stashed=0
 
-    # Get branch name with timeout
+    # Combined git command for branch info and status (optimization)
+    local git_status_combined
     if command -v timeout >/dev/null 2>&1; then
-        branch=$(timeout 0.1s git symbolic-ref --short -q HEAD 2>/dev/null)
+        git_status_combined=$(timeout "${fast_timeout}s" git status --porcelain=v1 -b --untracked-files=no 2>/dev/null)
     else
-        branch=$(git symbolic-ref --short -q HEAD 2>/dev/null)
+        git_status_combined=$(git status --porcelain=v1 -b --untracked-files=no 2>/dev/null)
     fi
 
-    if [[ -z "$branch" ]]; then
-        # Detached HEAD state
-        detached="yes"
-        if command -v timeout >/dev/null 2>&1; then
-            branch=$(timeout 0.1s git describe --exact-match --tags HEAD 2>/dev/null || timeout 0.1s git rev-parse --short HEAD 2>/dev/null)
-        else
-            branch=$(git describe --exact-match --tags HEAD 2>/dev/null || git rev-parse --short HEAD 2>/dev/null)
-        fi
-    else
-        # Get ahead/behind count with timeout
-        local upstream
-        if command -v timeout >/dev/null 2>&1; then
-            upstream=$(timeout 0.1s git for-each-ref --format='%(upstream:short)' "$(git symbolic-ref -q HEAD)" 2>/dev/null)
-        else
-            upstream=$(git for-each-ref --format='%(upstream:short)' "$(git symbolic-ref -q HEAD)" 2>/dev/null)
+    # Parse branch info from combined output
+    if [[ -n "$git_status_combined" ]]; then
+        local branch_line
+        branch_line=$(echo "$git_status_combined" | head -1)
+
+        if [[ "$branch_line" =~ "^##\s+([^.]+)" ]]; then
+            branch="${match[1]}"
+
+            # Extract ahead/behind from branch line if present
+            if [[ "$branch_line" =~ "\[ahead\s+([0-9]+)\]" ]]; then
+                ahead="${match[1]}"
+            fi
+            if [[ "$branch_line" =~ "\[behind\s+([0-9]+)\]" ]]; then
+                behind="${match[1]}"
+            fi
+            if [[ "$branch_line" =~ "\[ahead\s+([0-9]+),\s*behind\s+([0-9]+)\]" ]]; then
+                ahead="${match[1]}"
+                behind="${match[2]}"
+            fi
         fi
 
-        if [[ -n "$upstream" ]]; then
-            local ahead_behind
+        # Handle detached HEAD case
+        if [[ "$branch_line" =~ "HEAD \(no branch\)" ]] || [[ -z "$branch" ]]; then
+            detached="yes"
             if command -v timeout >/dev/null 2>&1; then
-                ahead_behind=$(timeout 0.15s git rev-list --left-right --count "$upstream...HEAD" 2>/dev/null)
+                branch=$(timeout "${base_timeout}s" git describe --exact-match --tags HEAD 2>/dev/null || timeout "${base_timeout}s" git rev-parse --short HEAD 2>/dev/null)
             else
-                ahead_behind=$(git rev-list --left-right --count "$upstream...HEAD" 2>/dev/null)
-            fi
-
-            if [[ -n "$ahead_behind" ]]; then
-                behind=${ahead_behind%%[[:space:]]*}
-                ahead=${ahead_behind##*[[:space:]]}
+                branch=$(git describe --exact-match --tags HEAD 2>/dev/null || git rev-parse --short HEAD 2>/dev/null)
             fi
         fi
     fi
 
-    # Get repository status with timeout (split for performance)
-    # Fast part: get staged/modified files without scanning untracked files
-    local git_status_fast
-    if command -v timeout >/dev/null 2>&1; then
-        git_status_fast=$(timeout 0.15s git status --porcelain=v1 --untracked-files=no 2>/dev/null)
-    else
-        git_status_fast=$(git status --porcelain=v1 --untracked-files=no 2>/dev/null)
+    # Process status information with shell built-ins (optimization)
+    if [[ -n "$git_status_combined" ]]; then
+        # Skip the branch line and process file status lines
+        local status_lines
+        status_lines=$(echo "$git_status_combined" | tail -n +2)
+
+        # Use shell parameter expansion instead of AWK for better performance
+        while IFS= read -r line; do
+            [[ -z "$line" ]] && continue
+
+            local index_status="${line[1]}"
+            local worktree_status="${line[2]}"
+
+            # Count staged files
+            case "$index_status" in
+                [MADRC]) ((staged++)) ;;
+                U) ((unmerged++)) ;;
+            esac
+
+            # Count changed files
+            case "$worktree_status" in
+                [MD]) ((changed++)) ;;
+                U) ((unmerged++)) ;;
+            esac
+        done <<< "$status_lines"
     fi
 
-    # Process fast status information (staged, unmerged, changed)
-    if [[ -n "$git_status_fast" ]]; then
-        local counts_fast
-        counts_fast=$(printf '%s\n' "$git_status_fast" | awk '
-            BEGIN { staged=0; unmerged=0; changed=0 }
-            /^[MADRC]/ { staged++ }
-            /^UU|^AA|^DD/ { unmerged++ }
-            /^.[MD]/ { changed++ }
-            END { printf "%d %d %d\n", staged, unmerged, changed }
-        ')
-        local -a count_array=(${=counts_fast})
-        staged=${count_array[1]}
-        unmerged=${count_array[2]}
-        changed=${count_array[3]}
-    fi
-
-    # Slow part: get untracked files with shorter timeout (can fail gracefully)
-    local untracked_files
-    if command -v timeout >/dev/null 2>&1; then
-        untracked_files=$(timeout 0.1s git ls-files --others --exclude-standard 2>/dev/null)
-    else
-        untracked_files=$(git ls-files --others --exclude-standard 2>/dev/null)
-    fi
-
-    # Count untracked files if we got them
-    if [[ -n "$untracked_files" ]]; then
-        untracked=$(printf '%s\n' "$untracked_files" | wc -l)
-    fi
-
-    # Get stash count only if stashes exist (performance optimization)
-    if [[ -f "$git_dir/refs/stash" ]]; then
+    # Untracked files with timeout (skip in large repos for performance)
+    if [[ "$large_repo" != "true" ]]; then
+        local untracked_files
         if command -v timeout >/dev/null 2>&1; then
-            stashed=$(timeout 0.1s git rev-list --walk-reflogs --count refs/stash 2>/dev/null || echo 0)
+            untracked_files=$(timeout "${slow_timeout}s" git ls-files --others --exclude-standard 2>/dev/null)
         else
-            stashed=$(git rev-list --walk-reflogs --count refs/stash 2>/dev/null || echo 0)
+            untracked_files=$(git ls-files --others --exclude-standard 2>/dev/null)
+        fi
+
+        # Count untracked files if we got them
+        if [[ -n "$untracked_files" ]]; then
+            untracked=$(printf '%s\n' "$untracked_files" | wc -l)
+        fi
+    fi
+
+    # Conditional stash counting (skip in large repos or if stash is old)
+    if [[ "$large_repo" != "true" ]] && [[ -f "$git_dir/refs/stash" ]]; then
+        # Only check stash if it was modified recently (within 24 hours)
+        if [[ $(find "$git_dir/refs/stash" -mtime -1 2>/dev/null) ]]; then
+            if command -v timeout >/dev/null 2>&1; then
+                stashed=$(timeout "${base_timeout}s" git rev-list --walk-reflogs --count refs/stash 2>/dev/null || echo 0)
+            else
+                stashed=$(git rev-list --walk-reflogs --count refs/stash 2>/dev/null || echo 0)
+            fi
         fi
     fi
 
