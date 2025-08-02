@@ -177,26 +177,39 @@ __git_prompt() {
         fi
     fi
 
-    # Get repository status with timeout
-    local git_status
+    # Get repository status with timeout (split for performance)
+    # Fast part: get staged/modified files without scanning untracked files
+    local git_status_fast
     if command -v timeout >/dev/null 2>&1; then
-        git_status=$(timeout 0.2s git status --porcelain=v1 2>/dev/null)
+        git_status_fast=$(timeout 0.15s git status --porcelain=v1 --untracked-files=no 2>/dev/null)
     else
-        git_status=$(git status --porcelain=v1 2>/dev/null)
+        git_status_fast=$(git status --porcelain=v1 --untracked-files=no 2>/dev/null)
     fi
 
-    # Process status information
-    if [[ -n "$git_status" ]]; then
-        local counts
-        counts=$(printf '%s\n' "$git_status" | awk '
-            BEGIN { staged=0; unmerged=0; changed=0; untracked=0 }
+    # Process fast status information (staged, unmerged, changed)
+    if [[ -n "$git_status_fast" ]]; then
+        local counts_fast
+        counts_fast=$(printf '%s\n' "$git_status_fast" | awk '
+            BEGIN { staged=0; unmerged=0; changed=0 }
             /^[MADRC]/ { staged++ }
             /^UU|^AA|^DD/ { unmerged++ }
             /^.[MD]/ { changed++ }
-            /^\?\?/ { untracked++ }
-            END { printf "%d %d %d %d\n", staged, unmerged, changed, untracked }
+            END { printf "%d %d %d\n", staged, unmerged, changed }
         ')
-        read staged unmerged changed untracked <<< "$counts"
+        read staged unmerged changed <<< "$counts_fast"
+    fi
+
+    # Slow part: get untracked files with shorter timeout (can fail gracefully)
+    local untracked_files
+    if command -v timeout >/dev/null 2>&1; then
+        untracked_files=$(timeout 0.1s git ls-files --others --exclude-standard 2>/dev/null)
+    else
+        untracked_files=$(git ls-files --others --exclude-standard 2>/dev/null)
+    fi
+
+    # Count untracked files if we got them
+    if [[ -n "$untracked_files" ]]; then
+        untracked=$(printf '%s\n' "$untracked_files" | wc -l)
     fi
 
     # Get stash count only if stashes exist (performance optimization)
