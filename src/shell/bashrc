@@ -168,7 +168,7 @@ __git_prompt() {
         local branch_line
         branch_line=$(echo "$git_status_combined" | head -1)
 
-        if [[ "$branch_line" =~ ^##\s+([^.]+) ]]; then
+        if [[ "$branch_line" =~ ^##\s+([^.[:space:]]+) ]]; then
             branch="${BASH_REMATCH[1]}"
 
             # Extract ahead/behind from branch line if present
