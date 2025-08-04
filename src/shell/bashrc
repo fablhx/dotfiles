@@ -155,51 +155,60 @@ __git_prompt() {
     local branch="" detached="no" behind=0 ahead=0
     local staged=0 unmerged=0 changed=0 untracked=0 stashed=0
 
-    # Combined git command for branch info and status (optimization)
-    local git_status_combined
+    # Get branch name separately for better reliability
     if command -v timeout >/dev/null 2>&1; then
-        git_status_combined=$(timeout "${fast_timeout}s" git status --porcelain=v1 -b --untracked-files=no 2>/dev/null)
+        branch=$(timeout "${fast_timeout}s" git symbolic-ref --short -q HEAD 2>/dev/null)
     else
-        git_status_combined=$(git status --porcelain=v1 -b --untracked-files=no 2>/dev/null)
+        branch=$(git symbolic-ref --short -q HEAD 2>/dev/null)
     fi
 
-    # Parse branch info from combined output
-    if [[ -n "$git_status_combined" ]]; then
-        local branch_line
-        branch_line=$(echo "$git_status_combined" | head -1)
+    # Handle detached HEAD case
+    if [[ -z "$branch" ]]; then
+        detached="yes"
+        if command -v timeout >/dev/null 2>&1; then
+            branch=$(timeout "${base_timeout}s" git describe --exact-match --tags HEAD 2>/dev/null || timeout "${base_timeout}s" git rev-parse --short HEAD 2>/dev/null)
+        else
+            branch=$(git describe --exact-match --tags HEAD 2>/dev/null || git rev-parse --short HEAD 2>/dev/null)
+        fi
+    fi
 
-        if [[ "$branch_line" =~ ^##\ ([^.]+) ]]; then
-            branch="${BASH_REMATCH[1]}"
+    # Get status information for file changes only
+    local git_status_combined
+    if command -v timeout >/dev/null 2>&1; then
+        git_status_combined=$(timeout "${fast_timeout}s" git status --porcelain=v1 --untracked-files=no 2>/dev/null)
+    else
+        git_status_combined=$(git status --porcelain=v1 --untracked-files=no 2>/dev/null)
+    fi
 
-            # Extract ahead/behind from branch line if present
-            if [[ "$branch_line" =~ \[ahead\s+([0-9]+)\] ]]; then
-                ahead="${BASH_REMATCH[1]}"
-            fi
-            if [[ "$branch_line" =~ \[behind\s+([0-9]+)\] ]]; then
-                behind="${BASH_REMATCH[1]}"
-            fi
-            if [[ "$branch_line" =~ \[ahead\s+([0-9]+),\s*behind\s+([0-9]+)\] ]]; then
-                ahead="${BASH_REMATCH[1]}"
-                behind="${BASH_REMATCH[2]}"
-            fi
+    # Get ahead/behind information separately if needed
+    if [[ "$detached" != "yes" ]]; then
+        local upstream
+        if command -v timeout >/dev/null 2>&1; then
+            upstream=$(timeout "${fast_timeout}s" git rev-parse --abbrev-ref @{upstream} 2>/dev/null)
+        else
+            upstream=$(git rev-parse --abbrev-ref @{upstream} 2>/dev/null)
         fi
 
-        # Handle detached HEAD case
-        if [[ "$branch_line" =~ HEAD\ \(no\ branch\) ]] || [[ -z "$branch" ]]; then
-            detached="yes"
+        if [[ -n "$upstream" ]]; then
+            local ahead_behind
             if command -v timeout >/dev/null 2>&1; then
-                branch=$(timeout "${base_timeout}s" git describe --exact-match --tags HEAD 2>/dev/null || timeout "${base_timeout}s" git rev-parse --short HEAD 2>/dev/null)
+                ahead_behind=$(timeout "${fast_timeout}s" git rev-list --left-right --count HEAD..."$upstream" 2>/dev/null)
             else
-                branch=$(git describe --exact-match --tags HEAD 2>/dev/null || git rev-parse --short HEAD 2>/dev/null)
+                ahead_behind=$(git rev-list --left-right --count HEAD..."$upstream" 2>/dev/null)
+            fi
+
+            if [[ -n "$ahead_behind" ]]; then
+                ahead=$(echo "$ahead_behind" | cut -f1)
+                behind=$(echo "$ahead_behind" | cut -f2)
             fi
         fi
     fi
 
     # Process status information with shell built-ins (optimization)
     if [[ -n "$git_status_combined" ]]; then
-        # Skip the branch line and process file status lines
+        # Process all file status lines directly
         local status_lines
-        status_lines=$(echo "$git_status_combined" | tail -n +2)
+        status_lines="$git_status_combined"
 
         # Use shell parameter expansion instead of AWK for better performance
         while IFS= read -r line; do
