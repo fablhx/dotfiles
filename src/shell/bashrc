@@ -168,7 +168,7 @@ __git_prompt() {
         local branch_line
         branch_line=$(echo "$git_status_combined" | head -1)
 
-        if [[ "$branch_line" =~ ^##\s+([^.[:space:]]+) ]]; then
+        if [[ "$branch_line" =~ ^##\ ([^.]+) ]]; then
             branch="${BASH_REMATCH[1]}"
 
             # Extract ahead/behind from branch line if present
@@ -185,7 +185,7 @@ __git_prompt() {
         fi
 
         # Handle detached HEAD case
-        if [[ "$branch_line" =~ "HEAD (no branch)" ]] || [[ -z "$branch" ]]; then
+        if [[ "$branch_line" =~ HEAD\ \(no\ branch\) ]] || [[ -z "$branch" ]]; then
             detached="yes"
             if command -v timeout >/dev/null 2>&1; then
                 branch=$(timeout "${base_timeout}s" git describe --exact-match --tags HEAD 2>/dev/null || timeout "${base_timeout}s" git rev-parse --short HEAD 2>/dev/null)

@@ -181,7 +181,7 @@ __git_prompt() {
         local branch_line
         branch_line=$(echo "$git_status_combined" | head -1)
 
-        if [[ "$branch_line" =~ "^##\s+([^.[:space:]]+)" ]]; then
+        if [[ "$branch_line" =~ "^## ([^.]+)" ]]; then
             branch="${match[1]}"
 
             # Extract ahead/behind from branch line if present
