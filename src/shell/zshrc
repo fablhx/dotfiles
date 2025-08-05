@@ -185,12 +185,43 @@ __git_prompt() {
         fi
     fi
 
-    # Get status information for file changes only
-    local git_status_combined
+    # Get status information with progressive fallback strategy
+    local git_status_combined=""
+    local using_fallback=false
+
+    # First try git status with timeout
     if command -v timeout >/dev/null 2>&1; then
         git_status_combined=$(timeout "${fast_timeout}s" git status --porcelain=v1 --untracked-files=no 2>/dev/null)
+
+        # If git status times out or fails, fall back to git diff --name-only
+        if [[ $? -ne 0 ]]; then
+            using_fallback=true
+            # Get staged changes (index vs HEAD) and unstaged changes in parallel
+            local staged_files changed_files
+            staged_files=$(timeout "${fast_timeout}s" git diff --cached --name-only 2>/dev/null) &
+            local staged_pid=$!
+            changed_files=$(timeout "${fast_timeout}s" git diff --name-only 2>/dev/null) &
+            local changed_pid=$!
+
+            wait $staged_pid; staged_files=$(jobs -p | grep -q $staged_pid || echo "$staged_files")
+            wait $changed_pid; changed_files=$(jobs -p | grep -q $changed_pid || echo "$changed_files")
+
+            # Build status more efficiently
+            git_status_combined=""
+            [[ -n "$staged_files" ]] && while read -r file; do git_status_combined+="M  $file"$'\n'; done <<< "$staged_files"
+            [[ -n "$changed_files" ]] && while read -r file; do git_status_combined+=" M $file"$'\n'; done <<< "$changed_files"
+        fi
     else
         git_status_combined=$(git status --porcelain=v1 --untracked-files=no 2>/dev/null)
+
+        if [[ $? -ne 0 ]]; then
+            using_fallback=true
+            local staged_files=$(git diff --cached --name-only 2>/dev/null)
+            local changed_files=$(git diff --name-only 2>/dev/null)
+            git_status_combined=""
+            [[ -n "$staged_files" ]] && while read -r file; do git_status_combined+="M  $file"$'\n'; done <<< "$staged_files"
+            [[ -n "$changed_files" ]] && while read -r file; do git_status_combined+=" M $file"$'\n'; done <<< "$changed_files"
+        fi
     fi
 
     # Get ahead/behind information separately if needed
@@ -206,6 +237,20 @@ __git_prompt() {
             local ahead_behind
             if command -v timeout >/dev/null 2>&1; then
                 ahead_behind=$(timeout "${fast_timeout}s" git rev-list --left-right --count HEAD..."$upstream" 2>/dev/null)
+
+                # If that times out, try merge-base approach for faster check
+                if [[ $? -ne 0 ]]; then
+                    local merge_base=$(timeout "${fast_timeout}s" git merge-base HEAD "$upstream" 2>/dev/null)
+                    if [[ -n "$merge_base" ]]; then
+                        local head_commit=$(timeout "${fast_timeout}s" git rev-parse HEAD 2>/dev/null)
+                        local upstream_commit=$(timeout "${fast_timeout}s" git rev-parse "$upstream" 2>/dev/null)
+
+                        if [[ -n "$head_commit" && -n "$upstream_commit" ]]; then
+                            [[ "$merge_base" != "$head_commit" ]] && ahead="?"  # We're ahead, unknown count
+                            [[ "$merge_base" != "$upstream_commit" ]] && behind="?"  # We're behind, unknown count
+                        fi
+                    fi
+                fi
             else
                 ahead_behind=$(git rev-list --left-right --count HEAD..."$upstream" 2>/dev/null)
             fi
