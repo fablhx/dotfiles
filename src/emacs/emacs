@@ -263,6 +263,9 @@ if applicable."
         scroll-step 1
         auto-window-vscroll nil)
 
+  ;; Enable eldoc for all programming modes
+  (add-hook 'prog-mode-hook #'eldoc-mode)
+
   ;; Various settings
   (setq
    Buffer-menu-name-width 30
@@ -275,13 +278,12 @@ if applicable."
    vc-follow-symlinks t)          ; Follow symlinks without asking
 
   ;; Custom variables
-  (custom-set-variables
-   '(inhibit-startup-echo-area-message t)
-   '(inhibit-startup-message t)
-   '(make-backup-files nil)
-   '(ring-bell-function #'ignore)
-   '(save-abbrevs nil)
-   '(search-highlight t))
+  (setq inhibit-startup-echo-area-message t
+        inhibit-startup-message t
+        make-backup-files nil
+        ring-bell-function #'ignore
+        save-abbrevs nil
+        search-highlight t)
 
   ;; Custom keybindings through minor mode
   (defvar my-keys-minor-mode-map
@@ -303,7 +305,7 @@ if applicable."
         (define-key map (kbd "C-c C-l") #'my-open-error-location-at-point))
 
       ;; Open file from ssh
-      (global-set-key (kbd "C-c C-f") #'my-open-remote-nofile)
+      (define-key map (kbd "C-c C-f") #'my-open-remote-nofile)
 
       map)
     "my-keys-minor-mode keymap.")
@@ -341,15 +343,15 @@ if applicable."
   :ensure t
   :config
   (show-paren-mode t)
-  (custom-set-variables
-   '(blink-matching-paren t)
-   '(blink-matching-paren-on-screen t)
-   '(show-paren-style 'expression)
-   '(blink-matching-paren-dont-ignore-comments t)))
+  (setq blink-matching-paren t
+        blink-matching-paren-on-screen t
+        show-paren-style 'expression
+        blink-matching-paren-dont-ignore-comments t))
 
 ;; Multiple cursors
 (use-package multiple-cursors
   :ensure t
+  :defer t
   :bind (("C-c e l" . mc/edit-lines)
          ("C->" . mc/mark-next-like-this)
          ("C-<" . mc/mark-previous-like-this)
@@ -358,12 +360,15 @@ if applicable."
 ;; Search with multiple cursors
 (use-package phi-search
   :ensure t
+  :defer t
   :hook ((multiple-cursors-mode-enabled . my-enable-phi-search)
          (multiple-cursors-mode-disabled . my-disable-phi-search)))
 
 ;; Jump to definitions
 (use-package dumb-jump
   :ensure t
+  :defer t
+  :commands (xref-find-definitions xref-go-back dumb-jump-mode)
   :config
   (setq dumb-jump-project-denoters
         '(".dumbjump" ".projectile" ".git" ".hg" ".fslckout"
@@ -381,9 +386,6 @@ if applicable."
               ("C-c C-l" . xref-find-definitions)
               ("C-c C-b" . xref-go-back)))
 
-(use-package cl-lib
-  :ensure nil
-  :demand t)
 
 ;; =============================================================================
 ;;                           Development Tools
@@ -539,6 +541,7 @@ if applicable."
 
 (use-package clang-format
   :ensure t
+  :defer t
   :after cc-mode)
 
 ;; Python Configuration
@@ -576,6 +579,8 @@ if applicable."
 
 (use-package flycheck-ocaml
   :ensure t
+  :defer t
+  :after tuareg
   :config (flycheck-ocaml-setup))
 
 ;; =============================================================================
@@ -585,6 +590,7 @@ if applicable."
 ;; Markdown
 (use-package markdown-mode
   :ensure t
+  :defer t
   :mode (("\\.md\\'" . markdown-mode)
          ("\\.markdown\\'" . markdown-mode))
   :init
@@ -593,6 +599,7 @@ if applicable."
 ;; JSON
 (use-package json-mode
   :ensure t
+  :defer t
   :mode "\\.json\\'"
   :bind (:map json-mode-map
               ("C-M-\\" . json-reformat-region)))

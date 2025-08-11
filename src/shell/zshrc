@@ -46,6 +46,7 @@ setopt share_history
 
 export ALTERNATE_EDITOR=""
 export EDITOR='emacs'
+export EMACSDIR="${HOME}/.emacs.d/"
 export LESS="-RFX"
 
 # =============================================================================
@@ -83,10 +84,14 @@ __setup_modern_aliases() {
     fi
 
     # ripgrep with fallback
-    command -v rg >/dev/null 2>&1 && alias grep='rg'
+    if command -v rg >/dev/null 2>&1; then
+        alias grep='rg'
+    fi
 
     # Tree with colors
-    alias tree='tree -C'
+    if command -v tree >/dev/null 2>&1; then
+        alias tree='tree -C'
+    fi
 
     # Clipboard integration
     alias xclip='xclip -selection clipboard'
@@ -193,14 +198,16 @@ __git_prompt() {
         using_fallback=true
         # Get staged changes (index vs HEAD) and unstaged changes in parallel
         local staged_files changed_files
-        timeout "${fast_timeout}s" git diff --cached --name-only 2>/dev/null > /tmp/staged_$$ &
+        local staged_tmp=$(mktemp)
+        local changed_tmp=$(mktemp)
+        timeout "${fast_timeout}s" git diff --cached --name-only 2>/dev/null > "$staged_tmp" &
         local staged_pid=$!
-        timeout "${fast_timeout}s" git diff --name-only 2>/dev/null > /tmp/changed_$$ &
+        timeout "${fast_timeout}s" git diff --name-only 2>/dev/null > "$changed_tmp" &
         local changed_pid=$!
 
-        wait $staged_pid; staged_files=$(cat /tmp/staged_$$ 2>/dev/null)
-        wait $changed_pid; changed_files=$(cat /tmp/changed_$$ 2>/dev/null)
-        rm -f /tmp/staged_$$ /tmp/changed_$$
+        wait $staged_pid; staged_files=$(cat "$staged_tmp" 2>/dev/null)
+        wait $changed_pid; changed_files=$(cat "$changed_tmp" 2>/dev/null)
+        rm -f "$staged_tmp" "$changed_tmp"
 
         # Build status more efficiently
         git_status_combined=""
