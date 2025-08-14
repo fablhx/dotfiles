@@ -160,19 +160,6 @@ __git_prompt() {
         local large_repo=false
     fi
 
-    # Colors for zsh
-    local color_detached="%{\033[38;5;200m%}"
-    local color_dirty="%{\033[38;5;240m%}"
-    local color_clean="%{\033[38;5;22m%}"
-    local color_behind="%{\033[38;5;250m%}"
-    local color_ahead="%{\033[38;5;250m%}"
-    local color_staged="%{\033[38;5;28m%}"
-    local color_unmerged="%{\033[38;5;196m%}"
-    local color_changed="%{\033[38;5;166m%}"
-    local color_untracked="%{\033[38;5;172m%}"
-    local color_stashed="%{\033[38;5;26m%}"
-    local reset_color="%{\033[0m%}"
-
     # Initialize variables
     local branch="" detached="no" behind=0 ahead=0
     local staged=0 unmerged=0 changed=0 untracked=0 stashed=0
@@ -191,7 +178,7 @@ __git_prompt() {
     local using_fallback=false
 
     # Try git status with timeout
-    git_status_combined=$(timeout "${fast_timeout}s" git status --porcelain=v1 --untracked-files=no 2>/dev/null)
+    git_status_combined=$(timeout "${fast_timeout}s" git status --porcelain --untracked-files=no 2>/dev/null)
 
     # If git status times out or fails, fall back to git diff --name-only
     if [[ $? -ne 0 ]]; then
@@ -290,6 +277,19 @@ __git_prompt() {
             stashed=$(timeout "${base_timeout}s" git rev-list --walk-reflogs --count refs/stash 2>/dev/null || echo 0)
         fi
     fi
+
+    # Colors for zsh
+    local color_detached="%{\033[38;5;200m%}"
+    local color_dirty="%{\033[38;5;240m%}"
+    local color_clean="%{\033[38;5;22m%}"
+    local color_behind="%{\033[38;5;250m%}"
+    local color_ahead="%{\033[38;5;250m%}"
+    local color_staged="%{\033[38;5;28m%}"
+    local color_unmerged="%{\033[38;5;196m%}"
+    local color_changed="%{\033[38;5;166m%}"
+    local color_untracked="%{\033[38;5;172m%}"
+    local color_stashed="%{\033[38;5;26m%}"
+    local reset_color="%{\033[0m%}"
 
     # Set branch color based on repository state
     local color_branch
