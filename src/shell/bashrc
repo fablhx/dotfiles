@@ -49,8 +49,8 @@ __setup_modern_aliases() {
     alias egrep='egrep --color=auto'
 
     # Modern tool alternatives (with fallbacks)
-    if command -v bat >/dev/null 2>&1; then
-        alias cat='bat --paging=never --style=plain'
+    if command -v batcat >/dev/null 2>&1; then
+        alias cat='batcat --paging=never --style=plain'
     fi
 
     # Prefer eza if available
@@ -311,7 +311,7 @@ __build_prompt() {
     local exit_code="$?"
 
     # Base prompt: user@host working_directory
-    PS1="\[\033[38;5;135m\]\u@\h\[\033[0m\] \w"
+    PS1="\[\033[38;5;135m\]\u@\H\[\033[0m\] \w"
 
     # Add git information
     PS1+="$(__git_prompt) "
