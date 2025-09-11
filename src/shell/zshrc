@@ -304,13 +304,13 @@ __git_prompt() {
     # Build prompt string efficiently
     local git_prompt=" $color_branch$branch${reset_color}"
 
-    [[ "$behind" -gt 0 ]] && git_prompt+=" $color_behind↓$behind${reset_color}"
-    [[ "$ahead" -gt 0 ]] && git_prompt+=" $color_ahead↑$ahead${reset_color}"
-    [[ "$staged" -gt 0 ]] && git_prompt+=" $color_staged•$staged${reset_color}"
+    [[ "$behind" -gt 0 ]] && git_prompt+=" $color_behindv$behind${reset_color}"
+    [[ "$ahead" -gt 0 ]] && git_prompt+=" $color_ahead^$ahead${reset_color}"
+    [[ "$staged" -gt 0 ]] && git_prompt+=" $color_staged*$staged${reset_color}"
     [[ "$unmerged" -gt 0 ]] && git_prompt+=" $color_unmerged$unmerged${reset_color}"
     [[ "$changed" -gt 0 ]] && git_prompt+=" $color_changed+$changed${reset_color}"
-    [[ "$untracked" -gt 0 ]] && git_prompt+=" $color_untracked…$untracked${reset_color}"
-    [[ "$stashed" -gt 0 ]] && git_prompt+=" $color_stashed⚑$stashed${reset_color}"
+    [[ "$untracked" -gt 0 ]] && git_prompt+=" $color_untracked?$untracked${reset_color}"
+    [[ "$stashed" -gt 0 ]] && git_prompt+=" $color_stashedS$stashed${reset_color}"
 
     echo "$git_prompt"
 }
@@ -324,7 +324,7 @@ __build_prompt() {
     local exit_code="$?"
 
     # Base prompt: user@host working_directory
-    PROMPT=$'%{\033[38;5;135m%}%n@%M%{\033[0m%} %4(c:…/:)%3c'
+    PROMPT=$'%{\033[38;5;135m%}%n@%M%{\033[0m%} %4(c:.../:)%3c'
 
     # Add git information
     PROMPT+="$(__git_prompt)"
