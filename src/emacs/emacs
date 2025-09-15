@@ -211,13 +211,14 @@ if applicable."
   ;; Function key bindings
   ([f1] . comment-dwim)
   ([f2] . whitespace-mode)
-  ;; [f3] => see ag
+  ;; [f3] => see ag / rg
   ([f4] . my-pop-local-mark-ring)
   ([(shift f4)] . pop-global-mark)
   ([f5] . compile)
   ([f6] . interrupt-and-recompile)
   ([f7] . next-error)
   ([f8] . flycheck-mode)
+  ;; ([f9] => see treemacs
   ([f12] . enlarge-window)
 
   ;; Window management with auto-balancing
@@ -331,12 +332,29 @@ if applicable."
 ;;                           Search and Navigation
 ;; =============================================================================
 
+;; Treemacs
+(use-package treemacs
+  :ensure t
+  :bind
+  ([f9] . treemacs)
+  :config
+  (treemacs-follow-mode t)
+  (treemacs-filewatch-mode t))
+
 ;; Silver Searcher integration
 (use-package ag
   :ensure t
   :bind
   ([f3] . ag)
   ([(shift f3)] . ag-project))
+
+;; Ripgrep, supposed to be faster that ag.
+(use-package rg
+  :ensure t
+  :config
+  (rg-enable-default-bindings)
+  ([f3] . rg)
+  ([(shift f3)] . rg-project))
 
 ;; Parenthesis handling
 (use-package paren
@@ -368,6 +386,9 @@ if applicable."
 (use-package dumb-jump
   :ensure t
   :defer t
+  :init
+  ;; Force dumb-jump xref backend
+  (add-hook 'xref-backend-functions #'dumb-jump-xref-activate)
   :commands (xref-find-definitions xref-go-back dumb-jump-mode)
   :config
   (setq dumb-jump-project-denoters
@@ -386,6 +407,29 @@ if applicable."
               ("C-c C-l" . xref-find-definitions)
               ("C-c C-b" . xref-go-back)))
 
+;; Help for key bindings
+(use-package which-key
+  :ensure t
+  :config
+  (which-key-mode)
+  (setq which-key-idle-delay 0.5))
+
+;; Settings for modern completion
+(use-package vertico
+  :ensure t
+  :init
+  (vertico-mode))
+
+(use-package orderless
+  :ensure t
+  :custom
+  (completion-styles '(orderless basic))
+  (completion-category-overrides '((file (styles basic partial-completion)))))
+
+(use-package marginalia
+  :ensure t
+  :init
+  (marginalia-mode))
 
 ;; =============================================================================
 ;;                           Development Tools
@@ -558,6 +602,11 @@ if applicable."
   (when (executable-find "pylint3")
     (setq flycheck-python-pylint-executable "pylint3"))
   (setq flycheck-python-mypy-cache-dir "/dev/null"))
+
+(use-package flycheck-inline
+  :ensure t
+  :after flycheck
+  :hook (flycheck-mode . flycheck-inline-mode))
 
 ;; OCaml Configuration
 (use-package tuareg
