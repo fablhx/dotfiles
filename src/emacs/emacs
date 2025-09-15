@@ -353,6 +353,7 @@ if applicable."
   :ensure t
   :config
   (rg-enable-default-bindings)
+  :bind
   ([f3] . rg)
   ([(shift f3)] . rg-project))
 
