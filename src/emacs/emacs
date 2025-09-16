@@ -197,6 +197,52 @@ if applicable."
         ;; fallback to original if no valid existing file or no match
         (apply orig-fun filename args)))))
 
+;; Define a jump function
+(defun my-jump-to-matching-ifdef ()
+  "Jump between matching #if/#ifdef/#ifndef and #endif."
+  (interactive)
+  (let ((start-point (point)))
+    (beginning-of-line)
+    (cond
+     ;; On #if/ifdef/ifndef - jump to matching #endif
+     ((looking-at "^\\s-*#\\s-*\\(if\\|ifdef\\|ifndef\\)")
+      (let ((level 1))
+        (while (and (> level 0)
+                    (re-search-forward "^\\s-*#\\s-*\\(if\\|ifdef\\|ifndef\\|endif\\)" nil t))
+          (beginning-of-line)
+          (cond
+           ((looking-at "^\\s-*#\\s-*\\(if\\|ifdef\\|ifndef\\)")
+            (setq level (1+ level)))
+           ((looking-at "^\\s-*#\\s-*endif")
+            (setq level (1- level))))
+          (unless (zerop level)
+            (forward-line)))
+        (when (zerop level)
+          (beginning-of-line))))
+
+     ;; On #endif - jump back to matching #if
+     ((looking-at "^\\s-*#\\s-*endif")
+      (let ((level 1))
+        (while (and (> level 0)
+                    (re-search-backward "^\\s-*#\\s-*\\(if\\|ifdef\\|ifndef\\|endif\\)" nil t))
+          (cond
+           ((looking-at "^\\s-*#\\s-*endif")
+            (setq level (1+ level)))
+           ((looking-at "^\\s-*#\\s-*\\(if\\|ifdef\\|ifndef\\)")
+            (setq level (1- level)))))))
+
+     ;; On #else or #elif - jump to parent #if or next #endif
+     ((looking-at "^\\s-*#\\s-*\\(else\\|elif\\)")
+      (if (re-search-backward "^\\s-*#\\s-*\\(if\\|ifdef\\|ifndef\\)" nil t)
+          (beginning-of-line)
+        (goto-char start-point)
+        (re-search-forward "^\\s-*#\\s-*endif" nil t)))
+
+     ;; Not on a preprocessor directive
+     (t
+      (goto-char start-point)
+      (message "Not on a preprocessor directive")))))
+
 ;; =============================================================================
 ;;                           Core Emacs Settings
 ;; =============================================================================
@@ -502,6 +548,17 @@ if applicable."
 (setq ediff-split-window-function #'split-window-horizontally
       ediff-window-setup-function #'ediff-setup-windows-plain)
 
+;; Syntax highlighting
+(use-package tree-sitter
+  :ensure t
+  :config
+  (global-tree-sitter-mode)
+  :hook (tree-sitter-after-on . tree-sitter-hl-mode))
+
+(use-package tree-sitter-langs
+  :ensure t
+  :after tree-sitter)
+
 ;; =============================================================================
 ;;                           Programming Languages
 ;; =============================================================================
@@ -588,6 +645,19 @@ if applicable."
   :ensure t
   :defer t
   :after cc-mode)
+
+(use-package hideif
+  :ensure nil
+  :hook ((c-mode c++-mode) . hide-ifdef-mode)
+  :config
+  (setq hide-ifdef-shadow t
+        hide-ifdef-initially nil
+        hide-ifdef-shadow-face '(:inherit shadow :background "gray95"))
+  :bind
+  (("C-c # h" . hide-ifdef-block)
+   ("C-c # s" . show-ifdef-block)
+   ("C-c # t" . hide-ifdef-toggle-shadowing)
+   ("C-c # j" . my-jump-to-matching-ifdef)))
 
 ;; Python Configuration
 (use-package python
@@ -720,6 +790,42 @@ if applicable."
 ;; =============================================================================
 ;;                           Visual Enhancement
 ;; =============================================================================
+
+(use-package doom-modeline
+  :ensure t
+  :init (doom-modeline-mode 1)
+  :config
+  (setq doom-modeline-height 30
+        doom-modeline-bar-width 4
+        doom-modeline-window-width-limit 85
+
+        ;; What to show
+        doom-modeline-buffer-file-name-style 'truncate-upto-root
+        doom-modeline-icon t
+        doom-modeline-major-mode-icon t
+        doom-modeline-major-mode-color-icon t
+        doom-modeline-buffer-state-icon t
+        doom-modeline-buffer-modification-icon t
+        doom-modeline-minor-modes nil
+        doom-modeline-enable-word-count nil
+        doom-modeline-buffer-encoding t
+        doom-modeline-indent-info nil
+        doom-modeline-checker-simple-format t
+        doom-modeline-vcs-max-length 12
+        doom-modeline-env-version t
+        doom-modeline-lsp t
+        doom-modeline-github nil
+        doom-modeline-modal-icon t
+        doom-modeline-persp-name nil
+        doom-modeline-display-default-persp-name nil
+
+        ;; Performance
+        doom-modeline-unicode-fallback nil))
+
+;; Required for icons
+(use-package all-the-icons
+  :ensure t
+  :if (display-graphic-p))
 
 ;; Whitespace visualization
 (use-package whitespace
