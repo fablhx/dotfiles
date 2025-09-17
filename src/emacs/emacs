@@ -674,11 +674,6 @@ if applicable."
     (setq flycheck-python-pylint-executable "pylint3"))
   (setq flycheck-python-mypy-cache-dir "/dev/null"))
 
-(use-package flycheck-inline
-  :ensure t
-  :after flycheck
-  :hook (flycheck-mode . flycheck-inline-mode))
-
 ;; OCaml Configuration
 (use-package tuareg
   :ensure t
