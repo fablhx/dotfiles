@@ -571,9 +571,6 @@ if applicable."
 (use-package cc-mode
   :ensure t
   :config
-  (setq c-default-style "linux"
-        c-basic-offset 4)
-
   ;; ACSL mode configuration
   (defconst acsl-keywords
     '("assert" "assigns" "ensures" "slevel" "slevel_merge" "requires")
@@ -586,29 +583,38 @@ if applicable."
              (and (eq (char-after (+ (nth 8 (syntax-ppss)) 2)) ?@))))) ; Check for //@
 
   (defvar acsl-font-lock-keywords
-    (let ((pre-match-form (lambda ()
-                            (goto-char (match-beginning 0))
-                            (match-end 0)))
-          (find-annot (lambda (limit)
-                        ;; Skip non-ACSL comments
-                        (if (and (looking-at "//") (acsl-comment))
-                            (re-search-forward "\n" limit t))
-                        (while (and (not (acsl-comment)) (< (point) limit))
-                          (re-search-forward "/[*/]" limit t))
-                        (if (>= (point) limit)
-                            nil
-                          (let ((b (save-excursion
-                                     (re-search-backward "/[*/]" (- (point) 2) t)
-                                     (point))))
-                            (re-search-forward "[*/]/\\|\n" limit t)
-                            (re-search-backward "//" (- (point) 2) t) ; Don't recolor comments
-                            (set-match-data (list b (point) (nth 2 (match-data t))))
-                            t)))))
+    (let ((find-acsl-comment
+           (lambda (limit)
+             ;; Search for ACSL comment starts: /*@ or //@
+             (when (re-search-forward "/[*/]@" limit t)
+               (let* ((comment-start (match-beginning 0))
+                      (is-block-comment (eq (char-after (1+ comment-start)) ?*))
+                      (comment-end
+                       (if is-block-comment
+                           ;; For /*@ find matching */
+                           (save-excursion
+                             (goto-char comment-start)
+                             (if (search-forward "*/" limit 'move)
+                                 (point)
+                               limit))
+                         ;; For //@ find end of line
+                         (save-excursion
+                           (goto-char comment-start)
+                           (if (search-forward "\n" limit 'move)
+                               (1- (point))
+                             limit)))))
+                 (set-match-data (list comment-start comment-end))
+                 (goto-char comment-end)
+                 t)))))
       (list
-       `(,find-annot
+       `(,find-acsl-comment
          (0 'font-lock-doc-face t)
-         (,(concat (regexp-opt acsl-keywords 'words) "") (,pre-match-form) nil
-          (0 '(font-lock-doc-face :inherit bold) t)))))
+         (,(regexp-opt acsl-keywords 'words)
+          ;; Pre-match: position at start of matched region
+          (goto-char (match-beginning 0))
+          ;; Post-match: position at end of matched region
+          (goto-char (match-end 0))
+          (0 '(:inherit (font-lock-doc-face bold)) t)))))
     "Default highlighting for ACSL mode")
 
   (defun my-acsl-mode ()
