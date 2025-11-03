@@ -571,6 +571,9 @@ if applicable."
 (use-package cc-mode
   :ensure t
   :config
+  (setq c-default-style "linux"
+        c-basic-offset 4)
+
   ;; ACSL mode configuration
   (defconst acsl-keywords
     '("assert" "assigns" "ensures" "slevel" "slevel_merge" "requires")
