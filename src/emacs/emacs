@@ -582,8 +582,7 @@ if applicable."
   (defun acsl-comment ()
     "Return non-nil if we are in an ACSL comment (/*@ or //@)."
     (and (nth 4 (syntax-ppss)) ; Inside a comment
-         (or (and (eq (char-after (+ (nth 8 (syntax-ppss)) 2)) ?@)) ; Check for /*@
-             (and (eq (char-after (+ (nth 8 (syntax-ppss)) 2)) ?@))))) ; Check for //@
+         (eq (char-after (+ (nth 8 (syntax-ppss)) 2)) ?@))) ; Check for /*@ or //@
 
   (defvar acsl-font-lock-keywords
     (let ((find-acsl-comment
@@ -653,7 +652,8 @@ if applicable."
 (use-package clang-format
   :ensure t
   :defer t
-  :after cc-mode)
+  :after cc-mode
+  :commands (clang-format-region clang-format-buffer))
 
 (use-package hideif
   :ensure nil
@@ -758,11 +758,11 @@ if applicable."
   :ensure nil
   :mode "\\.ya?ml\\'"
   :config
-  (when (treesit-available-p)
+  (when (and (treesit-available-p)
+             (not (treesit-language-available-p 'yaml)))
     (add-to-list 'treesit-language-source-alist
                  '(yaml "https://github.com/ikatyang/tree-sitter-yaml"))
-    (unless (treesit-language-available-p 'yaml)
-      (treesit-install-language-grammar 'yaml))))
+    (treesit-install-language-grammar 'yaml)))
 
 ;; TCL
 (use-package tcl-mode
