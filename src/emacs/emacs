@@ -46,7 +46,7 @@
               (let ((trimmed-line (string-trim line)))
                 (cond
                  ;; Match Host entries (ignore wildcards)
-                 ((string-match "^Host[ \t]+\\([^ *?\n]+\\)" trimmed-line)
+                 ((string-match "^Host\\s-+\\([^ *?\n]+\\)" trimmed-line)
                   (let ((host (match-string 1 trimmed-line)))
                     (when (my-sanitize-ssh-value host)
                       (setq current-host host))))
@@ -76,7 +76,7 @@ from ssh config."
         (unless (my-sanitize-ssh-value user)
           (error "Invalid user name: %s" user))
 
-        (let ((remote-path (format "/ssh:%s@%s:/home/%s/nofile"
+        (let ((remote-path (format "/ssh:%s@%s:~%s/nofile"
                                    user host user)))
           (message "Opening %s" remote-path)
           (condition-case err
@@ -105,9 +105,12 @@ from ssh config."
   (interactive)
   (let ((win-curr (selected-window))
         (win-other (next-window)))
-    (select-window win-other)
-    (kill-buffer-and-window)
-    (select-window win-curr)))
+    (if (eq win-curr win-other)
+        (message "Only one window exists, cannot kill it")
+      (select-window win-other)
+      (kill-buffer-and-window)
+      (when (window-live-p win-curr)
+        (select-window win-curr)))))
 
 ;; Text Manipulation Functions
 (defun my-renumber-list (start end &optional num)
@@ -116,12 +119,15 @@ If optional prefix arg NUM is given, start numbering from that number
 instead of 1."
   (interactive "*r\np")
   (save-excursion
-    (goto-char start)
-    (let ((num (or num 1)))
-    (save-match-data
-      (while (re-search-forward "^\\(-* *\\)\\([0-9]+\\)" end t)
-        (replace-match (concat (match-string 1) (number-to-string num)))
-        (setq num (1+ num)))))))
+    (let ((end-marker (make-marker))
+          (num (or num 1)))
+      (set-marker end-marker end)
+      (goto-char start)
+      (save-match-data
+        (while (re-search-forward "^\\(-* *\\)\\([0-9]+\\)" end-marker t)
+          (replace-match (concat (match-string 1) (number-to-string num)))
+          (setq num (1+ num))))
+      (set-marker end-marker nil))))
 
 ;; Line Operations
 (defun my-join-next-line ()
@@ -194,8 +200,11 @@ if applicable."
                 (when (and col (> col 0))
                   (move-to-column (1- col)))))
             buf)
-        ;; fallback to original if no valid existing file or no match
-        (apply orig-fun filename args)))))
+        ;; If pattern matched but file doesn't exist, try with just the file part
+        ;; Otherwise fall back to original behavior
+        (if file
+            (apply orig-fun file args)
+          (apply orig-fun filename args))))))
 
 ;; Define a jump function
 (defun my-jump-to-matching-ifdef ()
@@ -231,12 +240,22 @@ if applicable."
            ((looking-at "^\\s-*#\\s-*\\(if\\|ifdef\\|ifndef\\)")
             (setq level (1- level)))))))
 
-     ;; On #else or #elif - jump to parent #if or next #endif
+     ;; On #else or #elif - jump to matching #if with proper nesting
      ((looking-at "^\\s-*#\\s-*\\(else\\|elif\\)")
-      (if (re-search-backward "^\\s-*#\\s-*\\(if\\|ifdef\\|ifndef\\)" nil t)
-          (beginning-of-line)
-        (goto-char start-point)
-        (re-search-forward "^\\s-*#\\s-*endif" nil t)))
+      (let ((level 1)
+            (found nil))
+        (while (and (> level 0) (not found)
+                    (re-search-backward "^\\s-*#\\s-*\\(if\\|ifdef\\|ifndef\\|endif\\)" nil t))
+          (cond
+           ((looking-at "^\\s-*#\\s-*endif")
+            (setq level (1+ level)))
+           ((looking-at "^\\s-*#\\s-*\\(if\\|ifdef\\|ifndef\\)")
+            (setq level (1- level))
+            (when (zerop level)
+              (setq found t)))))
+        (unless found
+          (goto-char start-point)
+          (message "No matching #if found"))))
 
      ;; Not on a preprocessor directive
      (t
@@ -524,7 +543,9 @@ if applicable."
   (defun new-compilation-window-hook ()
     "Create a new window for compilation buffer if not already visible."
     (unless (get-buffer-window "*compilation*")
-      (split-window-vertically (- (window-height) 15))))
+      (let ((total-height (window-height)))
+        (when (> total-height 20)
+          (split-window-below (- total-height 15))))))
 
   (setq compilation-exit-message-function
         (lambda (status code msg)
