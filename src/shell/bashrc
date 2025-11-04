@@ -179,14 +179,14 @@ __git_prompt() {
         timeout "${fast_timeout}s" git diff --name-only 2>/dev/null > "${changed_tmp}" &
         local changed_pid=$!
 
-        wait $staged_pid; staged_files=$(cat "${staged_tmp}" 2>/dev/null)
-        wait $changed_pid; changed_files=$(cat "${changed_tmp}" 2>/dev/null)
+        wait ${staged_pid}; staged_files=$(cat "${staged_tmp}" 2>/dev/null)
+        wait ${changed_pid}; changed_files=$(cat "${changed_tmp}" 2>/dev/null)
         rm -f "${staged_tmp}" "${changed_tmp}"
 
         # Build status more efficiently
         git_status_combined=""
-        [[ -n "${staged_files}" ]] && while read -r file; do git_status_combined+="M  $file"$'\n'; done <<< "${staged_files}"
-        [[ -n "${changed_files}" ]] && while read -r file; do git_status_combined+=" M $file"$'\n'; done <<< "${changed_files}"
+        [[ -n "${staged_files}" ]] && while read -r file; do git_status_combined+="M  ${file}"$'\n'; done <<< "${staged_files}"
+        [[ -n "${changed_files}" ]] && while read -r file; do git_status_combined+=" M ${file}"$'\n'; done <<< "${changed_files}"
     fi
 
     # Get ahead/behind information separately if needed
