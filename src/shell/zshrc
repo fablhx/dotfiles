@@ -150,7 +150,7 @@ __git_prompt() {
     local slow_timeout=0.2
 
     # Detect large repos by .git directory size (approximate)
-    if [[ -d "$git_dir/objects/pack" ]] && [[ $(find "$git_dir/objects/pack" -name "*.pack" 2>/dev/null | wc -l) -gt 5 ]]; then
+    if [[ -d "${git_dir}/objects/pack" ]] && [[ $(find "${git_dir}/objects/pack" -name "*.pack" 2>/dev/null | wc -l) -gt 5 ]]; then
         # Large repo detected - use faster timeouts and skip expensive operations
         base_timeout=0.05
         fast_timeout=0.03
@@ -168,7 +168,7 @@ __git_prompt() {
     branch=$(timeout "${fast_timeout}s" git symbolic-ref --short -q HEAD 2>/dev/null)
 
     # Handle detached HEAD case
-    if [[ -z "$branch" ]]; then
+    if [[ -z "${branch}" ]]; then
         detached="yes"
         branch=$(timeout "${base_timeout}s" git describe --exact-match --tags HEAD 2>/dev/null || timeout "${base_timeout}s" git rev-parse --short HEAD 2>/dev/null)
     fi
@@ -187,93 +187,93 @@ __git_prompt() {
         local staged_files changed_files
         local staged_tmp=$(mktemp)
         local changed_tmp=$(mktemp)
-        timeout "${fast_timeout}s" git diff --cached --name-only 2>/dev/null > "$staged_tmp" &
+        timeout "${fast_timeout}s" git diff --cached --name-only 2>/dev/null > "${staged_tmp}" &
         local staged_pid=$!
-        timeout "${fast_timeout}s" git diff --name-only 2>/dev/null > "$changed_tmp" &
+        timeout "${fast_timeout}s" git diff --name-only 2>/dev/null > "${changed_tmp}" &
         local changed_pid=$!
 
-        wait $staged_pid; staged_files=$(cat "$staged_tmp" 2>/dev/null)
-        wait $changed_pid; changed_files=$(cat "$changed_tmp" 2>/dev/null)
-        rm -f "$staged_tmp" "$changed_tmp"
+        wait $staged_pid; staged_files=$(cat "${staged_tmp}" 2>/dev/null)
+        wait $changed_pid; changed_files=$(cat "${changed_tmp}" 2>/dev/null)
+        rm -f "${staged_tmp}" "${changed_tmp}"
 
         # Build status more efficiently
         git_status_combined=""
-        [[ -n "$staged_files" ]] && while read -r file; do git_status_combined+="M  $file"$'\n'; done <<< "$staged_files"
-        [[ -n "$changed_files" ]] && while read -r file; do git_status_combined+=" M $file"$'\n'; done <<< "$changed_files"
+        [[ -n "${staged_files}" ]] && while read -r file; do git_status_combined+="M  $file"$'\n'; done <<< "${staged_files}"
+        [[ -n "${changed_files}" ]] && while read -r file; do git_status_combined+=" M $file"$'\n'; done <<< "${changed_files}"
     fi
 
     # Get ahead/behind information separately if needed
-    if [[ "$detached" != "yes" ]]; then
+    if [[ "${detached}" != "yes" ]]; then
         local upstream
         upstream=$(timeout "${fast_timeout}s" git rev-parse --abbrev-ref @{upstream} 2>/dev/null)
 
-        if [[ -n "$upstream" ]]; then
+        if [[ -n "${upstream}" ]]; then
             local ahead_behind
-            ahead_behind=$(timeout "${fast_timeout}s" git rev-list --left-right --count HEAD..."$upstream" 2>/dev/null)
+            ahead_behind=$(timeout "${fast_timeout}s" git rev-list --left-right --count HEAD..."${upstream}" 2>/dev/null)
 
             # If that times out, try merge-base approach for faster check
             if [[ $? -ne 0 ]]; then
-                local merge_base=$(timeout "${fast_timeout}s" git merge-base HEAD "$upstream" 2>/dev/null)
-                if [[ -n "$merge_base" ]]; then
+                local merge_base=$(timeout "${fast_timeout}s" git merge-base HEAD "${upstream}" 2>/dev/null)
+                if [[ -n "${merge_base}" ]]; then
                     local head_commit=$(timeout "${fast_timeout}s" git rev-parse HEAD 2>/dev/null)
-                    local upstream_commit=$(timeout "${fast_timeout}s" git rev-parse "$upstream" 2>/dev/null)
+                    local upstream_commit=$(timeout "${fast_timeout}s" git rev-parse "${upstream}" 2>/dev/null)
 
-                    if [[ -n "$head_commit" && -n "$upstream_commit" ]]; then
-                        [[ "$merge_base" != "$head_commit" ]] && ahead="?"  # We're ahead, unknown count
-                        [[ "$merge_base" != "$upstream_commit" ]] && behind="?"  # We're behind, unknown count
+                    if [[ -n "${head_commit}" && -n "${upstream_commit}" ]]; then
+                        [[ "${merge_base}" != "${head_commit}" ]] && ahead="?"  # We're ahead, unknown count
+                        [[ "${merge_base}" != "${upstream_commit}" ]] && behind="?"  # We're behind, unknown count
                     fi
                 fi
             fi
 
-            if [[ -n "$ahead_behind" ]]; then
-                ahead=$(echo "$ahead_behind" | cut -f1)
-                behind=$(echo "$ahead_behind" | cut -f2)
+            if [[ -n "${ahead_behind}" ]]; then
+                ahead=$(echo "${ahead_behind}" | cut -f1)
+                behind=$(echo "${ahead_behind}" | cut -f2)
             fi
         fi
     fi
 
     # Process status information with shell built-ins (optimization)
-    if [[ -n "$git_status_combined" ]]; then
+    if [[ -n "${git_status_combined}" ]]; then
         # Process all file status lines directly
         local status_lines
-        status_lines="$git_status_combined"
+        status_lines="${git_status_combined}"
 
         # Use shell parameter expansion instead of AWK for better performance
         while IFS= read -r line; do
-            [[ -z "$line" ]] && continue
+            [[ -z "${line}" ]] && continue
 
             local index_status="${line[1]}"
             local worktree_status="${line[2]}"
 
             # Count staged files
-            case "$index_status" in
+            case "${index_status}" in
                 [MADRC]) ((staged++)) ;;
                 U) ((unmerged++)) ;;
             esac
 
             # Count changed files
-            case "$worktree_status" in
+            case "${worktree_status}" in
                 [MD]) ((changed++)) ;;
                 U) ((unmerged++)) ;;
             esac
-        done <<< "$status_lines"
+        done <<< "${status_lines}"
     fi
 
     # Untracked files with timeout (skip in large repos for performance)
-    if [[ "$large_repo" != "true" ]]; then
+    if [[ "${large_repo}" != "true" ]]; then
         local untracked_files
         untracked_files=$(timeout "${slow_timeout}s" git ls-files --others --exclude-standard 2>/dev/null)
 
         # Count untracked files if we got them
-        if [[ -n "$untracked_files" ]]; then
-            untracked=$(printf '%s\n' "$untracked_files" | wc -l)
+        if [[ -n "${untracked_files}" ]]; then
+            untracked=$(printf '%s\n' "${untracked_files}" | wc -l)
         fi
     fi
 
     # Conditional stash counting (skip in large repos or if stash is old)
-    if [[ "$large_repo" != "true" ]] && [[ -f "$git_dir/refs/stash" ]]; then
+    if [[ "${large_repo}" != "true" ]] && [[ -f "${git_dir}/refs/stash" ]]; then
         # Only check stash if it was modified recently (within 24 hours)
-        if [[ $(find "$git_dir/refs/stash" -mtime -1 2>/dev/null) ]]; then
+        if [[ $(find "${git_dir}/refs/stash" -mtime -1 2>/dev/null) ]]; then
             stashed=$(timeout "${base_timeout}s" git rev-list --walk-reflogs --count refs/stash 2>/dev/null || echo 0)
         fi
     fi
@@ -293,26 +293,26 @@ __git_prompt() {
 
     # Set branch color based on repository state
     local color_branch
-    if [[ "$detached" == "yes" ]]; then
-        color_branch="$color_detached"
-    elif [[ "$staged" -ne 0 || "$unmerged" -ne 0 || "$changed" -ne 0 || "$untracked" -ne 0 ]]; then
-        color_branch="$color_dirty"
+    if [[ "${detached}" == "yes" ]]; then
+        color_branch="${color_detached}"
+    elif [[ "${staged}" -ne 0 || "${unmerged}" -ne 0 || "${changed}" -ne 0 || "${untracked}" -ne 0 ]]; then
+        color_branch="${color_dirty}"
     else
-        color_branch="$color_clean"
+        color_branch="${color_clean}"
     fi
 
     # Build prompt string efficiently
-    local git_prompt=" $color_branch$branch${reset_color}"
+    local git_prompt=" ${color_branch}${branch}${reset_color}"
 
-    [[ "$behind" -gt 0 ]] && git_prompt+=" $color_behindv$behind${reset_color}"
-    [[ "$ahead" -gt 0 ]] && git_prompt+=" $color_ahead^$ahead${reset_color}"
-    [[ "$staged" -gt 0 ]] && git_prompt+=" $color_staged*$staged${reset_color}"
-    [[ "$unmerged" -gt 0 ]] && git_prompt+=" $color_unmerged$unmerged${reset_color}"
-    [[ "$changed" -gt 0 ]] && git_prompt+=" $color_changed+$changed${reset_color}"
-    [[ "$untracked" -gt 0 ]] && git_prompt+=" $color_untracked?$untracked${reset_color}"
-    [[ "$stashed" -gt 0 ]] && git_prompt+=" $color_stashedS$stashed${reset_color}"
+    [[ "${behind}" -gt 0 ]] && git_prompt+=" ${color_behind}v${behind}${reset_color}"
+    [[ "${ahead}" -gt 0 ]] && git_prompt+=" ${color_ahead}^${ahead}${reset_color}"
+    [[ "${staged}" -gt 0 ]] && git_prompt+=" ${color_staged}*${staged}${reset_color}"
+    [[ "${unmerged}" -gt 0 ]] && git_prompt+=" ${color_unmerged}${unmerged}${reset_color}"
+    [[ "${changed}" -gt 0 ]] && git_prompt+=" ${color_changed}+${changed}${reset_color}"
+    [[ "${untracked}" -gt 0 ]] && git_prompt+=" ${color_untracked}?${untracked}${reset_color}"
+    [[ "${stashed}" -gt 0 ]] && git_prompt+=" ${color_stashed}S${stashed}${reset_color}"
 
-    echo "$git_prompt"
+    echo "${git_prompt}"
 }
 
 # =============================================================================
@@ -330,7 +330,7 @@ __build_prompt() {
     PROMPT+="$(__git_prompt)"
 
     # Add exit code if non-zero
-    test "$exit_code" -eq 0 || PROMPT+=$' %{\033[38;5;196m%}[${exit_code}]%{\033[0m%}'
+    test "${exit_code}" -eq 0 || PROMPT+=$' %{\033[38;5;196m%}[${exit_code}]%{\033[0m%}'
 
     # Final prompt character
     PROMPT+=' %# '
