@@ -325,4 +325,8 @@ __build_prompt() {
 
 # Prompt settings
 PROMPT_DIRTRIM=3
-PROMPT_COMMAND="__build_prompt${PROMPT_COMMAND:+; $PROMPT_COMMAND}"
+if [[ -n "${PROMPT_COMMAND}" ]]; then
+    PROMPT_COMMAND="__build_prompt; ${PROMPT_COMMAND}"
+else
+    PROMPT_COMMAND="__build_prompt"
+fi
