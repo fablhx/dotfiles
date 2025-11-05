@@ -95,7 +95,7 @@ After installation, use these make targets:
 
 - **Shell**: Bash and Zsh with custom prompts and Git integration
 - **Editor**: Emacs with extensive customization
-- **Terminal**: Tmux configuration with custom keybindings
+- **Terminal**: Warp terminal Tmux configuration with custom keybindings
 - **Window Manager**: XMonad with MATE integration
 - **Version Control**: Git with aliases and enhanced diff tools
 - **Development**: Clang-format, Python, OCaml tooling
