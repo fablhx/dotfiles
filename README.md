@@ -9,7 +9,7 @@ Personal dotfiles and configuration management for Ubuntu Mate 24.04.
 Install required packages:
 
 ```bash
-sudo apt update && sudo apt install afl++ bat bear btop cloc eza emacs git htop hunspell hunspell-en-us hunspell-fr hunspell-fr-classical hyperfine icdiff ncdu parallel ripgrep silversearcher-ag ssh tree xclip xmonad zsh
+sudo apt update && sudo apt install afl++ bat bear btop cloc eza emacs fd-find git htop hunspell hunspell-en-us hunspell-fr hunspell-fr-classical hyperfine icdiff ncdu parallel ripgrep silversearcher-ag sd ssh tree xclip xmonad zsh
 ```
 
 ### Additional Tools (TODO)
