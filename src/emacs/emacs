@@ -728,6 +728,24 @@ if applicable."
   :after tuareg
   :config (flycheck-ocaml-setup))
 
+;; Rust Configuration
+(use-package rust-mode
+  :ensure t
+  :mode "\\.rs\\'"
+  :config
+  (setq rust-format-on-save nil)
+  (setq rust-indent-offset 4))
+
+(use-package rust-ts-mode
+  :ensure t
+  :mode "\\.rs\\'"
+  :config
+  (when (and (treesit-available-p)
+             (not (treesit-language-available-p 'rust)))
+    (add-to-list 'treesit-language-source-alist
+                 '(rust "https://github.com/tree-sitter/tree-sitter-rust"))
+    (treesit-install-language-grammar 'rust)))
+
 ;; =============================================================================
 ;;                           Markup and Config Languages
 ;; =============================================================================
