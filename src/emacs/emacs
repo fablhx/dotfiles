@@ -736,15 +736,17 @@ if applicable."
   (setq rust-format-on-save nil)
   (setq rust-indent-offset 4))
 
-(use-package rust-ts-mode
-  :ensure t
-  :mode "\\.rs\\'"
-  :config
-  (when (and (treesit-available-p)
-             (not (treesit-language-available-p 'rust)))
-    (add-to-list 'treesit-language-source-alist
-                 '(rust "https://github.com/tree-sitter/tree-sitter-rust"))
-    (treesit-install-language-grammar 'rust)))
+;; Tree-sitter support for Rust (optional enhancement)
+(when (treesit-available-p)
+  ;; Add Rust tree-sitter grammar source
+  ;; Using a specific revision compatible with Emacs 29.3 (tree-sitter ABI 14)
+  (add-to-list 'treesit-language-source-alist
+               '(rust "https://github.com/tree-sitter/tree-sitter-rust" "v0.20.4" "src"))
+
+  ;; If tree-sitter grammar for Rust is available, prefer rust-ts-mode
+  (when (treesit-language-available-p 'rust)
+    ;; Remap rust-mode to rust-ts-mode automatically
+    (add-to-list 'major-mode-remap-alist '(rust-mode . rust-ts-mode))))
 
 ;; =============================================================================
 ;;                           Markup and Config Languages
