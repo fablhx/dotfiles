@@ -206,7 +206,7 @@ if applicable."
             (apply orig-fun file args)
           (apply orig-fun filename args))))))
 
-;; Define a jump function
+;; Define a jump function for ifdef
 (defun my-jump-to-matching-ifdef ()
   "Jump between matching #if/#ifdef/#ifndef and #endif."
   (interactive)
@@ -397,7 +397,6 @@ if applicable."
 ;;                           Search and Navigation
 ;; =============================================================================
 
-;; Treemacs
 (use-package treemacs
   :ensure t
   :bind
@@ -422,7 +421,6 @@ if applicable."
   ([f3] . rg)
   ([(shift f3)] . rg-project))
 
-;; Parenthesis handling
 (use-package paren
   :ensure t
   :config
@@ -432,7 +430,6 @@ if applicable."
         show-paren-style 'expression
         blink-matching-paren-dont-ignore-comments t))
 
-;; Multiple cursors
 (use-package multiple-cursors
   :ensure t
   :defer t
@@ -459,8 +456,8 @@ if applicable."
   :config
   (setq dumb-jump-project-denoters
         '(".dumbjump" ".projectile" ".git" ".hg" ".fslckout"
-          ".bzr" "_darcs" ".svn" "PkgInfo" "-pkg.el"))
-  (setq dumb-jump-prefer-searcher 'ag)
+          ".bzr" "_darcs" ".svn" "PkgInfo" "-pkg.el")
+        dumb-jump-prefer-searcher 'ag)
   :hook ((prog-mode . dumb-jump-mode)
          (xref-backend-functions . #'dumb-jump-xref-activate)
          (c-mode . (lambda ()
@@ -504,7 +501,9 @@ if applicable."
 ;; Completion
 (use-package company
   :ensure t
-  :hook (after-init . global-company-mode)
+  :hook
+  ((after-init . global-company-mode)
+   (lsp-mode . company-mode))
   :bind ([C-tab] . company-complete-common)
   :custom
   (company-minimum-prefix-length 2)
@@ -569,22 +568,10 @@ if applicable."
 (setq ediff-split-window-function #'split-window-horizontally
       ediff-window-setup-function #'ediff-setup-windows-plain)
 
-;; Syntax highlighting
-(use-package tree-sitter
-  :ensure t
-  :config
-  (global-tree-sitter-mode)
-  :hook (tree-sitter-after-on . tree-sitter-hl-mode))
-
-(use-package tree-sitter-langs
-  :ensure t
-  :after tree-sitter)
-
 ;; =============================================================================
 ;;                           Programming Languages
 ;; =============================================================================
 
-;; Shell scripting
 (setq-default sh-basic-offset 2
               sh-indentation 2)
 
@@ -689,7 +676,6 @@ if applicable."
    ("C-c # t" . hide-ifdef-toggle-shadowing)
    ("C-c # j" . my-jump-to-matching-ifdef)))
 
-;; Python Configuration
 (use-package python
   :ensure nil
   :config
@@ -704,7 +690,6 @@ if applicable."
     (setq flycheck-python-pylint-executable "pylint3"))
   (setq flycheck-python-mypy-cache-dir "/dev/null"))
 
-;; OCaml Configuration
 (use-package tuareg
   :ensure t
   :mode ("\\.ocamlinit\\'" . tuareg-mode))
@@ -728,31 +713,93 @@ if applicable."
   :after tuareg
   :config (flycheck-ocaml-setup))
 
-;; Rust Configuration
 (use-package rust-mode
   :ensure t
   :mode "\\.rs\\'"
   :config
-  (setq rust-format-on-save nil)
-  (setq rust-indent-offset 4))
+  (setq rust-format-on-save nil
+        rust-indent-offset 4)
 
-;; Tree-sitter support for Rust (optional enhancement)
-(when (treesit-available-p)
-  ;; Add Rust tree-sitter grammar source
-  ;; Using a specific revision compatible with Emacs 29.3 (tree-sitter ABI 14)
-  (add-to-list 'treesit-language-source-alist
-               '(rust "https://github.com/tree-sitter/tree-sitter-rust" "v0.20.4" "src"))
+  ;; Configure built-in tree-sitter support (Emacs 29+)
+  (when (treesit-available-p)
+    ;; Add Rust tree-sitter grammar source
+    ;; Using a specific revision compatible with Emacs 29.3 (tree-sitter ABI 14)
+    (add-to-list 'treesit-language-source-alist
+                 '(rust "https://github.com/tree-sitter/tree-sitter-rust" "v0.20.4" "src"))
 
-  ;; If tree-sitter grammar for Rust is available, prefer rust-ts-mode
-  (when (treesit-language-available-p 'rust)
-    ;; Remap rust-mode to rust-ts-mode automatically
-    (add-to-list 'major-mode-remap-alist '(rust-mode . rust-ts-mode))))
+    ;; If tree-sitter grammar for Rust is available, prefer rust-ts-mode
+    (when (treesit-language-available-p 'rust)
+      ;; Remap rust-mode to rust-ts-mode automatically
+      (add-to-list 'major-mode-remap-alist '(rust-mode . rust-ts-mode)))))
+
+;; Syntax highlighting
+(use-package tree-sitter
+  :ensure t
+  :config
+  (global-tree-sitter-mode)
+  :hook (tree-sitter-after-on . tree-sitter-hl-mode))
+
+(use-package tree-sitter-langs
+  :ensure t
+  :after tree-sitter)
+
+;; Language Server Protocol support
+(use-package lsp-mode
+  :ensure t
+  :commands (lsp lsp-deferred)
+  :init
+  (setq lsp-keymap-prefix "C-c l")
+  :config
+  ;; Performance tuning
+  (setq lsp-idle-delay 0.5
+        lsp-log-io nil
+        lsp-enable-file-watchers nil
+        lsp-enable-folding nil
+        lsp-enable-snippet nil
+        lsp-enable-symbol-highlighting t
+        lsp-lens-enable nil
+        lsp-headerline-breadcrumb-enable nil)
+  ;; Rust-specific settings
+  (setq lsp-rust-analyzer-cargo-watch-command "clippy"
+        lsp-rust-analyzer-server-display-inlay-hints t
+        lsp-rust-analyzer-display-chaining-hints t
+        lsp-rust-analyzer-display-parameter-hints t)
+  :hook ((rust-mode . lsp-deferred)
+         (lsp-mode . lsp-enable-which-key-integration))
+  :bind (:map lsp-mode-map
+              ("C-c l h" . lsp-describe-thing-at-point)   ; Show type
+              ("C-c l t" . lsp-find-type-definition)      ; Jump to type
+              ("C-c l g" . lsp-find-definition)           ; Jump to definition
+              ("C-c l r" . lsp-find-references)           ; Find references
+              ("C-c l a" . lsp-execute-code-action)       ; Code actions
+              ("C-c l R" . lsp-rename)                    ; Rename
+              ("C-c l f" . lsp-format-buffer)))           ; Format
+
+;;;; LSP UI - Enhanced UI for LSP
+;;(use-package lsp-ui
+;;  :ensure t
+;;  :after lsp-mode
+;;  :commands lsp-ui-mode
+;;  :config
+;;  (setq lsp-ui-doc-enable t
+;;        lsp-ui-doc-position 'at-point
+;;        lsp-ui-doc-delay 0.5
+;;        lsp-ui-sideline-enable t
+;;        lsp-ui-sideline-show-hover t
+;;        lsp-ui-sideline-show-diagnostics t
+;;        lsp-ui-peek-enable t
+;;        lsp-ui-peek-always-show t)
+;;  :bind (:map lsp-ui-mode-map
+;;              ("C-c l d" . lsp-ui-doc-show)
+;;              ("C-c l D" . lsp-ui-doc-hide)
+;;              ("C-c l p" . lsp-ui-peek-find-definitions)
+;;              ("C-c l P" . lsp-ui-peek-find-references)))
+
 
 ;; =============================================================================
 ;;                           Markup and Config Languages
 ;; =============================================================================
 
-;; Markdown
 (use-package markdown-mode
   :ensure t
   :defer t
@@ -761,7 +808,6 @@ if applicable."
   :init
   (setq markdown-command "multimarkdown"))
 
-;; JSON
 (use-package json-mode
   :ensure t
   :defer t
