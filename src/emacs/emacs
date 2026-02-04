@@ -337,11 +337,13 @@ if applicable."
    Buffer-menu-name-width 30
    fill-nobreak-predicate '(fill-french-nobreak-p)
    mouse-yank-at-point nil
+   native-comp-deferred-compilation nil
+   query-replace-highlight t
    read-file-name-completion-ignore-case t
    require-final-newline t
    search-whitespace-regexp nil
-   query-replace-highlight t
-   vc-follow-symlinks t)          ; Follow symlinks without asking
+   vc-follow-symlinks t
+   warning-minimum-level :error)
 
   ;; Custom variables
   (setq inhibit-startup-echo-area-message t
@@ -720,7 +722,6 @@ if applicable."
   (setq rust-format-on-save nil
         rust-indent-offset 4)
 
-  ;; Configure built-in tree-sitter support (Emacs 29+)
   (when (treesit-available-p)
     ;; Add Rust tree-sitter grammar source
     ;; Using a specific revision compatible with Emacs 29.3 (tree-sitter ABI 14)
