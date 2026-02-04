@@ -25,6 +25,10 @@
 	oops = commit --amend --no-edit
 	subdate = submodule update --init --recursive --remote
 	sync = fetch origin --prune --force 'refs/pull-requests/*:refs/pr/*'
+    spull = pull --recurse-submodules
+    supdate = submodule update --init --recursive
+    sclean = clean -ffdx --recurse-submodules
+    sforeach = submodule foreach --recursive
 	hardclean = !git clean -xfd && git submodule foreach --recursive git clean -xfd && git reset --hard && git submodule foreach --recursive git reset --hard && git submodule update --init --recursive && :
 	rl = !git for-each-ref --sort=committerdate refs/heads/ --format='%(HEAD) %(color:red)%(objectname:short)%(color:reset) - %(color:yellow)(%(refname:short))%(color:reset) %(contents:subject) %(color:green)(%(committerdate:relative))%(color:reset) %(color:bold blue)<%(authorname)>%(color:reset)'
 [format]
