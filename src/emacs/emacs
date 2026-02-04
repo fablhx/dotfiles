@@ -337,7 +337,7 @@ if applicable."
    Buffer-menu-name-width 30
    fill-nobreak-predicate '(fill-french-nobreak-p)
    mouse-yank-at-point nil
-   native-comp-deferred-compilation nil
+   native-comp-jit-compilation nil
    query-replace-highlight t
    read-file-name-completion-ignore-case t
    require-final-newline t
@@ -368,10 +368,6 @@ if applicable."
       (define-key map (kbd "C-<delete>") #'my-join-next-line)
       (define-key map (kbd "C-c C-s") #'my-sort-ilines)
 
-      ;; Open (jump) file from log (only when not in prog-mode)
-      (unless (derived-mode-p 'prog-mode)
-        (define-key map (kbd "C-c C-l") #'my-open-error-location-at-point))
-
       ;; Open file from ssh
       (define-key map (kbd "C-c C-f") #'my-open-remote-nofile)
 
@@ -392,6 +388,14 @@ if applicable."
     :group 'convenience)
   (global-my-keys-minor-mode 1)
 
+  ;; Open (jump) file from log (only when not in prog-mode)
+  (defun my-maybe-bind-error-location ()
+    "Bind C-c C-l to open-error-location in non-prog-mode buffers."
+    (unless (derived-mode-p 'prog-mode)
+      (local-set-key (kbd "C-c C-l") #'my-open-error-location-at-point)))
+
+  (add-hook 'after-change-major-mode-hook #'my-maybe-bind-error-location)
+
   (when (fboundp 'find-file-noselect)
     (advice-add 'find-file-noselect :around #'my-find-file-noselect--advice-with-line-and-column)))
 
@@ -407,14 +411,7 @@ if applicable."
   (treemacs-follow-mode t)
   (treemacs-filewatch-mode t))
 
-;; Silver Searcher integration
-(use-package ag
-  :ensure t
-  :bind
-  ([f3] . ag)
-  ([(shift f3)] . ag-project))
-
-;; Ripgrep, supposed to be faster that ag.
+;; Ripgrep, supposed to be faster that ag (silver searcher).
 (use-package rg
   :ensure t
   :config
@@ -424,7 +421,7 @@ if applicable."
   ([(shift f3)] . rg-project))
 
 (use-package paren
-  :ensure t
+  :ensure nil
   :config
   (show-paren-mode t)
   (setq blink-matching-paren t
@@ -451,17 +448,15 @@ if applicable."
 (use-package dumb-jump
   :ensure t
   :defer t
-  :init
-  ;; Force dumb-jump xref backend
-  (add-hook 'xref-backend-functions #'dumb-jump-xref-activate)
   :commands (xref-find-definitions xref-go-back dumb-jump-mode)
   :config
   (setq dumb-jump-project-denoters
         '(".dumbjump" ".projectile" ".git" ".hg" ".fslckout"
           ".bzr" "_darcs" ".svn" "PkgInfo" "-pkg.el")
         dumb-jump-prefer-searcher 'ag)
+  ;; Force dumb-jump xref backend
+  (add-hook 'xref-backend-functions #'dumb-jump-xref-activate)
   :hook ((prog-mode . dumb-jump-mode)
-         (xref-backend-functions . #'dumb-jump-xref-activate)
          (c-mode . (lambda ()
                     (setq-local dumb-jump-force-searcher 'ag
                                dumb-jump-functions-only t))))
@@ -563,7 +558,7 @@ if applicable."
 
 ;; ANSI color support in compilation
 (use-package ansi-color
-  :ensure t
+  :ensure nil
   :hook (compilation-filter . ansi-color-compilation-filter))
 
 ;; Ediff configuration
@@ -766,6 +761,7 @@ if applicable."
         lsp-rust-analyzer-display-chaining-hints t
         lsp-rust-analyzer-display-parameter-hints t)
   :hook ((rust-mode . lsp-deferred)
+         (rust-ts-mode . lsp-deferred)
          (lsp-mode . lsp-enable-which-key-integration))
   :bind (:map lsp-mode-map
               ("C-c l h" . lsp-describe-thing-at-point)   ; Show type
