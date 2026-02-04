@@ -45,8 +45,6 @@ __setup_modern_aliases() {
     # Core command enhancements
     alias ls='ls --color=auto -v'
     alias grep='grep --color=auto'
-    alias fgrep='fgrep --color=auto'
-    alias egrep='egrep --color=auto'
 
     # Modern tool alternatives (with fallbacks)
     if command -v batcat >/dev/null 2>&1; then
@@ -68,11 +66,6 @@ __setup_modern_aliases() {
         alias lll='ls -lha'
         alias la='ls -lhd .?*'
         alias lt='ls -lht'
-    fi
-
-    # ripgrep with fallback
-    if command -v rg >/dev/null 2>&1; then
-        alias grep='rg'
     fi
 
     # Tree with colors
@@ -117,6 +110,29 @@ alias stop_emacs='emacsclient -e "(kill-emacs)"'  # Stop daemon
 #                           Git Prompt
 # =============================================================================
 
+declare -A __git_large_repo_cache
+
+__is_large_repo() {
+    local git_dir="$1"
+
+    # Return cached result if available
+    if [[ -v __git_large_repo_cache["${git_dir}"] ]]; then
+        [[ "${__git_large_repo_cache["${git_dir}"]}" == "true" ]]
+        return
+    fi
+
+    # Compute and cache
+    local is_large=false
+    if [[ -d "${git_dir}/objects/pack" ]]; then
+        local pack_count
+        pack_count=$(find "${git_dir}/objects/pack" -name "*.pack" 2>/dev/null | wc -l)
+        [[ ${pack_count} -gt 5 ]] && is_large=true
+    fi
+
+    __git_large_repo_cache["${git_dir}"]="${is_large}"
+    [[ "${is_large}" == "true" ]]
+}
+
 # Highly optimized Git prompt function with advanced performance improvements
 __git_prompt() {
     # Skip git prompt entirely if timeout command is not available
@@ -137,7 +153,7 @@ __git_prompt() {
     local slow_timeout=0.2
 
     # Detect large repos by .git directory size (approximate)
-    if [[ -d "${git_dir}/objects/pack" ]] && [[ $(find "${git_dir}/objects/pack" -name "*.pack" 2>/dev/null | wc -l) -gt 5 ]]; then
+    if __is_large_repo "${git_dir}"; then
         # Large repo detected - use faster timeouts and skip expensive operations
         base_timeout=0.05
         fast_timeout=0.03
@@ -291,13 +307,13 @@ __git_prompt() {
     # Build prompt string efficiently
     local git_prompt=" ${color_branch}${branch}${reset_color}"
 
-    [[ "${behind}" -gt 0 ]] && git_prompt+=" ${color_behind}v${behind}${reset_color}"
-    [[ "${ahead}" -gt 0 ]] && git_prompt+=" ${color_ahead}^${ahead}${reset_color}"
-    [[ "${staged}" -gt 0 ]] && git_prompt+=" ${color_staged}*${staged}${reset_color}"
-    [[ "${unmerged}" -gt 0 ]] && git_prompt+=" ${color_unmerged}${unmerged}${reset_color}"
-    [[ "${changed}" -gt 0 ]] && git_prompt+=" ${color_changed}+${changed}${reset_color}"
-    [[ "${untracked}" -gt 0 ]] && git_prompt+=" ${color_untracked}?${untracked}${reset_color}"
-    [[ "${stashed}" -gt 0 ]] && git_prompt+=" ${color_stashed}S${stashed}${reset_color}"
+    [[ -n "${behind}" && "${behind}" != "0" ]] && git_prompt+=" ${color_behind}v${behind}${reset_color}"
+    [[ -n "${ahead}" && "${ahead}" != "0" ]] && git_prompt+=" ${color_ahead}^${ahead}${reset_color}"
+    [[ -n "${staged}" && "${staged}" != "0" ]] && git_prompt+=" ${color_staged}*${staged}${reset_color}"
+    [[ -n "${unmerged}" && "${unmerged}" != "0" ]] && git_prompt+=" ${color_unmerged}${unmerged}${reset_color}"
+    [[ -n "${changed}" && "${changed}" != "0" ]] && git_prompt+=" ${color_changed}+${changed}${reset_color}"
+    [[ -n "${untracked}" && "${untracked}" != "0" ]] && git_prompt+=" ${color_untracked}?${untracked}${reset_color}"
+    [[ -n "${stashed}" && "${stashed}" != "0" ]] && git_prompt+=" ${color_stashed}S${stashed}${reset_color}"
 
     echo "${git_prompt}"
 }
