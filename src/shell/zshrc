@@ -1,50 +1,74 @@
 # =============================================================================
 #                               Zsh Configuration
+#                            (Warp Terminal / Linux)
 # =============================================================================
 
 # Early exit for dumb terminals
 [[ $TERM == "dumb" ]] && unsetopt zle && PS1='$ ' && return
 
 # =============================================================================
-#                           Shell Options & Completion
+#                           Shell Options
 # =============================================================================
 
-# Basic shell options
 REPORTTIME=10
-setopt complete_in_word
-setopt notify
-setopt prompt_subst
+setopt auto_cd             # cd by typing directory name
+setopt complete_in_word    # Complete from both ends of a word
+setopt correct             # Autocorrect minor command typos
+setopt extended_glob       # Extended pattern matching (#, ~, ^)
+setopt glob_dots           # Include dotfiles in globbing
+setopt notify              # Report background job status immediately
+setopt prompt_subst        # Enable prompt substitution
 
-# Completion configuration
+# =============================================================================
+#                           Shell Completion
+# =============================================================================
+
+autoload -Uz compinit && compinit
+
 zstyle ':completion:*' menu select
 zstyle ':completion:*' list-colors ${(s.:.)LS_COLORS}
 zstyle ':completion:*' verbose yes
 zstyle ':completion:*' group-name ''
-zstyle ':completion:*:descriptions' format "$fg[yellow]%B--- %d%b"
+zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}' # Case-insensitive
+zstyle ':completion:*:descriptions' format '%F{yellow}%B--- %d%b%f'
 zstyle ':completion:*:messages' format '%d'
-zstyle ':completion:*:warnings' format "$fg[red]No matches$reset_color"
+zstyle ':completion:*:warnings' format '%F{red}No matches%f'
 zstyle ':completion:*:corrections' format '%B%d (errors: %e)%b'
 
 # =============================================================================
 #                           History Configuration
 # =============================================================================
 
+HISTFILE="${HOME}/.zsh_history"
 HISTSIZE=50000
 SAVEHIST=50000
+
 setopt append_history
 setopt hist_expire_dups_first
 setopt hist_find_no_dups
 setopt hist_ignore_all_dups
 setopt hist_ignore_dups
+setopt hist_ignore_space         # Ignore commands starting with space
 setopt hist_save_no_dups
 setopt inc_append_history
 setopt share_history
+
+# Filter common commands from history
+zshaddhistory() {
+    local cmd="${1%%$'\n'}"
+    local word="${cmd%% *}"
+    case "$word" in
+        ls|ll|la|l|cd|pwd|exit|clear|history|bg|fg|jobs) return 1 ;;
+    esac
+    return 0
+}
 
 # =============================================================================
 #                           Environment Variables
 # =============================================================================
 
 export ALTERNATE_EDITOR=""
+export BAT_THEME="ansi"
 export EDITOR='emacs'
 export EMACSDIR="${HOME}/.emacs.d/"
 export LESS="-RFX"
@@ -53,57 +77,41 @@ export LESS="-RFX"
 #                           Command Aliases
 # =============================================================================
 
-# Enhanced tool detection and alias setup
-__setup_modern_aliases() {
-    # Core command enhancements
+alias df='df -h'
+alias du='du -h'
+alias grep='grep --color=auto'
+alias rm='rm -I'
+alias xclip='xclip -selection clipboard'
+alias xopen='xdg-open'
+
+if command -v batcat >/dev/null 2>&1; then
+    alias cat='batcat --paging=never --style=plain'
+fi
+
+if command -v eza >/dev/null 2>&1; then
+    alias ls='eza --color=auto --group-directories-first'
+    alias l='eza -lh'
+    alias ll='eza -lh'
+    alias lll='eza -lha'
+    alias la='eza -ld .*'
+    alias lt='eza -lh --sort=time'
+else
     alias ls='ls --color=auto -v'
-    alias grep='grep --color=auto'
+    alias l='ls -lh'
+    alias ll='ls -lh'
+    alias lll='ls -lha'
+    alias la='ls -lhd .?*'
+    alias lt='ls -lht'
+fi
 
-    # Modern tool alternatives (with fallbacks)
-    if command -v batcat >/dev/null 2>&1; then
-        alias cat='batcat --paging=never --style=plain'
-    fi
-
-    # Prefer eza if available
-    if command -v eza >/dev/null 2>&1; then
-        alias ls='eza --color=auto --group-directories-first'
-        alias l='eza -lh'
-        alias ll='eza -lh'
-        alias lll='eza -lha'
-        alias la='eza -d .*'
-        alias lt='eza -lht'
-    else
-        # Fallback to standard ls
-        alias l='ls -lh'
-        alias ll='ls -lh'
-        alias lll='ls -lha'
-        alias la='ls -lhd .?*'
-        alias lt='ls -lht'
-    fi
-
-    # Tree with colors
-    if command -v tree >/dev/null 2>&1; then
-        alias tree='tree -C'
-    fi
-
-    # Clipboard integration
-    alias xclip='xclip -selection clipboard'
-
-    # Enhanced safety aliases
-    alias rm='rm -I'    # Prompt once if removing 3+ files
-
-    # System integration
-    alias xopen='xdg-open'
-}
-
-# Initialize aliases
-__setup_modern_aliases
+if command -v tree >/dev/null 2>&1; then
+    alias tree='tree -C'
+fi
 
 # =============================================================================
 #                           Emacs Integration
 # =============================================================================
 
-# Smart emacsclient function
 __emacs_client() {
     # Check if there's already a frame available, reuse it if so
     if emacsclient -n -e "(if (> (length (frame-list)) 1) 't)" 2>/dev/null | grep -q t; then
@@ -128,229 +136,156 @@ typeset -A __git_large_repo_cache
 __is_large_repo() {
     local git_dir="$1"
 
-    # Return cached result if available
     if (( ${+__git_large_repo_cache["${git_dir}"]} )); then
         [[ "${__git_large_repo_cache["${git_dir}"]}" == "true" ]]
         return
     fi
 
-    # Compute and cache
     local is_large=false
     if [[ -d "${git_dir}/objects/pack" ]]; then
-        local pack_count
-        pack_count=$(find "${git_dir}/objects/pack" -name "*.pack" 2>/dev/null | wc -l)
-        [[ ${pack_count} -gt 5 ]] && is_large=true
+        local packs=("${git_dir}"/objects/pack/*.pack(N))
+        (( ${#packs} > 5 )) && is_large=true
     fi
 
     __git_large_repo_cache["${git_dir}"]="${is_large}"
     [[ "${is_large}" == "true" ]]
 }
 
-# Highly optimized Git prompt function with advanced performance improvements
-__git_prompt() {
-    # Skip git prompt entirely if timeout command is not available
-    # This simplifies the git prompt by requiring timeout for all git operations
-    command -v timeout >/dev/null 2>&1 || return
+# Sets __gp_* variables — called directly from precmd (no subshell)
+__git_prompt_compute() {
+    __gp_active=false
+    __gp_branch=""
+    __gp_detached=no
+    __gp_behind=0
+    __gp_ahead=0
+    __gp_staged=0
+    __gp_unmerged=0
+    __gp_changed=0
+    __gp_untracked=0
+    __gp_stashed=0
 
-    # Early exits and guards for performance
-    [[ "$PWD" == *"/.git"* ]] && return  # Skip if inside .git directory
-    [[ -d ".git" ]] || git rev-parse --git-dir >/dev/null 2>&1 || return  # Quick git repo check
+    [[ "$PWD" == *"/.git"* ]] && return
 
-    # Get git directory for repo size detection
     local git_dir
-    git_dir=$(git rev-parse --git-dir 2>/dev/null) || return
+    if [[ -d ".git" ]]; then
+        git_dir=".git"
+    else
+        git_dir=$(git rev-parse --git-dir 2>/dev/null) || return
+    fi
 
-    # Intelligent timeout scaling based on repo size
-    local base_timeout=0.1
+    __gp_active=true
+
+    local status_timeout=0.2
     local fast_timeout=0.05
-    local slow_timeout=0.2
+    local large_repo=false
 
-    # Detect large repos by .git directory size (approximate)
     if __is_large_repo "${git_dir}"; then
-        # Large repo detected - use faster timeouts and skip expensive operations
-        base_timeout=0.05
+        status_timeout=0.1
         fast_timeout=0.03
-        slow_timeout=0.1
-        local large_repo=true
-    else
-        local large_repo=false
+        large_repo=true
     fi
 
-    # Initialize variables
-    local branch="" detached="no" behind=0 ahead=0
-    local staged=0 unmerged=0 changed=0 untracked=0 stashed=0
+    # Branch + upstream + ahead/behind + file status in a single call
+    local untracked_opt="normal"
+    [[ "${large_repo}" == "true" ]] && untracked_opt="no"
 
-    # Get branch name separately for better reliability
-    branch=$(timeout "${fast_timeout}s" git symbolic-ref --short -q HEAD 2>/dev/null)
-
-    # Handle detached HEAD case
-    if [[ -z "${branch}" ]]; then
-        detached="yes"
-        branch=$(timeout "${base_timeout}s" git describe --exact-match --tags HEAD 2>/dev/null || timeout "${base_timeout}s" git rev-parse --short HEAD 2>/dev/null)
-    fi
-
-    # Get status information with progressive fallback strategy
-    local git_status_combined=""
-    local using_fallback=false
-
-    # Try git status with timeout
-    git_status_combined=$(timeout "${fast_timeout}s" git status --porcelain --untracked-files=no 2>/dev/null)
-
-    # If git status times out or fails, fall back to git diff --name-only
-    if [[ $? -ne 0 ]]; then
-        using_fallback=true
-        # Get staged changes (index vs HEAD) and unstaged changes in parallel
+    local status_output=""
+    if ! status_output=$(timeout "${status_timeout}s" git status \
+            --porcelain=v2 --branch --untracked-files="${untracked_opt}" 2>/dev/null); then
+        # Timed out — lightweight fallback
+        __gp_branch=$(timeout "${fast_timeout}s" git symbolic-ref --short -q HEAD 2>/dev/null)
+        if [[ -z "${__gp_branch}" ]]; then
+            __gp_detached="yes"
+            __gp_branch=$(timeout "${fast_timeout}s" git describe --exact-match --tags HEAD 2>/dev/null \
+                          || timeout "${fast_timeout}s" git rev-parse --short HEAD 2>/dev/null)
+        fi
         local staged_files changed_files
-        local staged_tmp=$(mktemp)
-        local changed_tmp=$(mktemp)
-        timeout "${fast_timeout}s" git diff --cached --name-only 2>/dev/null > "${staged_tmp}" &
-        local staged_pid=$!
-        timeout "${fast_timeout}s" git diff --name-only 2>/dev/null > "${changed_tmp}" &
-        local changed_pid=$!
-
-        wait ${staged_pid}; staged_files=$(cat "${staged_tmp}" 2>/dev/null)
-        wait ${changed_pid}; changed_files=$(cat "${changed_tmp}" 2>/dev/null)
-        rm -f "${staged_tmp}" "${changed_tmp}"
-
-        # Build status more efficiently
-        git_status_combined=""
-        [[ -n "${staged_files}" ]] && while read -r file; do git_status_combined+="M  ${file}"$'\n'; done <<< "${staged_files}"
-        [[ -n "${changed_files}" ]] && while read -r file; do git_status_combined+=" M ${file}"$'\n'; done <<< "${changed_files}"
-    fi
-
-    # Get ahead/behind information separately if needed
-    if [[ "${detached}" != "yes" ]]; then
-        local upstream
-        upstream=$(timeout "${fast_timeout}s" git rev-parse --abbrev-ref @{upstream} 2>/dev/null)
-
-        if [[ -n "${upstream}" ]]; then
-            local ahead_behind
-            ahead_behind=$(timeout "${fast_timeout}s" git rev-list --left-right --count HEAD..."${upstream}" 2>/dev/null)
-
-            # If that times out, try merge-base approach for faster check
-            if [[ $? -ne 0 ]]; then
-                local merge_base=$(timeout "${fast_timeout}s" git merge-base HEAD "${upstream}" 2>/dev/null)
-                if [[ -n "${merge_base}" ]]; then
-                    local head_commit=$(timeout "${fast_timeout}s" git rev-parse HEAD 2>/dev/null)
-                    local upstream_commit=$(timeout "${fast_timeout}s" git rev-parse "${upstream}" 2>/dev/null)
-
-                    if [[ -n "${head_commit}" && -n "${upstream_commit}" ]]; then
-                        [[ "${merge_base}" != "${head_commit}" ]] && ahead="?"  # We're ahead, unknown count
-                        [[ "${merge_base}" != "${upstream_commit}" ]] && behind="?"  # We're behind, unknown count
-                    fi
-                fi
-            fi
-
-            if [[ -n "${ahead_behind}" ]]; then
-                ahead=$(echo "${ahead_behind}" | cut -f1)
-                behind=$(echo "${ahead_behind}" | cut -f2)
-            fi
+        staged_files=$(timeout "${fast_timeout}s" git diff --cached --name-only 2>/dev/null)
+        changed_files=$(timeout "${fast_timeout}s" git diff --name-only 2>/dev/null)
+        [[ -n "${staged_files}" ]] && __gp_staged=$(echo "${staged_files}" | wc -l)
+        [[ -n "${changed_files}" ]] && __gp_changed=$(echo "${changed_files}" | wc -l)
+        if [[ -f "${git_dir}/refs/stash" ]]; then
+            __gp_stashed=$(timeout "${fast_timeout}s" git rev-list --walk-reflogs --count refs/stash 2>/dev/null || echo 0)
         fi
+        return
     fi
 
-    # Process status information with shell built-ins (optimization)
-    if [[ -n "${git_status_combined}" ]]; then
-        # Process all file status lines directly
-        local status_lines
-        status_lines="${git_status_combined}"
+    # Parse porcelain v2 output
+    local line
+    while IFS= read -r line; do
+        case "${line}" in
+            "# branch.head "*)
+                __gp_branch="${line#\# branch.head }"
+                [[ "${__gp_branch}" == "(detached)" ]] && __gp_detached="yes"
+                ;;
+            "# branch.ab "*)
+                local ab="${line#\# branch.ab }"
+                __gp_ahead="${ab%% *}"
+                __gp_ahead="${__gp_ahead#+}"
+                __gp_behind="${ab##* }"
+                __gp_behind="${__gp_behind#-}"
+                ;;
+            "1 "* | "2 "*)
+                local xy="${line:2:2}"
+                local idx="${xy:0:1}" wt="${xy:1:1}"
+                case "${idx}" in [MADRC]) ((__gp_staged++)) ;; U) ((__gp_unmerged++)) ;; esac
+                case "${wt}" in [MD]) ((__gp_changed++)) ;; U) ((__gp_unmerged++)) ;; esac
+                ;;
+            "u "*)
+                ((__gp_unmerged++))
+                ;;
+            "? "*)
+                ((__gp_untracked++))
+                ;;
+        esac
+    done <<< "${status_output}"
 
-        # Use shell parameter expansion instead of AWK for better performance
-        while IFS= read -r line; do
-            [[ -z "${line}" ]] && continue
-
-            local index_status="${line[1]}"
-            local worktree_status="${line[2]}"
-
-            # Count staged files
-            case "${index_status}" in
-                [MADRC]) ((staged++)) ;;
-                U) ((unmerged++)) ;;
-            esac
-
-            # Count changed files
-            case "${worktree_status}" in
-                [MD]) ((changed++)) ;;
-                U) ((unmerged++)) ;;
-            esac
-        done <<< "${status_lines}"
+    # Detached HEAD: resolve to tag or short hash
+    if [[ "${__gp_detached}" == "yes" ]]; then
+        __gp_branch=$(timeout "${fast_timeout}s" git describe --exact-match --tags HEAD 2>/dev/null \
+                      || timeout "${fast_timeout}s" git rev-parse --short HEAD 2>/dev/null)
     fi
 
-    # Untracked files with timeout (skip in large repos for performance)
-    if [[ "${large_repo}" != "true" ]]; then
-        local untracked_files
-        untracked_files=$(timeout "${slow_timeout}s" git ls-files --others --exclude-standard 2>/dev/null)
-
-        # Count untracked files if we got them
-        if [[ -n "${untracked_files}" ]]; then
-            untracked=$(printf '%s\n' "${untracked_files}" | wc -l)
-        fi
+    # Stash count
+    if [[ -f "${git_dir}/refs/stash" ]]; then
+        __gp_stashed=$(timeout "${fast_timeout}s" git rev-list --walk-reflogs --count refs/stash 2>/dev/null || echo 0)
     fi
-
-    # Conditional stash counting (skip in large repos or if stash is old)
-    if [[ "${large_repo}" != "true" ]] && [[ -f "${git_dir}/refs/stash" ]]; then
-        # Only check stash if it was modified recently (within 24 hours)
-        if [[ $(find "${git_dir}/refs/stash" -mtime -1 2>/dev/null) ]]; then
-            stashed=$(timeout "${base_timeout}s" git rev-list --walk-reflogs --count refs/stash 2>/dev/null || echo 0)
-        fi
-    fi
-
-    # Colors for zsh
-    local color_detached="%{\033[38;5;200m%}"
-    local color_dirty="%{\033[38;5;240m%}"
-    local color_clean="%{\033[38;5;22m%}"
-    local color_behind="%{\033[38;5;250m%}"
-    local color_ahead="%{\033[38;5;250m%}"
-    local color_staged="%{\033[38;5;28m%}"
-    local color_unmerged="%{\033[38;5;196m%}"
-    local color_changed="%{\033[38;5;166m%}"
-    local color_untracked="%{\033[38;5;172m%}"
-    local color_stashed="%{\033[38;5;26m%}"
-    local reset_color="%{\033[0m%}"
-
-    # Set branch color based on repository state
-    local color_branch
-    if [[ "${detached}" == "yes" ]]; then
-        color_branch="${color_detached}"
-    elif [[ "${staged}" -ne 0 || "${unmerged}" -ne 0 || "${changed}" -ne 0 || "${untracked}" -ne 0 ]]; then
-        color_branch="${color_dirty}"
-    else
-        color_branch="${color_clean}"
-    fi
-
-    # Build prompt string efficiently
-    local git_prompt=" ${color_branch}${branch}${reset_color}"
-
-    [[ -n "${behind}" && "${behind}" != "0" ]] && git_prompt+=" ${color_behind}v${behind}${reset_color}"
-    [[ -n "${ahead}" && "${ahead}" != "0" ]] && git_prompt+=" ${color_ahead}^${ahead}${reset_color}"
-    [[ -n "${staged}" && "${staged}" != "0" ]] && git_prompt+=" ${color_staged}*${staged}${reset_color}"
-    [[ -n "${unmerged}" && "${unmerged}" != "0" ]] && git_prompt+=" ${color_unmerged}${unmerged}${reset_color}"
-    [[ -n "${changed}" && "${changed}" != "0" ]] && git_prompt+=" ${color_changed}+${changed}${reset_color}"
-    [[ -n "${untracked}" && "${untracked}" != "0" ]] && git_prompt+=" ${color_untracked}?${untracked}${reset_color}"
-    [[ -n "${stashed}" && "${stashed}" != "0" ]] && git_prompt+=" ${color_stashed}S${stashed}${reset_color}"
-
-    echo "${git_prompt}"
 }
 
 # =============================================================================
 #                           Prompt Configuration
 # =============================================================================
 
-# Build custom prompt with git information
 __build_prompt() {
     local exit_code="$?"
 
-    # Base prompt: user@host working_directory
-    PROMPT=$'%{\033[38;5;135m%}%n@%M%{\033[0m%} %4(c:.../:)%3c'
+    # Base prompt: user@host working_directory (truncated to 3 components)
+    PROMPT='%{%F{135}%}%n@%M%{%f%} %3~'
 
-    # Add git information
-    PROMPT+="$(__git_prompt)"
+    # Git info (sets __gp_* variables directly, no fork)
+    __git_prompt_compute
 
-    # Add exit code if non-zero
-    test "${exit_code}" -eq 0 || PROMPT+=$' %{\033[38;5;196m%}[${exit_code}]%{\033[0m%}'
+    if [[ "${__gp_active}" == "true" ]]; then
+        if [[ "${__gp_detached}" == "yes" ]]; then
+            PROMPT+=" %{%F{200}%}${__gp_branch}%{%f%}"
+        elif (( __gp_staged || __gp_unmerged || __gp_changed || __gp_untracked )); then
+            PROMPT+=" %{%F{240}%}${__gp_branch}%{%f%}"
+        else
+            PROMPT+=" %{%F{22}%}${__gp_branch}%{%f%}"
+        fi
 
-    # Final prompt character
+        (( __gp_behind )) && PROMPT+=" %{%F{250}%}v${__gp_behind}%{%f%}"
+        (( __gp_ahead  )) && PROMPT+=" %{%F{250}%}^${__gp_ahead}%{%f%}"
+        (( __gp_staged    )) && PROMPT+=" %{%F{28}%}*${__gp_staged}%{%f%}"
+        (( __gp_unmerged  )) && PROMPT+=" %{%F{196}%}${__gp_unmerged}%{%f%}"
+        (( __gp_changed   )) && PROMPT+=" %{%F{166}%}+${__gp_changed}%{%f%}"
+        (( __gp_untracked )) && PROMPT+=" %{%F{172}%}?${__gp_untracked}%{%f%}"
+        (( __gp_stashed   )) && PROMPT+=" %{%F{26}%}S${__gp_stashed}%{%f%}"
+    fi
+
+    (( exit_code )) && PROMPT+=" %{%F{196}%}[${exit_code}]%{%f%}"
+
     PROMPT+=' %# '
 }
 
-# Set prompt command
 precmd() { __build_prompt; }
