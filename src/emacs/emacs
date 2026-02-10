@@ -85,13 +85,23 @@ from ssh config."
              (message "Failed to open remote file: %s" (error-message-string err)))))))))
 
 ;; Multiple cursors search functions
+(defvar my-phi-search-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "C-s") #'phi-search)
+    (define-key map (kbd "C-r") #'phi-search-backward)
+    map)
+  "Keymap active only when phi-search should replace isearch.")
+
+(define-minor-mode my-phi-search-mode
+  "Minor mode to temporarily override isearch with phi-search."
+  :lighter ""
+  :keymap my-phi-search-mode-map)
+
 (defun my-enable-phi-search ()
-  (global-set-key (kbd "C-s") #'phi-search)
-  (global-set-key (kbd "C-r") #'phi-search-backward))
+  (my-phi-search-mode 1))
 
 (defun my-disable-phi-search ()
-  (global-set-key (kbd "C-s") #'isearch-forward)
-  (global-set-key (kbd "C-r") #'isearch-backward))
+  (my-phi-search-mode -1))
 
 ;; Navigation Functions
 (defun my-pop-local-mark-ring ()
@@ -157,7 +167,8 @@ instead of 1."
 
 (defun my-open-error-location-at-point ()
   "Open file:line:column at point.
-Path is resolved relative to current buffer's directory."
+Path is resolved relative to current buffer's directory.
+Navigates directly instead of relying on find-file advice."
   (interactive)
   (let* ((line-text (thing-at-point 'line t))
          (parsed (my-open-error-location--parse line-text)))
@@ -173,8 +184,11 @@ Path is resolved relative to current buffer's directory."
                                       (not (eq win (selected-window)))))))
                 (when target-window
                   (select-window target-window))
-                ;; Let advice handle positioning
-                (find-file (format "%s:%d:%d" full-path line (or col 1))))
+                (find-file full-path)
+                (goto-char (point-min))
+                (forward-line (1- line))
+                (when (and col (> col 0))
+                  (move-to-column (1- col))))
             (message "File not found: %s" full-path)))
       (message "No valid filename:line[:column] pattern found at point."))))
 
@@ -276,14 +290,14 @@ if applicable."
   ;; Function key bindings
   ([f1] . comment-dwim)
   ([f2] . whitespace-mode)
-  ;; [f3] => see ag / rg
+  ;; [f3] => see rg
   ([f4] . my-pop-local-mark-ring)
   ([(shift f4)] . pop-global-mark)
   ([f5] . compile)
   ([f6] . interrupt-and-recompile)
   ([f7] . next-error)
   ([f8] . flycheck-mode)
-  ;; ([f9] => see treemacs
+  ;; [f9] => see treemacs
   ([f12] . enlarge-window)
 
   ;; Window management with auto-balancing
@@ -301,10 +315,6 @@ if applicable."
                (balance-windows)))
 
   :config
-  ;; Path configuration
-  (add-to-list 'load-path (expand-file-name "~/.emacs.d/elpa"))
-  (add-to-list 'load-path (expand-file-name "~/.emacs.d/melpa"))
-
   ;; Editor behavior
   (setq-default
    indent-tabs-mode nil           ; Use spaces instead of tabs
@@ -319,9 +329,11 @@ if applicable."
   (scroll-bar-mode -1)            ; Hide scroll bar
   (transient-mark-mode t)         ; Highlight selection
   (delete-selection-mode t)       ; Delete selected text
-  (fset 'yes-or-no-p #'y-or-n-p)  ; Use y/n instead of yes/no
+  (setq use-short-answers t)      ; Use modern y/n
   (global-auto-revert-mode t)     ; Auto reload changed files
   (save-place-mode t)             ; Remember cursor position
+  (savehist-mode 1)               ; Persist minibuffer history
+  (recentf-mode 1)                ; Track recent files
 
   ;; Scrolling behavior
   (setq scroll-conservatively 10000
@@ -337,13 +349,11 @@ if applicable."
    Buffer-menu-name-width 30
    fill-nobreak-predicate '(fill-french-nobreak-p)
    mouse-yank-at-point nil
-   native-comp-jit-compilation nil
    query-replace-highlight t
    read-file-name-completion-ignore-case t
    require-final-newline t
    search-whitespace-regexp nil
-   vc-follow-symlinks t
-   warning-minimum-level :error)
+   vc-follow-symlinks t)
 
   ;; Custom variables
   (setq inhibit-startup-echo-area-message t
@@ -352,6 +362,17 @@ if applicable."
         ring-bell-function #'ignore
         save-abbrevs nil
         search-highlight t)
+
+  ;; Redirect auto-save files out of project directories
+  (setq auto-save-file-name-transforms
+        `((".*" ,(expand-file-name "auto-save/" user-emacs-directory) t)))
+  (let ((auto-save-dir (expand-file-name "auto-save/" user-emacs-directory)))
+    (unless (file-directory-p auto-save-dir)
+      (make-directory auto-save-dir t)))
+
+  ;; Recentf settings
+  (setq recentf-max-saved-items 200
+        recentf-max-menu-items 15)
 
   ;; Custom keybindings through minor mode
   (defvar my-keys-minor-mode-map
@@ -411,7 +432,7 @@ if applicable."
   (treemacs-follow-mode t)
   (treemacs-filewatch-mode t))
 
-;; Ripgrep, supposed to be faster that ag (silver searcher).
+;; Ripgrep
 (use-package rg
   :ensure t
   :config
@@ -453,12 +474,12 @@ if applicable."
   (setq dumb-jump-project-denoters
         '(".dumbjump" ".projectile" ".git" ".hg" ".fslckout"
           ".bzr" "_darcs" ".svn" "PkgInfo" "-pkg.el")
-        dumb-jump-prefer-searcher 'ag)
+        dumb-jump-prefer-searcher 'rg)
   ;; Force dumb-jump xref backend
   (add-hook 'xref-backend-functions #'dumb-jump-xref-activate)
   :hook ((prog-mode . dumb-jump-mode)
          (c-mode . (lambda ()
-                    (setq-local dumb-jump-force-searcher 'ag
+                    (setq-local dumb-jump-force-searcher 'rg
                                dumb-jump-functions-only t))))
   :bind (:map dumb-jump-mode-map
               ("C-M-g" . nil)
@@ -491,9 +512,31 @@ if applicable."
   :init
   (marginalia-mode))
 
+;; Consult
+(use-package consult
+  :ensure t)
+;  :bind (("C-x b"   . consult-buffer)
+;         ("C-x 4 b" . consult-buffer-other-window)
+;         ("M-g g"   . consult-goto-line)
+;         ("M-g M-g" . consult-goto-line)
+;         ("M-g i"   . consult-imenu)
+;         ("M-s r"   . consult-ripgrep)
+;         ("M-s l"   . consult-line)
+;         ("M-s f"   . consult-find)
+;         ("C-x r b" . consult-bookmark)
+;         ("M-y"     . consult-yank-pop))
+;  :config
+;  (setq consult-narrow-key "<"))
+
 ;; =============================================================================
 ;;                           Development Tools
 ;; =============================================================================
+
+;; Project-specific formatting
+(use-package editorconfig
+  :ensure t
+  :config
+  (editorconfig-mode 1))
 
 ;; Completion
 (use-package company
@@ -546,14 +589,13 @@ if applicable."
   (setq compilation-exit-message-function
         (lambda (status code msg)
           (when (and (eq status 'exit) (zerop code))
-            (let ((compilation-buffer (get-buffer "*compilation*")))
-              (when compilation-buffer
-                (run-with-timer 1 nil
-                  (lambda ()
-                    (when (get-buffer "*compilation*")
-                      (bury-buffer "*compilation*")
-                      (when-let ((window (get-buffer-window "*compilation*")))
-                        (delete-window window))))))))
+            (let ((comp-buf (current-buffer)))
+              (run-with-timer 1 nil
+                (lambda ()
+                  (when (buffer-live-p comp-buf)
+                    (bury-buffer comp-buf)
+                    (when-let ((window (get-buffer-window comp-buf)))
+                      (delete-window window)))))))
           (cons msg code))))
 
 ;; ANSI color support in compilation
@@ -574,7 +616,7 @@ if applicable."
 
 ;; C/C++
 (use-package cc-mode
-  :ensure t
+  :ensure nil
   :config
   (setq c-default-style "linux"
         c-basic-offset 4)
@@ -641,7 +683,10 @@ if applicable."
 
   (defun my-cc-clang-format-keys ()
     "Set custom keybindings for clang-format in C/C++ modes."
-    (local-set-key (kbd "C-M-\\") #'clang-format-region))
+    (local-set-key (kbd "C-M-\\") #'clang-format-region)
+    ;; Also bind LSP format for when clangd is running
+    (when (bound-and-true-p lsp-mode)
+      (local-set-key (kbd "C-c l f") #'lsp-format-buffer)))
 
   (defun my-cc-mode-setup ()
     "Setup function for C/C++ modes."
@@ -685,11 +730,13 @@ if applicable."
   :config
   (when (executable-find "pylint3")
     (setq flycheck-python-pylint-executable "pylint3"))
-  (setq flycheck-python-mypy-cache-dir "/dev/null"))
+  (setq flycheck-python-mypy-cache-dir
+        (expand-file-name "mypy-cache" user-emacs-directory)))
 
 (use-package tuareg
   :ensure t
-  :mode ("\\.ocamlinit\\'" . tuareg-mode))
+  :mode (("\\.ocamlinit\\'" . tuareg-mode)
+         ("\\.mli?\\'" . tuareg-mode)))
 
 (use-package dune
   :ensure t)
@@ -699,10 +746,6 @@ if applicable."
   :hook ((tuareg-mode . merlin-mode)
          (merlin-mode . company-mode))
   :config (setq merlin-error-after-save nil))
-
-(use-package merlin-eldoc
-  :ensure t
-  :hook (tuareg-mode . merlin-eldoc-setup))
 
 (use-package flycheck-ocaml
   :ensure t
@@ -717,6 +760,11 @@ if applicable."
   (setq rust-format-on-save nil
         rust-indent-offset 4)
 
+  (defun my-rust-mode-setup ()
+    "Setup for Rust mode buffers."
+    (setq-local compile-command "cargo build"))
+  (add-hook 'rust-mode-hook #'my-rust-mode-setup)
+
   (when (treesit-available-p)
     ;; Add Rust tree-sitter grammar source
     ;; Using a specific revision compatible with Emacs 29.3 (tree-sitter ABI 14)
@@ -728,18 +776,12 @@ if applicable."
       ;; Remap rust-mode to rust-ts-mode automatically
       (add-to-list 'major-mode-remap-alist '(rust-mode . rust-ts-mode)))))
 
-;; Syntax highlighting
-(use-package tree-sitter
-  :ensure t
-  :config
-  (global-tree-sitter-mode)
-  :hook (tree-sitter-after-on . tree-sitter-hl-mode))
-
-(use-package tree-sitter-langs
-  :ensure t
-  :after tree-sitter)
-
 ;; Language Server Protocol support
+;; Servers needed:
+;;   Rust:  rustup component add rust-analyzer
+;;   C/C++: apt install clangd (or clangd-17)
+;;   OCaml: opam install ocaml-lsp-server
+;;   Bash:  npm i -g bash-language-server
 (use-package lsp-mode
   :ensure t
   :commands (lsp lsp-deferred)
@@ -751,18 +793,55 @@ if applicable."
         lsp-log-io nil
         lsp-enable-file-watchers nil
         lsp-enable-folding nil
-        lsp-enable-snippet nil
+        lsp-enable-snippet t
         lsp-enable-symbol-highlighting t
         lsp-lens-enable nil
         lsp-headerline-breadcrumb-enable nil)
-  ;; Rust-specific settings
+
+  ;; --- Rust (rust-analyzer) ---
   (setq lsp-rust-analyzer-cargo-watch-command "clippy"
         lsp-rust-analyzer-server-display-inlay-hints t
         lsp-rust-analyzer-display-chaining-hints t
         lsp-rust-analyzer-display-parameter-hints t)
-  :hook ((rust-mode . lsp-deferred)
+
+  ;; --- C/C++ (clangd) ---
+  (setq lsp-clangd-binary-path (or (executable-find "clangd")
+                                    (executable-find "clangd-17")
+                                    (executable-find "clangd-16")
+                                    (executable-find "clangd-15")
+                                    "clangd"))
+  (setq lsp-clients-clangd-args
+        '("--background-index"           ; Index in background
+          "--clang-tidy"                  ; Enable clang-tidy diagnostics
+          "--completion-style=detailed"   ; Detailed completions
+          "--header-insertion=iwyu"       ; Include-what-you-use
+          "--fallback-style=linux"        ; Match your c-default-style
+          "-j=4"))                        ; Parallel indexing jobs
+
+  ;; --- OCaml (ocamllsp) ---
+  ;; lsp-mode has built-in support: it looks for "ocamllsp" on PATH.
+  ;; ocamllsp uses merlin internally, so merlin package is still needed.
+
+  ;; --- Bash (bash-language-server) ---
+  ;; lsp-mode has built-in support: it looks for "bash-language-server" on PATH.
+  (setq lsp-bash-highlight-parsing-errors t)
+
+  ;; Explicitly use flycheck as the diagnostics provider
+  (setq lsp-diagnostics-provider :flycheck)
+
+  :hook (;; Rust
+         (rust-mode    . lsp-deferred)
          (rust-ts-mode . lsp-deferred)
-         (lsp-mode . lsp-enable-which-key-integration))
+         ;; C/C++
+         (c-mode       . lsp-deferred)
+         (c++-mode     . lsp-deferred)
+         ;; OCaml
+         (tuareg-mode  . lsp-deferred)
+         ;; Bash / Shell
+         (sh-mode      . lsp-deferred)
+         ;; Common
+         (lsp-mode . lsp-enable-which-key-integration)
+         (lsp-mode . flycheck-mode))
   :bind (:map lsp-mode-map
               ("C-c l h" . lsp-describe-thing-at-point)   ; Show type
               ("C-c l t" . lsp-find-type-definition)      ; Jump to type
@@ -770,27 +849,32 @@ if applicable."
               ("C-c l r" . lsp-find-references)           ; Find references
               ("C-c l a" . lsp-execute-code-action)       ; Code actions
               ("C-c l R" . lsp-rename)                    ; Rename
-              ("C-c l f" . lsp-format-buffer)))           ; Format
+              ("C-c l f" . lsp-format-buffer)))
 
-;;;; LSP UI - Enhanced UI for LSP
-;;(use-package lsp-ui
-;;  :ensure t
-;;  :after lsp-mode
-;;  :commands lsp-ui-mode
-;;  :config
-;;  (setq lsp-ui-doc-enable t
-;;        lsp-ui-doc-position 'at-point
-;;        lsp-ui-doc-delay 0.5
-;;        lsp-ui-sideline-enable t
-;;        lsp-ui-sideline-show-hover t
-;;        lsp-ui-sideline-show-diagnostics t
-;;        lsp-ui-peek-enable t
-;;        lsp-ui-peek-always-show t)
-;;  :bind (:map lsp-ui-mode-map
-;;              ("C-c l d" . lsp-ui-doc-show)
-;;              ("C-c l D" . lsp-ui-doc-hide)
-;;              ("C-c l p" . lsp-ui-peek-find-definitions)
-;;              ("C-c l P" . lsp-ui-peek-find-references)))
+;; Required for LSP snippet support
+(use-package yasnippet
+  :ensure t
+  :hook (lsp-mode . yas-minor-mode))
+
+;; Enhanced UI for LSP
+(use-package lsp-ui
+  :ensure t
+  :after lsp-mode
+  :commands lsp-ui-mode
+  :config
+  (setq lsp-ui-doc-enable t
+        lsp-ui-doc-position 'at-point
+        lsp-ui-doc-delay 0.5
+        lsp-ui-sideline-enable t
+        lsp-ui-sideline-show-hover nil
+        lsp-ui-sideline-show-diagnostics t
+        lsp-ui-peek-enable t
+        lsp-ui-peek-always-show t)
+  :bind (:map lsp-ui-mode-map
+              ("C-c l d" . lsp-ui-doc-show)
+              ("C-c l D" . lsp-ui-doc-hide)
+              ("C-c l p" . lsp-ui-peek-find-definitions)
+              ("C-c l P" . lsp-ui-peek-find-references)))
 
 
 ;; =============================================================================
@@ -830,7 +914,7 @@ if applicable."
 ;; JavaScript/TypeScript
 (use-package typescript-mode
   :ensure t
-  :mode "\\.tsx\\'")
+  :mode ("\\.tsx?\\'" . typescript-mode))
 
 ;; Makefile
 (use-package make-mode
