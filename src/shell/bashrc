@@ -102,7 +102,7 @@ alias start_emacs='emacs --daemon'  # Start daemon
 alias stop_emacs='emacsclient -e "(kill-emacs)"'  # Stop daemon
 
 # =============================================================================
-#                           Git Prompt
+#                           Git Info
 # =============================================================================
 
 # Uses `git status --porcelain=v2 --branch` to retrieve branch, upstream,
@@ -127,17 +127,17 @@ __is_large_repo() {
     [[ "${is_large}" == "true" ]]
 }
 
-__git_prompt_compute() {
-    __gp_active=false
-    __gp_branch=""
-    __gp_detached=no
-    __gp_behind=0
-    __gp_ahead=0
-    __gp_staged=0
-    __gp_unmerged=0
-    __gp_changed=0
-    __gp_untracked=0
-    __gp_stashed=0
+__git_info_compute() {
+    __gi_active=false
+    __gi_branch=""
+    __gi_detached=no
+    __gi_behind=0
+    __gi_ahead=0
+    __gi_staged=0
+    __gi_unmerged=0
+    __gi_changed=0
+    __gi_untracked=0
+    __gi_stashed=0
 
     [[ "$PWD" == *"/.git"* ]] && return
 
@@ -149,7 +149,7 @@ __git_prompt_compute() {
         git_dir=$(git rev-parse --git-dir 2>/dev/null) || return
     fi
 
-    __gp_active=true
+    __gi_active=true
 
     local status_timeout=0.2
     local fast_timeout=0.05
@@ -169,21 +169,21 @@ __git_prompt_compute() {
     if ! status_output=$(timeout "${status_timeout}s" git status \
             --porcelain=v2 --branch --untracked-files="${untracked_opt}" 2>/dev/null); then
         # Timed out or failed — try lightweight fallback
-        __gp_branch=$(timeout "${fast_timeout}s" git symbolic-ref --short -q HEAD 2>/dev/null)
-        if [[ -z "${__gp_branch}" ]]; then
-            __gp_detached="yes"
-            __gp_branch=$(timeout "${fast_timeout}s" git describe --exact-match --tags HEAD 2>/dev/null \
+        __gi_branch=$(timeout "${fast_timeout}s" git symbolic-ref --short -q HEAD 2>/dev/null)
+        if [[ -z "${__gi_branch}" ]]; then
+            __gi_detached="yes"
+            __gi_branch=$(timeout "${fast_timeout}s" git describe --exact-match --tags HEAD 2>/dev/null \
                           || timeout "${fast_timeout}s" git rev-parse --short HEAD 2>/dev/null)
         fi
         # Fallback: try to get at least staged/changed counts
         local staged_files changed_files
         staged_files=$(timeout "${fast_timeout}s" git diff --cached --name-only 2>/dev/null)
         changed_files=$(timeout "${fast_timeout}s" git diff --name-only 2>/dev/null)
-        [[ -n "${staged_files}" ]] && __gp_staged=$(echo "${staged_files}" | wc -l)
-        [[ -n "${changed_files}" ]] && __gp_changed=$(echo "${changed_files}" | wc -l)
+        [[ -n "${staged_files}" ]] && __gi_staged=$(echo "${staged_files}" | wc -l)
+        [[ -n "${changed_files}" ]] && __gi_changed=$(echo "${changed_files}" | wc -l)
         # Stash
         if [[ -f "${git_dir}/refs/stash" ]]; then
-            __gp_stashed=$(timeout "${fast_timeout}s" git rev-list --walk-reflogs --count refs/stash 2>/dev/null || echo 0)
+            __gi_stashed=$(timeout "${fast_timeout}s" git rev-list --walk-reflogs --count refs/stash 2>/dev/null || echo 0)
         fi
         return
     fi
@@ -192,90 +192,75 @@ __git_prompt_compute() {
     while IFS= read -r line; do
         case "${line}" in
             "# branch.head "*)
-                __gp_branch="${line#\# branch.head }"
-                [[ "${__gp_branch}" == "(detached)" ]] && __gp_detached="yes"
+                __gi_branch="${line#\# branch.head }"
+                [[ "${__gi_branch}" == "(detached)" ]] && __gi_detached="yes"
                 ;;
             "# branch.ab "*)
                 # Format: "# branch.ab +3 -1"
                 local ab="${line#\# branch.ab }"
-                __gp_ahead="${ab%% *}"    # "+3"
-                __gp_ahead="${__gp_ahead#+}"  # "3"
-                __gp_behind="${ab##* }"   # "-1"
-                __gp_behind="${__gp_behind#-}" # "1"
+                __gi_ahead="${ab%% *}"    # "+3"
+                __gi_ahead="${__gi_ahead#+}"  # "3"
+                __gi_behind="${ab##* }"   # "-1"
+                __gi_behind="${__gi_behind#-}" # "1"
                 ;;
             "1 "* | "2 "*)
                 # Changed entries: "1 XY ..."  or  "2 XY ... (renames)"
                 local xy="${line:2:2}"
                 local idx="${xy:0:1}" wt="${xy:1:1}"
-                case "${idx}" in [MADRC]) ((__gp_staged++)) ;; U) ((__gp_unmerged++)) ;; esac
-                case "${wt}" in [MD]) ((__gp_changed++)) ;; U) ((__gp_unmerged++)) ;; esac
+                case "${idx}" in [MADRC]) ((__gi_staged++)) ;; U) ((__gi_unmerged++)) ;; esac
+                case "${wt}" in [MD]) ((__gi_changed++)) ;; U) ((__gi_unmerged++)) ;; esac
                 ;;
             "u "*)
                 # Unmerged entry
-                ((__gp_unmerged++))
+                ((__gi_unmerged++))
                 ;;
             "? "*)
                 # Untracked file
-                ((__gp_untracked++))
+                ((__gi_untracked++))
                 ;;
         esac
     done <<< "${status_output}"
 
     # Detached HEAD: resolve to tag or short hash
-    if [[ "${__gp_detached}" == "yes" ]]; then
-        __gp_branch=$(timeout "${fast_timeout}s" git describe --exact-match --tags HEAD 2>/dev/null \
+    if [[ "${__gi_detached}" == "yes" ]]; then
+        __gi_branch=$(timeout "${fast_timeout}s" git describe --exact-match --tags HEAD 2>/dev/null \
                       || timeout "${fast_timeout}s" git rev-parse --short HEAD 2>/dev/null)
     fi
 
     # Stash count (not available via status --porcelain)
     if [[ -f "${git_dir}/refs/stash" ]]; then
-        __gp_stashed=$(timeout "${fast_timeout}s" git rev-list --walk-reflogs --count refs/stash 2>/dev/null || echo 0)
+        __gi_stashed=$(timeout "${fast_timeout}s" git rev-list --walk-reflogs --count refs/stash 2>/dev/null || echo 0)
     fi
 }
 
-# =============================================================================
-#                           Prompt Configuration
-# =============================================================================
+__gi() {
+    __git_info_compute
 
-__build_prompt() {
-    local exit_code="$?"
-
-    # Sync history across sessions
-    history -a; history -c; history -r
-
-    # Base prompt
-    PS1="\[\033[38;5;135m\]\u@\H\[\033[0m\] \w"
-
-    # Git info
-    __git_prompt_compute
-
-    if [[ "${__gp_active}" == "true" ]]; then
-        if [[ "${__gp_detached}" == "yes" ]]; then
-            PS1+=" \[\033[38;5;200m\]${__gp_branch}\[\033[0m\]"
-        elif [[ "${__gp_staged}" -ne 0 || "${__gp_unmerged}" -ne 0 || "${__gp_changed}" -ne 0 || "${__gp_untracked}" -ne 0 ]]; then
-            PS1+=" \[\033[38;5;240m\]${__gp_branch}\[\033[0m\]"
-        else
-            PS1+=" \[\033[38;5;22m\]${__gp_branch}\[\033[0m\]"
-        fi
-
-        [[ "${__gp_behind}" != "0" ]] && PS1+=" \[\033[38;5;250m\]v${__gp_behind}\[\033[0m\]"
-        [[ "${__gp_ahead}"  != "0" ]] && PS1+=" \[\033[38;5;250m\]^${__gp_ahead}\[\033[0m\]"
-        [[ "${__gp_staged}"    -ne 0 ]] && PS1+=" \[\033[38;5;28m\]*${__gp_staged}\[\033[0m\]"
-        [[ "${__gp_unmerged}"  -ne 0 ]] && PS1+=" \[\033[38;5;196m\]${__gp_unmerged}\[\033[0m\]"
-        [[ "${__gp_changed}"   -ne 0 ]] && PS1+=" \[\033[38;5;166m\]+${__gp_changed}\[\033[0m\]"
-        [[ "${__gp_untracked}" -ne 0 ]] && PS1+=" \[\033[38;5;172m\]?${__gp_untracked}\[\033[0m\]"
-        [[ "${__gp_stashed}"   -ne 0 ]] && PS1+=" \[\033[38;5;26m\]S${__gp_stashed}\[\033[0m\]"
+    if [[ "${__gi_active}" != "true" ]]; then
+        echo "Not a git repository"
+        return 1
     fi
 
-    [[ "${exit_code}" -ne 0 ]] && PS1+=" \[\033[38;5;196m\][${exit_code}]\[\033[0m\]"
+    local rst=$'\033[0m'
+    local out=""
 
-    PS1+=" \$ "
+    if [[ "${__gi_detached}" == "yes" ]]; then
+        out+="\033[38;5;200m${__gi_branch}${rst}"
+    elif [[ "${__gi_staged}" -ne 0 || "${__gi_unmerged}" -ne 0 || "${__gi_changed}" -ne 0 || "${__gi_untracked}" -ne 0 ]]; then
+        out+="\033[38;5;240m${__gi_branch}${rst}"
+    else
+        out+="\033[38;5;22m${__gi_branch}${rst}"
+    fi
+
+    [[ "${__gi_behind}" != "0" ]]  && out+=" \033[38;5;250mv${__gi_behind}${rst}"
+    [[ "${__gi_ahead}"  != "0" ]]  && out+=" \033[38;5;250m^${__gi_ahead}${rst}"
+    [[ "${__gi_staged}"    -ne 0 ]] && out+=" \033[38;5;28m*${__gi_staged}${rst}"
+    [[ "${__gi_unmerged}"  -ne 0 ]] && out+=" \033[38;5;196m${__gi_unmerged}${rst}"
+    [[ "${__gi_changed}"   -ne 0 ]] && out+=" \033[38;5;166m+${__gi_changed}${rst}"
+    [[ "${__gi_untracked}" -ne 0 ]] && out+=" \033[38;5;172m?${__gi_untracked}${rst}"
+    [[ "${__gi_stashed}"   -ne 0 ]] && out+=" \033[38;5;26mS${__gi_stashed}${rst}"
+
+    echo -e "Git info: ${out}"
 }
 
-PROMPT_DIRTRIM=3
-
-if [[ -n "${PROMPT_COMMAND}" ]]; then
-    PROMPT_COMMAND="__build_prompt; ${PROMPT_COMMAND}"
-else
-    PROMPT_COMMAND="__build_prompt"
-fi
+alias gi='__gi'
