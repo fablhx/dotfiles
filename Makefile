@@ -89,7 +89,7 @@ build:
 	# Link config items
 	@$(foreach item,$(CONFIG_ITEMS), \
 		if [ -e "$(BUILD_DIR)/config/$(item)" ]; then \
-			ln -sf "$(BUILD_DIR)/config/$(item)" "$(HOME)/.config/$(item)"; \
+			ln -sfn "$(BUILD_DIR)/config/$(item)" "$(HOME)/.config/$(item)"; \
 		fi;)
 
 	# Compile Emacs configuration
