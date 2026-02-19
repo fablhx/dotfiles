@@ -3,6 +3,7 @@
 import XMonad
 
 import XMonad.Actions.CycleWS
+import XMonad.Actions.SpawnOn
 import XMonad.Actions.SwapWorkspaces
 
 import XMonad.Config.Mate
@@ -50,6 +51,12 @@ fileExplorerCmd = "caja ~"
 screenshotCmd :: String
 screenshotCmd = "mate-screenshot -i"
 
+-- Setup workspace layout
+setupWorkspaces :: X ()
+setupWorkspaces = do
+  spawnOn "1" browserCmd
+  spawnOn "2" myTerminal
+
 -- Display
 myBorderWidth = 2
 myNormalBorderColor = "#202030"
@@ -61,7 +68,9 @@ myWorkspaces = ["1", "2", "3", "4", "5", "6", "7"]
 -- Hooks
 myManageHook =
   (composeAll . concat $
-    [ [ manageHook myBaseConfig ] ])
+    [ [ manageHook myBaseConfig ]
+    , [ manageSpawn ]
+    ])
 
 -- Layouts
 basicLayout = ResizableTall nmaster delta ratio [] where
@@ -149,6 +158,7 @@ myKeys conf = M.fromList $
     , ((winMask              , xK_h     ), spawn ("echo \"" ++ help ++ "\" | xmessage -file -"))
     , ((winMask              , xK_m     ), windows W.swapMaster)
     , ((winMask              , xK_q     ), kill)
+    , ((winMask              , xK_s     ), setupWorkspaces)
     , ((winMask              , xK_r     ), mateRun)
     , ((winMask .|. shiftMask, xK_i     ), spawn browserCmdIncognito)
     , ((winMask .|. shiftMask, xK_q     ), spawn "mate-session-save --shutdown-dialog")
@@ -228,6 +238,7 @@ help = unlines
   , "-- Win+M                       Move window to master area"
   , "-- Win+Q                       Close window"
   , "-- Win+R                       Open the Mate run dialog"
+  , "-- Win+S                       Startup workspace"
   , "-- Win+Shift+I                 Start a browser incognito"
   , "-- Win+Shift+Q                 Display Mate shutdown dialog"
   , "-- Win+X                       Restart XMonad"

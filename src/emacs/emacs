@@ -824,7 +824,7 @@ if applicable."
 
   ;; --- Bash (bash-language-server) ---
   ;; lsp-mode has built-in support: it looks for "bash-language-server" on PATH.
-  (setq lsp-bash-highlight-parsing-errors t)
+  ;(setq lsp-bash-highlight-parsing-errors t)
 
   ;; Explicitly use flycheck as the diagnostics provider
   (setq lsp-diagnostics-provider :flycheck)
