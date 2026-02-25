@@ -533,10 +533,10 @@ if applicable."
 ;; =============================================================================
 
 ;; Project-specific formatting
-(use-package editorconfig
+(use-package dtrt-indent
   :ensure t
   :config
-  (editorconfig-mode 1))
+  (dtrt-indent-global-mode 1))
 
 ;; Completion
 (use-package company
@@ -837,8 +837,6 @@ if applicable."
          (c++-mode     . lsp-deferred)
          ;; OCaml
          (tuareg-mode  . lsp-deferred)
-         ;; Bash / Shell
-         (sh-mode      . lsp-deferred)
          ;; Common
          (lsp-mode . lsp-enable-which-key-integration)
          (lsp-mode . flycheck-mode))

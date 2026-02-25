@@ -35,7 +35,7 @@ fi
 export HISTCONTROL=ignoredups:erasedups
 export HISTSIZE=50000
 export HISTFILESIZE=50000
-export HISTIGNORE="ls:ll:la:l:cd:pwd:exit:clear:history:bg:fg:jobs"
+export HISTIGNORE="ls:ll:la:l:cd:rm:pwd:exit:clear:history:bg:fg:jobs"
 
 # =============================================================================
 #                           Environment Variables
@@ -264,3 +264,17 @@ __gi() {
 }
 
 alias gi='__gi'
+
+# =============================================================================
+#                           Prompt sync
+# =============================================================================
+
+PROMPT_COMMAND="history -a; history -n; $PROMPT_COMMAND"
+
+# =============================================================================
+#                           Private / Corporate
+# =============================================================================
+
+_build_dir="$(dirname "$(realpath "${BASH_SOURCE[0]}")")"
+[[ -f "${_build_dir}/bashrc.private" ]] && source "${_build_dir}/bashrc.private"
+unset _build_dir
