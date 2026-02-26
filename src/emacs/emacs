@@ -383,6 +383,10 @@ if applicable."
       (define-key map (kbd "M-<up>") #'windmove-up)
       (define-key map (kbd "M-<down>") #'windmove-down)
 
+      ;; Window resize
+      (define-key map (kbd "C-S-<up>") #'enlarge-window)
+      (define-key map (kbd "C-S-<down>") #'shrink-window)
+
       ;; Text operations
       (define-key map (kbd "C-c w d") #'delete-trailing-whitespace)
       (define-key map (kbd "C-x C-k") #'my-kill-last-opened-buffer)
