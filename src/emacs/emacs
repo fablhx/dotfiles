@@ -276,6 +276,18 @@ if applicable."
       (goto-char start-point)
       (message "Not on a preprocessor directive")))))
 
+(defun my-special-buffer-visible-p ()
+  "Check if any visible window displays a *special* buffer."
+  (seq-some (lambda (w)
+              (string-match-p "\\`\\*.*\\*\\'"
+                              (buffer-name (window-buffer w))))
+            (window-list)))
+
+(defun my-balance-windows-maybe ()
+  "Balance windows unless a *special* buffer is visible."
+  (unless (my-special-buffer-visible-p)
+    (balance-windows)))
+
 ;; =============================================================================
 ;;                           Core Emacs Settings
 ;; =============================================================================
@@ -304,15 +316,15 @@ if applicable."
   ("C-x 2" . (lambda ()
                (interactive)
                (split-window-below)
-               (balance-windows)))
+               (my-balance-windows-maybe)))
   ("C-x 3" . (lambda ()
                (interactive)
                (split-window-right)
-               (balance-windows)))
+               (my-balance-windows-maybe)))
   ("C-x 0" . (lambda ()
                (interactive)
                (delete-window)
-               (balance-windows)))
+               (my-balance-windows-maybe)))
 
   :config
   ;; Editor behavior
