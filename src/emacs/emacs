@@ -303,12 +303,12 @@ if applicable."
   ([f1] . comment-dwim)
   ([f2] . whitespace-mode)
   ;; [f3] => see rg
-  ([f4] . my-pop-local-mark-ring)
-  ([(shift f4)] . pop-global-mark)
+  ([f4] . flycheck-mode)
   ([f5] . compile)
   ([f6] . interrupt-and-recompile)
   ([f7] . next-error)
-  ([f8] . flycheck-mode)
+  ([f8] . my-pop-local-mark-ring)
+  ([(shift f8)] . pop-global-mark)
   ;; [f9] => see treemacs
   ([f12] . enlarge-window)
 
