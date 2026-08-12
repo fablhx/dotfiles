@@ -1,17 +1,85 @@
+;;; emacs --- Personal Emacs configuration  -*- lexical-binding: t; -*-
+
+;;; Commentary:
+;; Deployed as ~/.emacs (and byte-compiled to ~/.emacs.elc, which Emacs loads
+;; in preference to the source).  Requires Emacs 29.1+, which bundles
+;; use-package and tree-sitter.
+
+;;; Code:
+
 ;; =============================================================================
 ;;                             Package Management
 ;; =============================================================================
 
-(require 'package)
-(add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
-(package-initialize)
+;; eval-and-compile, not a bare top-level form: use-package's `:ensure' runs at
+;; macro-expansion time, so it also fires while this file is byte-compiled.
+;; byte-compile-file does not evaluate ordinary top-level forms, so registering
+;; MELPA with a plain add-to-list left the compiler seeing only gnu/nongnu -
+;; and every MELPA-only package (rg, lsp-mode, lsp-ui, doom-modeline,
+;; nerd-icons, ...) reported "Package is unavailable" and was never installed.
+(eval-and-compile
+  (require 'package)
+  (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t))
 
-;; Bootstrap use-package
-(unless (package-installed-p 'use-package)
-  (package-refresh-contents)
-  (package-install 'use-package))
+;; package-initialize is implicit since Emacs 27 and use-package is bundled
+;; since 29.1, so neither needs bootstrapping here.
+(when (version< emacs-version "29.1")
+  (error "This configuration requires Emacs 29.1 or newer (running %s)" emacs-version))
 (require 'use-package)
 (setq use-package-always-ensure t)
+
+;; No manual archive refresh is needed here: use-package's :ensure handler
+;; already calls package-refresh-contents and retries when a package is
+;; missing from package-archive-contents (use-package-ensure.el).
+
+;; Keep `M-x customize' out of this file: ~/.emacs is a symlink into the build
+;; directory, so anything written here is overwritten by `make build'.
+(setq custom-file (expand-file-name "custom.el" user-emacs-directory))
+(when (file-exists-p custom-file)
+  (load custom-file nil t))
+
+;; =============================================================================
+;;                           Tree-sitter Grammars
+;; =============================================================================
+
+(defconst my-treesit-grammars
+  '((rust       . ("https://github.com/tree-sitter/tree-sitter-rust" "v0.20.4" "src"))
+    (yaml       . ("https://github.com/ikatyang/tree-sitter-yaml"))
+    (typescript . ("https://github.com/tree-sitter/tree-sitter-typescript" nil "typescript/src"))
+    (tsx        . ("https://github.com/tree-sitter/tree-sitter-typescript" nil "tsx/src")))
+  "Grammar sources, pinned where a revision matters for this Emacs ABI.")
+
+(require 'treesit nil t)
+
+(when (treesit-available-p)
+  (dolist (entry my-treesit-grammars)
+    (add-to-list 'treesit-language-source-alist
+                 (cons (car entry) (cdr entry)))))
+
+(defun my-install-treesit-grammars ()
+  "Compile and install every grammar in `my-treesit-grammars'.
+Run this once by hand.  Grammars are deliberately not built during startup
+or on first visiting a file: it needs git plus a C compiler and blocks for
+tens of seconds."
+  (interactive)
+  (unless (treesit-available-p)
+    (user-error "This Emacs was built without tree-sitter support"))
+  (dolist (entry my-treesit-grammars)
+    (let ((lang (car entry)))
+      (if (treesit-language-available-p lang)
+          (message "Grammar %s already installed" lang)
+        (message "Installing grammar %s..." lang)
+        (condition-case err
+            (treesit-install-language-grammar lang)
+          (error (message "Failed to install %s: %s"
+                          lang (error-message-string err))))))))
+
+(defun my-treesit-mode-if-available (lang ts-mode fallback-mode)
+  "Return TS-MODE when grammar LANG is usable, else FALLBACK-MODE."
+  (if (and (treesit-available-p)
+           (treesit-language-available-p lang))
+      ts-mode
+    fallback-mode))
 
 ;; =============================================================================
 ;;                           Custom Functions
@@ -20,16 +88,16 @@
 ;; Remote host
 (defun my-sanitize-ssh-value (value)
   "Sanitize SSH config values to prevent path injection.
- Returns VALUE if it contains only safe characters, nil otherwise."
+Returns VALUE if it contains only safe characters, nil otherwise."
   (when (and value
              (stringp value)
              (not (string-empty-p value))
-             (string-match-p "^[a-zA-Z0-9._-]+$" value))
+             (string-match-p "\\`[a-zA-Z0-9._-]+\\'" value))
     value))
 
 (defun my-ssh-config-host-alist ()
   "Parse SSH config file and return an alist of (host . user).
- Returns nil if config file doesn't exist or isn't readable."
+Returns nil if config file doesn't exist or isn't readable."
   (let ((config-file (expand-file-name "~/.ssh/config")))
     (if (not (file-readable-p config-file))
         (progn
@@ -62,11 +130,11 @@
          (message "Error parsing SSH config: %s" (error-message-string err))
          nil)))))
 
-(defun my-open-remote-nofile ()
-  "Prompt for an SSH host and open remote file using the correct user
-from ssh config."
+(defun my-open-remote-home ()
+  "Prompt for an SSH host and open its home directory over TRAMP.
+The remote user is taken from ~/.ssh/config when it names one."
   (interactive)
-  (let* ((host-alist (my-ssh-config-host-alist)))
+  (let ((host-alist (my-ssh-config-host-alist)))
     (if (null host-alist)
         (message "No SSH hosts found in configuration file")
       (let* ((host (completing-read "SSH host: " (mapcar #'car host-alist) nil t))
@@ -75,14 +143,13 @@ from ssh config."
           (error "Invalid host name: %s" host))
         (unless (my-sanitize-ssh-value user)
           (error "Invalid user name: %s" user))
-
-        (let ((remote-path (format "/ssh:%s@%s:~%s/nofile"
-                                   user host user)))
+        (let ((remote-path (format "/ssh:%s@%s:~/" user host)))
           (message "Opening %s" remote-path)
           (condition-case err
               (find-file remote-path)
             (error
-             (message "Failed to open remote file: %s" (error-message-string err)))))))))
+             (message "Failed to open remote path: %s"
+                      (error-message-string err)))))))))
 
 ;; Multiple cursors search functions
 (defvar my-phi-search-mode-map
@@ -98,9 +165,11 @@ from ssh config."
   :keymap my-phi-search-mode-map)
 
 (defun my-enable-phi-search ()
+  "Enable `my-phi-search-mode'."
   (my-phi-search-mode 1))
 
 (defun my-disable-phi-search ()
+  "Disable `my-phi-search-mode'."
   (my-phi-search-mode -1))
 
 ;; Navigation Functions
@@ -149,76 +218,100 @@ instead of 1."
     (just-one-space)))
 
 ;; Text Processing
+;; Declared special so the let below is a dynamic binding.  Under
+;; lexical-binding, without this declaration sort.el's variable is shadowed by
+;; an ordinary lexical one and the case-insensitive sort silently stops working.
+(defvar sort-fold-case)
+
 (defun my-sort-ilines ()
   "Sort lines ignoring case."
   (interactive)
+  (require 'sort)
   (let ((sort-fold-case t))
     (call-interactively #'sort-lines)))
 
-;; Log file: open <file>:<column>
-(defun my-open-error-location--parse (text)
-  "Parse TEXT of form filename:line[:col[:]] and return (filename line col)."
-  (when (string-match "\\([^:\n]+\\):\\([0-9]+\\)\\(?::\\([0-9]+\\)\\)?" (string-trim text))
-    (let* ((file (match-string 1 text))
-           (line (string-to-number (match-string 2 text)))
-           (col-str (match-string 3 text))
-           (col (when col-str (string-to-number col-str))))
-      (list file line col))))
+;; Log file: open <file>:<line>[:<column>]
+(defconst my-error-location-regexp
+  "\\([^:\n\t ]+\\):\\([0-9]+\\)\\(?::\\([0-9]+\\)\\)?"
+  "Loose match for FILE:LINE[:COL] appearing inside a line of text.")
+
+(defconst my-error-location-suffix-regexp
+  "\\`\\(.+?\\):\\([0-9]+\\)\\(?::\\([0-9]+\\)\\)?:?\\'"
+  "Anchored match for a whole filename ending in :LINE[:COL].")
+
+(defun my-open-error-location--parse (text &optional anchored)
+  "Parse TEXT of form FILE:LINE[:COL] and return (FILE LINE COL), or nil.
+With ANCHORED non-nil, TEXT must consist entirely of such a reference."
+  ;; The match data indexes into the *trimmed* string, so every match-string
+  ;; call below must read from that same string rather than from TEXT.
+  (let ((s (string-trim text)))
+    (when (string-match (if anchored
+                            my-error-location-suffix-regexp
+                          my-error-location-regexp)
+                        s)
+      (list (match-string 1 s)
+            (string-to-number (match-string 2 s))
+            (let ((col (match-string 3 s)))
+              (and col (string-to-number col)))))))
+
+(defun my-goto-line-column (line col)
+  "Move point to LINE and, when non-nil, COL in the current buffer."
+  (goto-char (point-min))
+  (when (and line (> line 0))
+    (forward-line (1- line)))
+  (when (and col (> col 0))
+    (move-to-column (1- col))))
 
 (defun my-open-error-location-at-point ()
-  "Open file:line:column at point.
-Path is resolved relative to current buffer's directory.
-Navigates directly instead of relying on find-file advice."
+  "Open the FILE:LINE[:COLUMN] reference on the current line.
+Path is resolved relative to the current buffer's directory."
   (interactive)
   (let* ((line-text (thing-at-point 'line t))
-         (parsed (my-open-error-location--parse line-text)))
-    (if parsed
-        (let* ((rel-file (nth 0 parsed))
-               (line (nth 1 parsed))
-               (col (nth 2 parsed))
-               (base-dir (file-name-directory (or (buffer-file-name) default-directory)))
-               (full-path (expand-file-name rel-file base-dir)))
-          (if (file-exists-p full-path)
-              (let ((target-window (get-window-with-predicate
-                                    (lambda (win)
-                                      (not (eq win (selected-window)))))))
-                (when target-window
-                  (select-window target-window))
-                (find-file full-path)
-                (goto-char (point-min))
-                (forward-line (1- line))
-                (when (and col (> col 0))
-                  (move-to-column (1- col))))
-            (message "File not found: %s" full-path)))
-      (message "No valid filename:line[:column] pattern found at point."))))
+         (parsed (and line-text (my-open-error-location--parse line-text))))
+    (if (not parsed)
+        (message "No valid filename:line[:column] pattern found at point.")
+      (let* ((rel-file (nth 0 parsed))
+             (line (nth 1 parsed))
+             (col (nth 2 parsed))
+             (base-dir (file-name-directory (or (buffer-file-name) default-directory)))
+             (full-path (expand-file-name rel-file base-dir)))
+        (if (not (file-exists-p full-path))
+            (message "File not found: %s" full-path)
+          (let ((target-window (get-window-with-predicate
+                                (lambda (win)
+                                  (not (eq win (selected-window)))))))
+            (when target-window
+              (select-window target-window))
+            (find-file full-path)
+            (my-goto-line-column line col)))))))
 
 (defun my-find-file-noselect--advice-with-line-and-column (orig-fun filename &rest args)
-  "Advice to allow find-file to open FILENAME at specific line and column
-if applicable."
-  (save-match-data
-    (let* ((parsed (when (string-match "\\([^:\n]+\\):\\([0-9]+\\)\\(?::\\([0-9]+\\)\\)?" (string-trim filename))
-                     (list (match-string 1 filename)
-                           (string-to-number (match-string 2 filename))
-                           (when (match-string 3 filename)
-                             (string-to-number (match-string 3 filename))))))
-           (file (and parsed (nth 0 parsed)))
-           (line (and parsed (nth 1 parsed)))
-           (col  (and parsed (nth 2 parsed))))
-      ;; Only parse line/col if file part exists
-      (if (and file (file-exists-p file))
+  "Open FILENAME of the form path:LINE[:COL] at that position.
+Rewriting is attempted only when FILENAME names no existing file but the
+path before the :LINE suffix does.  Anything else - including remote
+names and ordinary files that merely contain a colon - is handed to
+ORIG-FUN untouched, along with ARGS."
+  (let ((parsed (and (stringp filename)
+                     (not (file-remote-p filename))
+                     (not (file-exists-p filename))
+                     (my-open-error-location--parse filename t))))
+    (if (not parsed)
+        (apply orig-fun filename args)
+      (let ((file (nth 0 parsed))
+            (line (nth 1 parsed))
+            (col (nth 2 parsed)))
+        (if (not (and file (file-exists-p file)))
+            ;; Pass the ORIGINAL name through; using the truncated one here
+            ;; silently opened the wrong file.
+            (apply orig-fun filename args)
           (let ((buf (apply orig-fun file args)))
-            (when (and (buffer-live-p buf) line (> line 0))
+            (when (buffer-live-p buf)
               (with-current-buffer buf
-                (goto-char (point-min))
-                (forward-line (1- line))
-                (when (and col (> col 0))
-                  (move-to-column (1- col)))))
-            buf)
-        ;; If pattern matched but file doesn't exist, try with just the file part
-        ;; Otherwise fall back to original behavior
-        (if file
-            (apply orig-fun file args)
-          (apply orig-fun filename args))))))
+                (my-goto-line-column line col)))
+            buf))))))
+
+(advice-add 'find-file-noselect :around
+            #'my-find-file-noselect--advice-with-line-and-column)
 
 ;; Define a jump function for ifdef
 (defun my-jump-to-matching-ifdef ()
@@ -288,6 +381,102 @@ if applicable."
   (unless (my-special-buffer-visible-p)
     (balance-windows)))
 
+(defun my-split-window-below-balanced ()
+  "Split the window below, then rebalance."
+  (interactive)
+  (split-window-below)
+  (my-balance-windows-maybe))
+
+(defun my-split-window-right-balanced ()
+  "Split the window to the right, then rebalance."
+  (interactive)
+  (split-window-right)
+  (my-balance-windows-maybe))
+
+(defun my-delete-window-balanced ()
+  "Delete the selected window, then rebalance."
+  (interactive)
+  (delete-window)
+  (my-balance-windows-maybe))
+
+;; Compilation helpers.  Defined here, and bound below via plain `define-key',
+;; because use-package's :bind/:hook would emit
+;; (autoload 'interrupt-and-recompile "compile") for a function compile.el does
+;; not define - an autoload that can only ever fail.
+(defun interrupt-and-recompile ()
+  "Interrupt old compilation, if any, and recompile."
+  (interactive)
+  (let ((compilation-buffer (get-buffer "*compilation*")))
+    (when compilation-buffer
+      (with-current-buffer compilation-buffer
+        (when (get-buffer-process compilation-buffer)
+          (interrupt-process (get-buffer-process compilation-buffer))
+          (sleep-for 0.1)))  ; Brief pause to allow clean shutdown
+      (ignore-errors (kill-buffer compilation-buffer))))
+  (recompile))
+
+(defun new-compilation-window-hook ()
+  "Create a new window for compilation buffer if not already visible."
+  (unless (get-buffer-window "*compilation*")
+    (let ((total-height (window-height)))
+      (when (> total-height 20)
+        (split-window-below (- total-height 15))))))
+
+(add-hook 'compilation-mode-hook #'new-compilation-window-hook)
+
+;; =============================================================================
+;;                           Personal Keymap
+;; =============================================================================
+;; Defined at top level: nesting `define-minor-mode' inside a `use-package'
+;; :config block produced byte-compiler warnings about non-toplevel
+;; `make-variable-buffer-local' and free variable references.
+
+(defvar my-keys-minor-mode-map
+  (let ((map (make-sparse-keymap)))
+    ;; Window movement
+    (define-key map (kbd "M-<left>") #'windmove-left)
+    (define-key map (kbd "M-<right>") #'windmove-right)
+    (define-key map (kbd "M-<up>") #'windmove-up)
+    (define-key map (kbd "M-<down>") #'windmove-down)
+
+    ;; Window resize
+    (define-key map (kbd "C-S-<up>") #'enlarge-window)
+    (define-key map (kbd "C-S-<down>") #'shrink-window)
+
+    ;; Text operations
+    (define-key map (kbd "C-c w d") #'delete-trailing-whitespace)
+    (define-key map (kbd "C-x C-k") #'my-kill-last-opened-buffer)
+    (define-key map (kbd "C-<delete>") #'my-join-next-line)
+    (define-key map (kbd "C-c C-s") #'my-sort-ilines)
+
+    ;; Open file from ssh
+    (define-key map (kbd "C-c C-f") #'my-open-remote-home)
+
+    ;; Cross-reference.  These used to live in dumb-jump-mode-map, whose
+    ;; minor mode is deprecated in favour of the xref backend.
+    (define-key map (kbd "C-c C-l") #'xref-find-definitions)
+    (define-key map (kbd "C-c C-b") #'xref-go-back)
+
+    ;; Compilation (see the note on interrupt-and-recompile above)
+    (define-key map (kbd "<f6>") #'interrupt-and-recompile)
+    (define-key map (kbd "C-c c") #'interrupt-and-recompile)
+
+    map)
+  "Keymap for `my-keys-minor-mode'.")
+
+(define-minor-mode my-keys-minor-mode
+  "A minor mode so that my key settings override annoying major modes."
+  :init-value t
+  :lighter " my-keys"
+  :keymap my-keys-minor-mode-map)
+
+(define-globalized-minor-mode global-my-keys-minor-mode
+  my-keys-minor-mode
+  (lambda () (my-keys-minor-mode 1))
+  :group 'convenience)
+
+(global-my-keys-minor-mode 1)
+
 ;; =============================================================================
 ;;                           Core Emacs Settings
 ;; =============================================================================
@@ -305,26 +494,17 @@ if applicable."
   ;; [f3] => see rg
   ([f4] . flycheck-mode)
   ([f5] . compile)
-  ([f6] . interrupt-and-recompile)
+  ;; [f6] => interrupt-and-recompile, bound in my-keys-minor-mode-map
   ([f7] . next-error)
   ([f8] . my-pop-local-mark-ring)
   ([(shift f8)] . pop-global-mark)
-  ;; [f9] => see treemacs
+  ([f9] . my-open-error-location-at-point)
   ([f12] . enlarge-window)
 
   ;; Window management with auto-balancing
-  ("C-x 2" . (lambda ()
-               (interactive)
-               (split-window-below)
-               (my-balance-windows-maybe)))
-  ("C-x 3" . (lambda ()
-               (interactive)
-               (split-window-right)
-               (my-balance-windows-maybe)))
-  ("C-x 0" . (lambda ()
-               (interactive)
-               (delete-window)
-               (my-balance-windows-maybe)))
+  ("C-x 2" . my-split-window-below-balanced)
+  ("C-x 3" . my-split-window-right-balanced)
+  ("C-x 0" . my-delete-window-balanced)
 
   :config
   ;; Editor behavior
@@ -367,9 +547,11 @@ if applicable."
    search-whitespace-regexp nil
    vc-follow-symlinks t)
 
-  ;; Custom variables
-  (setq inhibit-startup-echo-area-message t
-        inhibit-startup-message t
+  ;; Custom variables.  `inhibit-startup-echo-area-message' is deliberately
+  ;; absent: Emacs only honours it when it can find a literal
+  ;; (setq inhibit-startup-echo-area-message "<login>") in `user-init-file',
+  ;; which is the byte-compiled .elc here, so it can never match.
+  (setq inhibit-startup-message t
         make-backup-files nil
         ring-bell-function #'ignore
         save-abbrevs nil
@@ -384,69 +566,11 @@ if applicable."
 
   ;; Recentf settings
   (setq recentf-max-saved-items 200
-        recentf-max-menu-items 15)
-
-  ;; Custom keybindings through minor mode
-  (defvar my-keys-minor-mode-map
-    (let ((map (make-sparse-keymap)))
-      ;; Window movement
-      (define-key map (kbd "M-<left>") #'windmove-left)
-      (define-key map (kbd "M-<right>") #'windmove-right)
-      (define-key map (kbd "M-<up>") #'windmove-up)
-      (define-key map (kbd "M-<down>") #'windmove-down)
-
-      ;; Window resize
-      (define-key map (kbd "C-S-<up>") #'enlarge-window)
-      (define-key map (kbd "C-S-<down>") #'shrink-window)
-
-      ;; Text operations
-      (define-key map (kbd "C-c w d") #'delete-trailing-whitespace)
-      (define-key map (kbd "C-x C-k") #'my-kill-last-opened-buffer)
-      (define-key map (kbd "C-<delete>") #'my-join-next-line)
-      (define-key map (kbd "C-c C-s") #'my-sort-ilines)
-
-      ;; Open file from ssh
-      (define-key map (kbd "C-c C-f") #'my-open-remote-nofile)
-
-      map)
-    "my-keys-minor-mode keymap.")
-
-  (define-minor-mode my-keys-minor-mode
-    "A minor mode so that my key settings override annoying major modes."
-    :init-value t
-    :lighter " my-keys")
-
-  (make-variable-buffer-local 'my-keys-minor-mode)
-
-  (my-keys-minor-mode t)
-
-  (define-globalized-minor-mode global-my-keys-minor-mode my-keys-minor-mode
-    (lambda () (my-keys-minor-mode 1))
-    :group 'convenience)
-  (global-my-keys-minor-mode 1)
-
-  ;; Open (jump) file from log (only when not in prog-mode)
-  (defun my-maybe-bind-error-location ()
-    "Bind C-c C-l to open-error-location in non-prog-mode buffers."
-    (unless (derived-mode-p 'prog-mode)
-      (local-set-key (kbd "C-c C-l") #'my-open-error-location-at-point)))
-
-  (add-hook 'after-change-major-mode-hook #'my-maybe-bind-error-location)
-
-  (when (fboundp 'find-file-noselect)
-    (advice-add 'find-file-noselect :around #'my-find-file-noselect--advice-with-line-and-column)))
+        recentf-max-menu-items 15))
 
 ;; =============================================================================
 ;;                           Search and Navigation
 ;; =============================================================================
-
-(use-package treemacs
-  :ensure t
-  :bind
-  ([f9] . treemacs)
-  :config
-  (treemacs-follow-mode t)
-  (treemacs-filewatch-mode t))
 
 ;; Ripgrep
 (use-package rg
@@ -462,7 +586,6 @@ if applicable."
   :config
   (show-paren-mode t)
   (setq blink-matching-paren t
-        blink-matching-paren-on-screen t
         show-paren-style 'expression
         blink-matching-paren-dont-ignore-comments t))
 
@@ -481,28 +604,21 @@ if applicable."
   :hook ((multiple-cursors-mode-enabled . my-enable-phi-search)
          (multiple-cursors-mode-disabled . my-disable-phi-search)))
 
-;; Jump to definitions
+;; Jump to definitions.  Used purely as an xref backend; the dumb-jump minor
+;; mode and its keymap are deprecated upstream.
 (use-package dumb-jump
   :ensure t
   :defer t
-  :commands (xref-find-definitions xref-go-back dumb-jump-mode)
+  :init
+  (add-hook 'xref-backend-functions #'dumb-jump-xref-activate)
   :config
   (setq dumb-jump-project-denoters
         '(".dumbjump" ".projectile" ".git" ".hg" ".fslckout"
           ".bzr" "_darcs" ".svn" "PkgInfo" "-pkg.el")
         dumb-jump-prefer-searcher 'rg)
-  ;; Force dumb-jump xref backend
-  (add-hook 'xref-backend-functions #'dumb-jump-xref-activate)
-  :hook ((prog-mode . dumb-jump-mode)
-         (c-mode . (lambda ()
+  :hook (c-mode . (lambda ()
                     (setq-local dumb-jump-force-searcher 'rg
-                               dumb-jump-functions-only t))))
-  :bind (:map dumb-jump-mode-map
-              ("C-M-g" . nil)
-              ("C-M-p" . nil)
-              ("C-M-q" . nil)
-              ("C-c C-l" . xref-find-definitions)
-              ("C-c C-b" . xref-go-back)))
+                                dumb-jump-functions-only t))))
 
 ;; Help for key bindings
 (use-package which-key
@@ -528,22 +644,6 @@ if applicable."
   :init
   (marginalia-mode))
 
-;; Consult
-(use-package consult
-  :ensure t)
-;  :bind (("C-x b"   . consult-buffer)
-;         ("C-x 4 b" . consult-buffer-other-window)
-;         ("M-g g"   . consult-goto-line)
-;         ("M-g M-g" . consult-goto-line)
-;         ("M-g i"   . consult-imenu)
-;         ("M-s r"   . consult-ripgrep)
-;         ("M-s l"   . consult-line)
-;         ("M-s f"   . consult-find)
-;         ("C-x r b" . consult-bookmark)
-;         ("M-y"     . consult-yank-pop))
-;  :config
-;  (setq consult-narrow-key "<"))
-
 ;; =============================================================================
 ;;                           Development Tools
 ;; =============================================================================
@@ -557,9 +657,7 @@ if applicable."
 ;; Completion
 (use-package company
   :ensure t
-  :hook
-  ((after-init . global-company-mode)
-   (lsp-mode . company-mode))
+  :hook (after-init . global-company-mode)
   :bind ([C-tab] . company-complete-common)
   :custom
   (company-minimum-prefix-length 2)
@@ -572,46 +670,24 @@ if applicable."
   (define-key company-active-map (kbd "C-n") #'company-select-next)
   (define-key company-active-map (kbd "C-p") #'company-select-previous))
 
-;; Compilation
 (use-package compile
   :ensure nil
   :custom
   (compilation-scroll-output 'first-error)
   (compilation-window-height 15)
-  :commands (interrupt-and-recompile new-compilation-window-hook)
-  :bind (("C-c c" . interrupt-and-recompile)
-         ("C-c r" . recompile))
-  :hook (compilation-mode . new-compilation-window-hook)
+  ;; recompile really does live in compile.el, so this autoload is correct.
+  :bind ("C-c r" . recompile)
   :config
-  (defun interrupt-and-recompile ()
-    "Interrupt old compilation, if any, and recompile."
-    (interactive)
-    (let ((compilation-buffer (get-buffer "*compilation*")))
-      (when compilation-buffer
-        (with-current-buffer compilation-buffer
-          (when (get-buffer-process compilation-buffer)
-            (interrupt-process (get-buffer-process compilation-buffer))
-            (sleep-for 0.1)))  ; Brief pause to allow clean shutdown
-        (ignore-errors (kill-buffer compilation-buffer))))
-    (recompile))
-
-  (defun new-compilation-window-hook ()
-    "Create a new window for compilation buffer if not already visible."
-    (unless (get-buffer-window "*compilation*")
-      (let ((total-height (window-height)))
-        (when (> total-height 20)
-          (split-window-below (- total-height 15))))))
-
   (setq compilation-exit-message-function
         (lambda (status code msg)
           (when (and (eq status 'exit) (zerop code))
             (let ((comp-buf (current-buffer)))
               (run-with-timer 1 nil
-                (lambda ()
-                  (when (buffer-live-p comp-buf)
-                    (bury-buffer comp-buf)
-                    (when-let ((window (get-buffer-window comp-buf)))
-                      (delete-window window)))))))
+                              (lambda ()
+                                (when (buffer-live-p comp-buf)
+                                  (bury-buffer comp-buf)
+                                  (when-let ((window (get-buffer-window comp-buf)))
+                                    (delete-window window)))))))
           (cons msg code))))
 
 ;; ANSI color support in compilation
@@ -620,15 +696,19 @@ if applicable."
   :hook (compilation-filter . ansi-color-compilation-filter))
 
 ;; Ediff configuration
-(setq ediff-split-window-function #'split-window-horizontally
-      ediff-window-setup-function #'ediff-setup-windows-plain)
+(use-package ediff
+  :ensure nil
+  :defer t
+  :config
+  (setq ediff-split-window-function #'split-window-horizontally
+        ediff-window-setup-function #'ediff-setup-windows-plain))
 
 ;; =============================================================================
 ;;                           Programming Languages
 ;; =============================================================================
 
-(setq-default sh-basic-offset 2
-              sh-indentation 2)
+;; `sh-indentation' is an obsolete alias for `sh-basic-offset' (Emacs 26.1).
+(setq-default sh-basic-offset 2)
 
 ;; C/C++
 (use-package cc-mode
@@ -641,11 +721,6 @@ if applicable."
   (defconst acsl-keywords
     '("assert" "assigns" "ensures" "slevel" "slevel_merge" "requires")
     "List of ACSL keywords to highlight.")
-
-  (defun acsl-comment ()
-    "Return non-nil if we are in an ACSL comment (/*@ or //@)."
-    (and (nth 4 (syntax-ppss)) ; Inside a comment
-         (eq (char-after (+ (nth 8 (syntax-ppss)) 2)) ?@))) ; Check for /*@ or //@
 
   (defvar acsl-font-lock-keywords
     (let ((find-acsl-comment
@@ -675,12 +750,13 @@ if applicable."
        `(,find-acsl-comment
          (0 'font-lock-doc-face t)
          (,(regexp-opt acsl-keywords 'words)
-          ;; Pre-match: position at start of matched region
-          (goto-char (match-beginning 0))
-          ;; Post-match: position at end of matched region
+          ;; Pre-match: rewind to the start of the comment and report its end
+          ;; as the search limit for the keyword matcher.
+          (progn (goto-char (match-beginning 0)) (match-end 0))
+          ;; Post-match: leave point after the comment.
           (goto-char (match-end 0))
           (0 '(:inherit (font-lock-doc-face bold)) t)))))
-    "Default highlighting for ACSL mode")
+    "Default highlighting for ACSL mode.")
 
   (defun my-acsl-mode ()
     "Enable ACSL (ANSI/ISO C Specification Language) syntax highlighting."
@@ -699,10 +775,7 @@ if applicable."
 
   (defun my-cc-clang-format-keys ()
     "Set custom keybindings for clang-format in C/C++ modes."
-    (local-set-key (kbd "C-M-\\") #'clang-format-region)
-    ;; Also bind LSP format for when clangd is running
-    (when (bound-and-true-p lsp-mode)
-      (local-set-key (kbd "C-c l f") #'lsp-format-buffer)))
+    (local-set-key (kbd "C-M-\\") #'clang-format-region))
 
   (defun my-cc-mode-setup ()
     "Setup function for C/C++ modes."
@@ -726,8 +799,11 @@ if applicable."
   :hook ((c-mode c++-mode) . hide-ifdef-mode)
   :config
   (setq hide-ifdef-shadow t
-        hide-ifdef-initially nil
-        hide-ifdef-shadow-face '(:inherit shadow :background "gray95"))
+        hide-ifdef-initially nil)
+  ;; The shadowed region is a face named `hide-ifdef-shadow'; there is no
+  ;; `hide-ifdef-shadow-face' variable to set.
+  (set-face-attribute 'hide-ifdef-shadow nil
+                      :inherit 'shadow :background "gray95")
   :bind
   (("C-c # h" . hide-ifdef-block)
    ("C-c # s" . show-ifdef-block)
@@ -744,8 +820,10 @@ if applicable."
   :ensure t
   :hook (python-mode . flycheck-mode)
   :config
-  (when (executable-find "pylint3")
-    (setq flycheck-python-pylint-executable "pylint3"))
+  (let ((pylint (or (executable-find "pylint")
+                    (executable-find "pylint3"))))
+    (when pylint
+      (setq flycheck-python-pylint-executable pylint)))
   (setq flycheck-python-mypy-cache-dir
         (expand-file-name "mypy-cache" user-emacs-directory)))
 
@@ -755,18 +833,26 @@ if applicable."
          ("\\.mli?\\'" . tuareg-mode)))
 
 (use-package dune
-  :ensure t)
+  :ensure t
+  :defer t
+  :mode ("\\(?:\\`\\|/\\)dune\\(?:-project\\)?\\'" . dune-mode))
+
+;; OCaml gets exactly one analysis backend.  ocamllsp embeds merlin, so
+;; running both duplicates diagnostics and completion.
+(defconst my-ocaml-use-lsp (and (executable-find "ocamllsp") t)
+  "Non-nil when ocamllsp is installed and should drive OCaml support.")
 
 (use-package merlin
   :ensure t
-  :hook ((tuareg-mode . merlin-mode)
-         (merlin-mode . company-mode))
+  :if (not my-ocaml-use-lsp)
+  :hook (tuareg-mode . merlin-mode)
   :config (setq merlin-error-after-save nil))
 
 (use-package flycheck-ocaml
   :ensure t
   :defer t
-  :after tuareg
+  :if (not my-ocaml-use-lsp)
+  :after (tuareg merlin)
   :config (flycheck-ocaml-setup))
 
 (use-package rust-mode
@@ -781,21 +867,15 @@ if applicable."
     (setq-local compile-command "cargo build"))
   (add-hook 'rust-mode-hook #'my-rust-mode-setup)
 
-  (when (treesit-available-p)
-    ;; Add Rust tree-sitter grammar source
-    ;; Using a specific revision compatible with Emacs 29.3 (tree-sitter ABI 14)
-    (add-to-list 'treesit-language-source-alist
-                 '(rust "https://github.com/tree-sitter/tree-sitter-rust" "v0.20.4" "src"))
-
-    ;; If tree-sitter grammar for Rust is available, prefer rust-ts-mode
-    (when (treesit-language-available-p 'rust)
-      ;; Remap rust-mode to rust-ts-mode automatically
-      (add-to-list 'major-mode-remap-alist '(rust-mode . rust-ts-mode)))))
+  ;; Prefer the tree-sitter mode when its grammar is actually installed.
+  (when (and (treesit-available-p)
+             (treesit-language-available-p 'rust))
+    (add-to-list 'major-mode-remap-alist '(rust-mode . rust-ts-mode))))
 
 ;; Language Server Protocol support
 ;; Servers needed:
 ;;   Rust:  rustup component add rust-analyzer
-;;   C/C++: apt install clangd (or clangd-17)
+;;   C/C++: apt install clangd
 ;;   OCaml: opam install ocaml-lsp-server
 ;;   Bash:  npm i -g bash-language-server
 (use-package lsp-mode
@@ -821,26 +901,18 @@ if applicable."
         lsp-rust-analyzer-display-parameter-hints t)
 
   ;; --- C/C++ (clangd) ---
-  (setq lsp-clangd-binary-path (or (executable-find "clangd")
-                                    (executable-find "clangd-17")
-                                    (executable-find "clangd-16")
-                                    (executable-find "clangd-15")
-                                    "clangd"))
+  (when-let ((clangd (executable-find "clangd")))
+    (setq lsp-clients-clangd-executable clangd))
   (setq lsp-clients-clangd-args
         '("--background-index"           ; Index in background
           "--clang-tidy"                  ; Enable clang-tidy diagnostics
           "--completion-style=detailed"   ; Detailed completions
           "--header-insertion=iwyu"       ; Include-what-you-use
-          "--fallback-style=linux"        ; Match your c-default-style
+          "--fallback-style=linux"        ; Match c-default-style
           "-j=4"))                        ; Parallel indexing jobs
 
-  ;; --- OCaml (ocamllsp) ---
-  ;; lsp-mode has built-in support: it looks for "ocamllsp" on PATH.
-  ;; ocamllsp uses merlin internally, so merlin package is still needed.
-
-  ;; --- Bash (bash-language-server) ---
-  ;; lsp-mode has built-in support: it looks for "bash-language-server" on PATH.
-  ;(setq lsp-bash-highlight-parsing-errors t)
+  ;; OCaml and Bash need no configuration: lsp-mode looks for "ocamllsp" and
+  ;; "bash-language-server" on PATH.
 
   ;; Explicitly use flycheck as the diagnostics provider
   (setq lsp-diagnostics-provider :flycheck)
@@ -851,8 +923,6 @@ if applicable."
          ;; C/C++
          (c-mode       . lsp-deferred)
          (c++-mode     . lsp-deferred)
-         ;; OCaml
-         (tuareg-mode  . lsp-deferred)
          ;; Common
          (lsp-mode . lsp-enable-which-key-integration)
          (lsp-mode . flycheck-mode))
@@ -864,6 +934,11 @@ if applicable."
               ("C-c l a" . lsp-execute-code-action)       ; Code actions
               ("C-c l R" . lsp-rename)                    ; Rename
               ("C-c l f" . lsp-format-buffer)))
+
+;; OCaml joins the LSP hooks only when ocamllsp exists, otherwise merlin above
+;; already owns tuareg-mode.
+(when my-ocaml-use-lsp
+  (add-hook 'tuareg-mode-hook #'lsp-deferred))
 
 ;; Required for LSP snippet support
 (use-package yasnippet
@@ -890,7 +965,6 @@ if applicable."
               ("C-c l p" . lsp-ui-peek-find-definitions)
               ("C-c l P" . lsp-ui-peek-find-references)))
 
-
 ;; =============================================================================
 ;;                           Markup and Config Languages
 ;; =============================================================================
@@ -901,14 +975,21 @@ if applicable."
   :mode (("\\.md\\'" . markdown-mode)
          ("\\.markdown\\'" . markdown-mode))
   :init
-  (setq markdown-command "multimarkdown"))
+  ;; Only claim a renderer that is actually installed, otherwise C-c C-c
+  ;; fails with a confusing shell error.
+  (setq markdown-command
+        (or (executable-find "multimarkdown")
+            (executable-find "pandoc")
+            "markdown")))
 
 (use-package json-mode
   :ensure t
   :defer t
   :mode "\\.json\\'"
+  ;; json-reformat-region came from the archived json-reformat package and is
+  ;; no longer available; json-mode-beautify is the supported replacement.
   :bind (:map json-mode-map
-              ("C-M-\\" . json-reformat-region)))
+              ("C-M-\\" . json-mode-beautify)))
 
 ;; Configuration files
 (use-package conf-mode
@@ -919,37 +1000,37 @@ if applicable."
    ("/gitconfig\\'" . conf-unix-mode)
    ("/gitignore\\'" . conf-unix-mode)
    ("/tmux\\'" . conf-unix-mode)
-   ("/valgrindrc\\'" . conf-unix-mode)
-   ("/xmobarrc\\'" . conf-unix-mode)
    ("/clang-format\\'" . conf-unix-mode)
    ("/bashrc\\'" . sh-mode)
    ("/zshrc\\'" . sh-mode)))
 
-;; JavaScript/TypeScript
+;; JavaScript/TypeScript.  typescript-ts-mode ships with Emacs 29 but needs a
+;; grammar; fall back to the typescript-mode package when it is missing.
 (use-package typescript-mode
   :ensure t
-  :mode ("\\.tsx?\\'" . typescript-mode))
+  :defer t
+  :if (not (and (treesit-available-p)
+                (treesit-language-available-p 'typescript))))
+
+(add-to-list 'auto-mode-alist
+             (cons "\\.ts\\'"
+                   (my-treesit-mode-if-available
+                    'typescript 'typescript-ts-mode 'typescript-mode)))
+(add-to-list 'auto-mode-alist
+             (cons "\\.tsx\\'"
+                   (my-treesit-mode-if-available
+                    'tsx 'tsx-ts-mode 'typescript-mode)))
 
 ;; Makefile
 (use-package make-mode
   :ensure nil
   :mode "Makefile\\.inc\\'")
 
-;; YAML with tree-sitter
-(use-package yaml-ts-mode
-  :ensure nil
-  :mode "\\.ya?ml\\'"
-  :config
-  (when (and (treesit-available-p)
-             (not (treesit-language-available-p 'yaml)))
-    (add-to-list 'treesit-language-source-alist
-                 '(yaml "https://github.com/ikatyang/tree-sitter-yaml"))
-    (treesit-install-language-grammar 'yaml)))
-
-;; TCL
-(use-package tcl-mode
-  :ensure nil
-  :mode "\\.tcl\\'")
+;; YAML.  Without a grammar yaml-ts-mode cannot activate at all, so only claim
+;; .yaml/.yml once it is installed (see `my-install-treesit-grammars').
+(add-to-list 'auto-mode-alist
+             (cons "\\.ya?ml\\'"
+                   (my-treesit-mode-if-available 'yaml 'yaml-ts-mode 'conf-mode)))
 
 ;; Emacs config files (handle files named "emacs" without extension)
 (add-to-list 'auto-mode-alist '("/emacs\\'" . emacs-lisp-mode))
@@ -958,39 +1039,34 @@ if applicable."
 ;;                           Text and Spelling
 ;; =============================================================================
 
-;; Spelling configuration
+(defun custom-ispell ()
+  "Skip regions from spell checking."
+  (make-local-variable 'ispell-skip-region-alist)
+  (add-to-list 'ispell-skip-region-alist '("`" . "`"))
+  (add-to-list 'ispell-skip-region-alist '("^```" . "```$")))
+
 (use-package ispell
   :ensure nil
   :hook (markdown-mode . custom-ispell)
   :config
   (when (executable-find "hunspell")
     (setq-default ispell-program-name "hunspell")
-    (setq ispell-really-hunspell t))
-
-  (defun custom-ispell ()
-    "Skip regions from spell checking."
-    (make-local-variable 'ispell-skip-region-alist)
-    (add-to-list 'ispell-skip-region-alist '("`" . "`"))
-    (add-to-list 'ispell-skip-region-alist '("^```" . "```$"))))
+    (setq ispell-really-hunspell t)))
 
 ;; =============================================================================
 ;;                           Visual Enhancement
 ;; =============================================================================
 
-;; M-x all-the-icons-install-fonts
 ;; M-x nerd-icons-install-fonts
 (use-package doom-modeline
   :ensure t
   :init (doom-modeline-mode 1))
 
-;; Required for icons
-(use-package all-the-icons
-  :ensure t
-  :if (display-graphic-p))
-
+;; Required for icons.  No display-graphic-p guard: under `emacs --daemon'
+;; that is nil at startup, so the guard permanently disabled icons for every
+;; graphical frame created later by emacsclient.
 (use-package nerd-icons
-  :ensure t
-  :if (display-graphic-p))
+  :ensure t)
 
 ;; Whitespace visualization
 (use-package whitespace
@@ -998,7 +1074,8 @@ if applicable."
   :hook (prog-mode . whitespace-mode)
   :custom
   (whitespace-style '(face trailing empty lines-tail tabs tab-mark))
-  (whitespace-space 'whitespace-hspace)
+  ;; `whitespace-space' is an obsolete variable (Emacs 24.4) - it is a face,
+  ;; configured below, and setting the variable did nothing.
   (whitespace-line-column 80)
   :config
   ;; Set region highlight
@@ -1017,9 +1094,4 @@ if applicable."
    '(whitespace-tab ((t (:foreground "red"))))
    '(whitespace-trailing ((t (:foreground "red" :background "yellow"))))))
 
-;; =============================================================================
-;;                           Final Configuration
-;; =============================================================================
-
-(provide 'init)
-;;; init.el ends here
+;;; emacs ends here
