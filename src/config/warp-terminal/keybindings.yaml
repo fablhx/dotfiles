@@ -1,4 +1,10 @@
 ---
-"editor_view:select_all": ctrl-shift-A
-"editor_view:move_to_line_start": ctrl-a
 "editor_view:move_to_line_end": ctrl-e
+"editor_view:select_all": ctrl-shift-A
+"terminal:scroll_to_top_of_selected_block": none
+"terminal:scroll_to_bottom_of_selected_block": none
+"terminal:scroll_up_one_line": ctrl-shift-up
+"editor_view:move_to_line_start": ctrl-a
+"editor_view:add_cursor_below": none
+"editor_view:add_cursor_above": none
+"terminal:scroll_down_one_line": ctrl-shift-down
