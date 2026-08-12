@@ -995,14 +995,19 @@ ORIG-FUN untouched, along with ARGS."
 (use-package conf-mode
   :ensure nil
   :mode
+  ;; Order matters, and it is the REVERSE of the priority you want:
+  ;; use-package emits an `add-to-list' per entry, each prepending, so the
+  ;; last entry here ends up first in `auto-mode-alist'.  The bashrc rules
+  ;; must therefore come last - "/\\.[^/]*rc\\'" also matches ~/.bashrc and
+  ;; would otherwise open the deployed symlink in conf-unix-mode.
   (("/\\.[^/]*rc\\'" . conf-unix-mode)
    ("/config\\'" . conf-unix-mode)
    ("/gitconfig\\'" . conf-unix-mode)
    ("/gitignore\\'" . conf-unix-mode)
-   ("/tmux\\'" . conf-unix-mode)
+   ("/tmux\\.conf\\'" . conf-unix-mode)
    ("/clang-format\\'" . conf-unix-mode)
-   ("/bashrc\\'" . sh-mode)
-   ("/zshrc\\'" . sh-mode)))
+   ("/\\.bashrc\\'" . sh-mode)
+   ("/bashrc\\(?:\\.private\\)?\\'" . sh-mode)))
 
 ;; JavaScript/TypeScript.  typescript-ts-mode ships with Emacs 29 but needs a
 ;; grammar; fall back to the typescript-mode package when it is missing.
