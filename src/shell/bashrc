@@ -6,6 +6,11 @@
 # Early exit for dumb terminals
 [[ $TERM == "dumb" ]] && PS1='$ ' && return
 
+# Directory this file was deployed into (_build), used to locate the private
+# overrides at the end of this file. ~/.bashrc is a symlink, so BASH_SOURCE
+# alone gives $HOME; realpath is what resolves it to the build directory.
+__config_dir="$(dirname "$(realpath "${BASH_SOURCE[0]}")")"
+
 # =============================================================================
 #                           Shell Options
 # =============================================================================
@@ -32,7 +37,7 @@ fi
 #                           History Configuration
 # =============================================================================
 
-export HISTCONTROL=ignoredups:erasedups
+export HISTCONTROL=ignoredups:erasedups:ignorespace
 export HISTSIZE=50000
 export HISTFILESIZE=50000
 export HISTIGNORE="ls:ll:la:l:cd:rm:pwd:exit:clear:history:bg:fg:jobs"
@@ -44,7 +49,6 @@ export HISTIGNORE="ls:ll:la:l:cd:rm:pwd:exit:clear:history:bg:fg:jobs"
 export ALTERNATE_EDITOR=""
 export BAT_THEME="ansi"
 export EDITOR='emacs'
-export EMACSDIR="${HOME}/.emacs.d/"
 export LESS="-RFX"
 
 # =============================================================================
@@ -108,11 +112,16 @@ alias stop_emacs='emacsclient -e "(kill-emacs)"'  # Stop daemon
 # =============================================================================
 #                           Git Info
 # =============================================================================
-
-# Uses `git status --porcelain=v2 --branch` to retrieve branch, upstream,
+# A single `git status --porcelain=v2 --branch` call supplies branch, upstream
+# divergence and per-file state. Every git invocation is wrapped in `timeout`
+# so a slow filesystem or a huge repository can never stall the shell.
 
 declare -A __git_large_repo_cache
 
+# Repositories with many packfiles get tighter timeouts and skip the untracked
+# scan, which is the expensive part of `git status`. The verdict is cached per
+# repository; the key must be an ABSOLUTE path, otherwise every repository
+# collides on the literal key ".git".
 __is_large_repo() {
     local git_dir="$1"
 
@@ -122,13 +131,23 @@ __is_large_repo() {
     fi
 
     local is_large=false
-    if [[ -d "${git_dir}/objects/pack" ]]; then
-        local packs=("${git_dir}"/objects/pack/*.pack)
-        [[ -e "${packs[0]}" ]] && [[ ${#packs[@]} -gt 5 ]] && is_large=true
-    fi
+    local -a packs
+    # An unmatched glob expands to the pattern itself, so probe before counting.
+    packs=( "${git_dir}"/objects/pack/*.pack )
+    [[ -e "${packs[0]}" ]] || packs=()
+    (( ${#packs[@]} > 5 )) && is_large=true
 
     __git_large_repo_cache["${git_dir}"]="${is_large}"
     [[ "${is_large}" == "true" ]]
+}
+
+# Stash count is not reported by `git status --porcelain`.
+__git_info_stash_count() {
+    local git_dir="$1" fast_timeout="$2"
+    [[ -f "${git_dir}/refs/stash" ]] || return 0
+    __gi_stashed=$(timeout "${fast_timeout}s" git rev-list --walk-reflogs --count refs/stash 2>/dev/null) \
+        || __gi_stashed=0
+    : "${__gi_stashed:=0}"
 }
 
 __git_info_compute() {
@@ -143,56 +162,49 @@ __git_info_compute() {
     __gi_untracked=0
     __gi_stashed=0
 
-    [[ "$PWD" == *"/.git"* ]] && return
+    # Skip only when genuinely inside the .git directory. A plain
+    # `*"/.git"*` glob also matches .github/, .gitlab/ and friends.
+    [[ "$PWD" == */.git || "$PWD" == */.git/* ]] && return
 
-    # Resolve git_dir
     local git_dir
     if [[ -d ".git" ]]; then
-        git_dir=".git"
+        git_dir="$PWD/.git"
     else
-        git_dir=$(git rev-parse --git-dir 2>/dev/null) || return
+        git_dir=$(git rev-parse --absolute-git-dir 2>/dev/null) || return
     fi
 
     __gi_active=true
 
     local status_timeout=0.2
     local fast_timeout=0.05
-    local large_repo=false
+    local untracked_opt="normal"
 
     if __is_large_repo "${git_dir}"; then
         status_timeout=0.1
         fast_timeout=0.03
-        large_repo=true
+        untracked_opt="no"
     fi
-
-    # Branch + upstream + ahead/behind + file status
-    local untracked_opt="normal"
-    [[ "${large_repo}" == "true" ]] && untracked_opt="no"
 
     local status_output=""
     if ! status_output=$(timeout "${status_timeout}s" git status \
             --porcelain=v2 --branch --untracked-files="${untracked_opt}" 2>/dev/null); then
-        # Timed out or failed — try lightweight fallback
+        # Timed out or failed - fall back to the cheapest useful subset.
         __gi_branch=$(timeout "${fast_timeout}s" git symbolic-ref --short -q HEAD 2>/dev/null)
         if [[ -z "${__gi_branch}" ]]; then
             __gi_detached="yes"
             __gi_branch=$(timeout "${fast_timeout}s" git describe --exact-match --tags HEAD 2>/dev/null \
                           || timeout "${fast_timeout}s" git rev-parse --short HEAD 2>/dev/null)
         fi
-        # Fallback: try to get at least staged/changed counts
         local staged_files changed_files
         staged_files=$(timeout "${fast_timeout}s" git diff --cached --name-only 2>/dev/null)
         changed_files=$(timeout "${fast_timeout}s" git diff --name-only 2>/dev/null)
-        [[ -n "${staged_files}" ]] && __gi_staged=$(echo "${staged_files}" | wc -l)
-        [[ -n "${changed_files}" ]] && __gi_changed=$(echo "${changed_files}" | wc -l)
-        # Stash
-        if [[ -f "${git_dir}/refs/stash" ]]; then
-            __gi_stashed=$(timeout "${fast_timeout}s" git rev-list --walk-reflogs --count refs/stash 2>/dev/null || echo 0)
-        fi
+        [[ -n "${staged_files}" ]] && __gi_staged=$(printf '%s\n' "${staged_files}" | wc -l)
+        [[ -n "${changed_files}" ]] && __gi_changed=$(printf '%s\n' "${changed_files}" | wc -l)
+        __git_info_stash_count "${git_dir}" "${fast_timeout}"
         return
     fi
 
-    # Parse porcelain v2 output
+    local line
     while IFS= read -r line; do
         case "${line}" in
             "# branch.head "*)
@@ -202,46 +214,37 @@ __git_info_compute() {
             "# branch.ab "*)
                 # Format: "# branch.ab +3 -1"
                 local ab="${line#\# branch.ab }"
-                __gi_ahead="${ab%% *}"    # "+3"
-                __gi_ahead="${__gi_ahead#+}"  # "3"
-                __gi_behind="${ab##* }"   # "-1"
-                __gi_behind="${__gi_behind#-}" # "1"
+                __gi_ahead="${ab%% *}"
+                __gi_ahead="${__gi_ahead#+}"
+                __gi_behind="${ab##* }"
+                __gi_behind="${__gi_behind#-}"
                 ;;
             "1 "* | "2 "*)
-                # Changed entries: "1 XY ..."  or  "2 XY ... (renames)"
+                # Changed entry: "1 XY ..." / rename: "2 XY ..."
                 local xy="${line:2:2}"
                 local idx="${xy:0:1}" wt="${xy:1:1}"
                 case "${idx}" in [MADRC]) ((__gi_staged++)) ;; U) ((__gi_unmerged++)) ;; esac
                 case "${wt}" in [MD]) ((__gi_changed++)) ;; U) ((__gi_unmerged++)) ;; esac
                 ;;
-            "u "*)
-                # Unmerged entry
-                ((__gi_unmerged++))
-                ;;
-            "? "*)
-                # Untracked file
-                ((__gi_untracked++))
-                ;;
+            "u "*) ((__gi_unmerged++)) ;;
+            "? "*) ((__gi_untracked++)) ;;
         esac
     done <<< "${status_output}"
 
-    # Detached HEAD: resolve to tag or short hash
     if [[ "${__gi_detached}" == "yes" ]]; then
         __gi_branch=$(timeout "${fast_timeout}s" git describe --exact-match --tags HEAD 2>/dev/null \
                       || timeout "${fast_timeout}s" git rev-parse --short HEAD 2>/dev/null)
     fi
 
-    # Stash count (not available via status --porcelain)
-    if [[ -f "${git_dir}/refs/stash" ]]; then
-        __gi_stashed=$(timeout "${fast_timeout}s" git rev-list --walk-reflogs --count refs/stash 2>/dev/null || echo 0)
-    fi
+    __git_info_stash_count "${git_dir}" "${fast_timeout}"
 }
 
+# One-line summary for the current directory, bound to `gi` below.
 __gi() {
     __git_info_compute
 
     if [[ "${__gi_active}" != "true" ]]; then
-        echo "Not a git repository"
+        printf 'Not a git repository\n' >&2
         return 1
     fi
 
@@ -249,22 +252,22 @@ __gi() {
     local out=""
 
     if [[ "${__gi_detached}" == "yes" ]]; then
-        out+="\033[38;5;200m${__gi_branch}${rst}"
-    elif [[ "${__gi_staged}" -ne 0 || "${__gi_unmerged}" -ne 0 || "${__gi_changed}" -ne 0 || "${__gi_untracked}" -ne 0 ]]; then
-        out+="\033[38;5;240m${__gi_branch}${rst}"
+        out+=$'\033[38;5;200m'"${__gi_branch}${rst}"
+    elif (( __gi_staged || __gi_unmerged || __gi_changed || __gi_untracked )); then
+        out+=$'\033[38;5;240m'"${__gi_branch}${rst}"
     else
-        out+="\033[38;5;22m${__gi_branch}${rst}"
+        out+=$'\033[38;5;22m'"${__gi_branch}${rst}"
     fi
 
-    [[ "${__gi_behind}" != "0" ]]  && out+=" \033[38;5;250mv${__gi_behind}${rst}"
-    [[ "${__gi_ahead}"  != "0" ]]  && out+=" \033[38;5;250m^${__gi_ahead}${rst}"
-    [[ "${__gi_staged}"    -ne 0 ]] && out+=" \033[38;5;28m*${__gi_staged}${rst}"
-    [[ "${__gi_unmerged}"  -ne 0 ]] && out+=" \033[38;5;196m${__gi_unmerged}${rst}"
-    [[ "${__gi_changed}"   -ne 0 ]] && out+=" \033[38;5;166m+${__gi_changed}${rst}"
-    [[ "${__gi_untracked}" -ne 0 ]] && out+=" \033[38;5;172m?${__gi_untracked}${rst}"
-    [[ "${__gi_stashed}"   -ne 0 ]] && out+=" \033[38;5;26mS${__gi_stashed}${rst}"
+    (( __gi_behind    )) && out+=" "$'\033[38;5;250m'"v${__gi_behind}${rst}"
+    (( __gi_ahead     )) && out+=" "$'\033[38;5;250m'"^${__gi_ahead}${rst}"
+    (( __gi_staged    )) && out+=" "$'\033[38;5;28m'"*${__gi_staged}${rst}"
+    (( __gi_unmerged  )) && out+=" "$'\033[38;5;196m'"${__gi_unmerged}${rst}"
+    (( __gi_changed   )) && out+=" "$'\033[38;5;166m'"+${__gi_changed}${rst}"
+    (( __gi_untracked )) && out+=" "$'\033[38;5;172m'"?${__gi_untracked}${rst}"
+    (( __gi_stashed   )) && out+=" "$'\033[38;5;26m'"S${__gi_stashed}${rst}"
 
-    echo -e "Git info: ${out}"
+    printf 'Git info: %s\n' "${out}"
 }
 
 alias gi='__gi'
@@ -273,12 +276,18 @@ alias gi='__gi'
 #                           Prompt sync
 # =============================================================================
 
-PROMPT_COMMAND="history -a; history -n; $PROMPT_COMMAND"
+# Flush this shell's history and pull in what other shells wrote. Guarded so
+# that re-sourcing this file does not keep prepending to PROMPT_COMMAND.
+if [[ "${PROMPT_COMMAND}" != *"history -a; history -n;"* ]]; then
+    PROMPT_COMMAND="history -a; history -n; ${PROMPT_COMMAND}"
+fi
 
 # =============================================================================
 #                           Private / Corporate
 # =============================================================================
 
-_build_dir="$(dirname "$(realpath "${BASH_SOURCE[0]}")")"
-[[ -f "${_build_dir}/bashrc.private" ]] && source "${_build_dir}/bashrc.private"
-unset _build_dir
+# Lives beside this file in the build directory, where the build tree's own
+# git repo keeps it under version control without it ever reaching the public
+# remote. `make clean` removes only symlinks, so it survives.
+[[ -f "${__config_dir}/bashrc.private" ]] && source "${__config_dir}/bashrc.private"
+unset __config_dir
