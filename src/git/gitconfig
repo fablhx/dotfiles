@@ -1,6 +1,3 @@
-[include]
-	# Load private user info
-	path = ~/config/_build/gitconfig.private
 [color "grep"]
 	# Enable colors for grep
 	linenumber = yellow
@@ -28,13 +25,20 @@
 	# Format used for the log
 	pretty = %Cred%h%Creset -%C(auto)%d%Creset %s %Cgreen(%cr, %cd) %C(bold blue)<%an>%Creset
 [core]
-	editor = emacs
+	# emacsclient reuses a running daemon; -a "" starts one when there is none.
+	# The quotes are escaped so git keeps them in the value - unescaped, git
+	# strips them and -a swallows the filename as its argument.
+	editor = emacsclient -c -nw -a \"\"
+	# Overrides the XDG default (~/.config/git/ignore), so every global
+	# ignore rule must live in the file below or it is silently inactive.
 	excludesfile = ~/.gitignore
 [diff]
 	# When using --word-diff, assume --word-diff-regex=.
 	wordRegex = .
 	algorithm = histogram
 	colorMoved = dimmed-zebra
+	# a/ b/ prefixes become c/ w/ i/ o/ (commit, worktree, index, object)
+	mnemonicPrefix = true
 [rerere]
 	autoupdate = true
 	enabled = true
@@ -42,28 +46,60 @@
 	# This is GREAT... when you know what you're doing and are careful
 	# not to pull --no-rebase over a local line containing a true merge.
 	rebase = true
+[push]
+	default = simple
+	# Create the upstream branch on first push instead of erroring out
+	autoSetupRemote = true
+[fetch]
+	# Drop remote-tracking refs whose branch was deleted upstream
+	prune = true
+[rebase]
+	autoStash = true
 [log]
 	# Use abbrev SHAs whenever possible/relevant instead of full 40 chars
 	abbrevCommit = true
 	# Automatically --follow when given a single path
 	follow = true
+	date = format-local:%Y-%m-%d %H:%M
 [blame]
 	# Use short dates
 	date = short
+[branch]
+	# Most recently worked-on branches first
+	sort = -committerdate
 [tag]
 	# Sort tags as version numbers whenever applicable,
 	# so 1.10.2 is AFTER 1.2.0.
 	sort = version:refname
+[column]
+	ui = auto
+[help]
+	autocorrect = prompt
 [merge]
-	conflictStyle = diff3
+	# zdiff3 is diff3 with the common lines hoisted out of the conflict
+	conflictStyle = zdiff3
+	tool = ediff
 [mergetool]
 	# Clean up backup files created by merge tools on tool exit
 	keepBackup = false
 [mergetool "ediff"]
 	cmd = emacs --eval \"(ediff-merge-files-with-ancestor \\\"$LOCAL\\\" \\\"$REMOTE\\\" \\\"$BASE\\\" nil \\\"$MERGED\\\")\"
 [filter "lfs"]
-	clean = git lfs clean %f
-	smudge = git lfs smudge %f
+	# The filter-process form is the current git-lfs interface: one long-lived
+	# process instead of a fork per file, and "--" so filenames starting with
+	# a dash are not parsed as options.
+	process = git-lfs filter-process
+	clean = git-lfs clean -- %f
+	smudge = git-lfs smudge -- %f
 	required = true
 [init]
 	defaultBranch = main
+[include]
+	# Load private user info. Kept in $HOME rather than inside the build
+	# directory so that `make clean` cannot delete it, and so this path does
+	# not have to hard-code the clone location.
+	#
+	# Deliberately LAST: git applies includes in position order and
+	# last-one-wins, so an include at the top of this file could never
+	# override anything below it.
+	path = ~/.gitconfig.private

@@ -1,1 +1,7 @@
+# Global gitignore, deployed to ~/.gitignore and selected via
+# core.excludesfile. That setting overrides git's XDG default
+# (~/.config/git/ignore), so every global rule belongs here.
 .DS_Store
+
+# Agent/editor local state that should never be committed
+**/.claude/settings.local.json
