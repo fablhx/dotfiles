@@ -95,9 +95,16 @@
 [init]
 	defaultBranch = main
 [include]
-	# Load private user info. Kept in $HOME rather than inside the build
-	# directory so that `make clean` cannot delete it, and so this path does
-	# not have to hard-code the clone location.
+	# Load private user info. The real file lives in the build directory, under
+	# the build tree's own git repo; ~/.gitconfig.private is a symlink to it,
+	# created by `make build`.
+	#
+	# A relative path here would NOT work. Git resolves include.path against
+	# the directory of the config file it actually read - ~/.gitconfig - and
+	# not the _build/gitconfig that symlink resolves to, so `path =
+	# gitconfig.private` looks in $HOME and silently finds nothing. Git does
+	# follow a symlinked include target, hence this indirection; it also keeps
+	# the clone location out of this file.
 	#
 	# Deliberately LAST: git applies includes in position order and
 	# last-one-wins, so an include at the top of this file could never
