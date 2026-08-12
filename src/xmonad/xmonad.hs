@@ -8,17 +8,13 @@ import XMonad.Actions.SwapWorkspaces
 
 import XMonad.Config.Mate
 
-import XMonad.Hooks.DynamicLog
 import XMonad.Hooks.ManageDocks
 
-import XMonad.Layout.IndependentScreens
-import XMonad.Layout.Named
 import XMonad.Layout.NoBorders
 import XMonad.Layout.Reflect
+import XMonad.Layout.Renamed
 import XMonad.Layout.ResizableTile
 import XMonad.Layout.SimplestFloat
-
-import XMonad.Util.WorkspaceCompare
 
 import qualified Data.Map as M
 import qualified XMonad.StackSet as W
@@ -27,10 +23,12 @@ import qualified XMonad.StackSet as W
 myBaseConfig = mateConfig
 
 -- Mod key. Mod4 is the Super / Windows key
+winMask, altMask :: KeyMask
 winMask = mod4Mask
 altMask = mod1Mask
 
 -- Default terminal
+myTerminal :: String
 myTerminal = "warp-terminal"
 
 -- Browser to launch
@@ -58,14 +56,18 @@ setupWorkspaces = do
   spawnOn "2" myTerminal
 
 -- Display
+myBorderWidth :: Dimension
 myBorderWidth = 2
+myNormalBorderColor, myFocusedBorderColor :: String
 myNormalBorderColor = "#202030"
 myFocusedBorderColor = "#A0A0D0"
 
 -- Workspaces
+myWorkspaces :: [String]
 myWorkspaces = ["1", "2", "3", "4", "5", "6", "7"]
 
 -- Hooks
+myManageHook :: ManageHook
 myManageHook =
   (composeAll . concat $
     [ [ manageHook myBaseConfig ]
@@ -73,16 +75,19 @@ myManageHook =
     ])
 
 -- Layouts
+-- Every layout goes through avoidStruts: without it the MATE panel overlaps
+-- windows in that layout. `named` is superseded by Renamed's `renamed`.
 basicLayout = ResizableTall nmaster delta ratio [] where
     nmaster = 1
     delta   = 3/100
     ratio   = 1/2
-tallLayout = named "tall" $ reflectHoriz $ avoidStruts $ basicLayout
-wideLayout = named "wide" $ avoidStruts $ Mirror basicLayout
-singleLayout = named "single" $ avoidStruts $ noBorders Full
+tallLayout   = renamed [Replace "tall"]   $ reflectHoriz $ avoidStruts $ basicLayout
+wideLayout   = renamed [Replace "wide"]   $ avoidStruts $ Mirror basicLayout
+singleLayout = renamed [Replace "single"] $ avoidStruts $ noBorders Full
+floatLayout  = renamed [Replace "float"]  $ avoidStruts $ simplestFloat
 
 myLayoutHook = normal where
-    normal = tallLayout ||| wideLayout ||| singleLayout ||| simplestFloat ||| Full
+    normal = tallLayout ||| wideLayout ||| singleLayout ||| floatLayout
 
 -- Key bindings
 myKeys conf = M.fromList $
@@ -164,10 +169,12 @@ myKeys conf = M.fromList $
     , ((winMask .|. shiftMask, xK_q     ), spawn "mate-session-save --shutdown-dialog")
     , ((winMask              , xK_x     ), broadcastMessage ReleaseResources >> restart "xmonad" True)
     ]
-    where workspaceKeys = [xK_F1 .. xK_F10]
+    -- zip against myWorkspaces truncates to the number of workspaces
+    where workspaceKeys = [xK_F1 .. xK_F12]
 
--- Mouse bindings that mimic Gnome's
-myMouseBindings (XConfig {XMonad.modMask = modMask}) = M.fromList $
+-- Mouse bindings that mimic Gnome's. These all use altMask, so the config's
+-- own modMask is deliberately not bound here.
+myMouseBindings _ = M.fromList $
     [ ((altMask, button1), (\w -> focus w >> mouseMoveWindow w))
     , ((altMask, button2), (\w -> focus w >> mouseResizeWindow w))
     , ((altMask, button3), (\w -> focus w >> (withFocused $ windows . W.sink)))
@@ -213,8 +220,8 @@ help = unlines
   , "-- Alt+Win+Shift+Left/Right    Swap with workspace to left/right"
   , "-- Alt+Win+Shift+Up/Down       Swap with next/previous screen"
   , ""
-  , "-- Alt+F1..F10                 Switch to workspace N"
-  , "-- Win+F1..F10                 Move window to workspace N"
+  , "-- Alt+F1..F7                  Switch to workspace N"
+  , "-- Win+F1..F7                  Move window to workspace N"
   , ""
   , "-- Alt+Tab                     Focus next window"
   , "-- Alt+Shift+Tab               Focus previous window"
