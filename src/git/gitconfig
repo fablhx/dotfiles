@@ -15,24 +15,19 @@
 	supdate = submodule update --init --recursive
 	sync = fetch origin --prune --force 'refs/pull-requests/*:refs/pr/*'
 [blame]
-	# Use short dates
 	date = short
 [branch]
-	# Most recently worked-on branches first
 	sort = -committerdate
 [color "branch"]
 	# Blue on black is hard to read in git branch -vv: use cyan instead
 	upstream = cyan
 [color "grep"]
-	# Enable colors for grep
 	linenumber = yellow
 	match = red
 [column]
 	ui = auto
 [core]
 	editor = emacs
-	# Overrides the XDG default (~/.config/git/ignore), so every global
-	# ignore rule must live in the file below or it is silently inactive.
 	excludesfile = ~/.gitignore
 [diff]
 	algorithm = histogram
@@ -42,42 +37,30 @@
 	# When using --word-diff, assume --word-diff-regex=.
 	wordRegex = .
 [fetch]
-	# Drop remote-tracking refs whose branch was deleted upstream
 	prune = true
 [filter "lfs"]
-	# Requires the git-lfs package; it is in the README prerequisites because
-	# of this section. Without the binary, any repository with an LFS
-	# .gitattributes fails outright: a `process` filter that cannot start is
-	# fatal, and required = false does not soften that. Dropping the section
-	# instead would be worse - git would then store and check out the pointer
-	# text as if it were the real content, with no error at all.
-	#
-	# The filter-process form is the current git-lfs interface: one long-lived
-	# process instead of a fork per file, and "--" so filenames starting with
-	# a dash are not parsed as options.
+	# Needs the git-lfs package: a process filter that cannot start is fatal,
+	# so without it every LFS repository fails. Dropping the section is worse
+	# still - git would then check out the pointer text as the real content.
 	clean = git-lfs clean -- %f
 	process = git-lfs filter-process
 	required = true
 	smudge = git-lfs smudge -- %f
 [format]
-	# Format used for the log
 	pretty = %Cred%h%Creset -%C(auto)%d%Creset %s %Cgreen(%cr, %cd) %C(bold blue)<%an>%Creset
 [help]
 	autocorrect = prompt
 [init]
 	defaultBranch = main
 [log]
-	# Use abbrev SHAs whenever possible/relevant instead of full 40 chars
 	abbrevCommit = true
 	date = format-local:%Y-%m-%d %H:%M
-	# Automatically --follow when given a single path
 	follow = true
 [merge]
 	# zdiff3 is diff3 with the common lines hoisted out of the conflict
 	conflictStyle = zdiff3
 	tool = ediff
 [mergetool]
-	# Clean up backup files created by merge tools on tool exit
 	keepBackup = false
 [mergetool "ediff"]
 	cmd = emacs --eval \"(ediff-merge-files-with-ancestor \\\"$LOCAL\\\" \\\"$REMOTE\\\" \\\"$BASE\\\" nil \\\"$MERGED\\\")\"
@@ -86,7 +69,6 @@
 	# not to pull --no-rebase over a local line containing a true merge.
 	rebase = true
 [push]
-	# Create the upstream branch on first push instead of erroring out
 	autoSetupRemote = true
 	default = simple
 [rebase]
@@ -95,17 +77,11 @@
 	autoupdate = true
 	enabled = true
 [tag]
-	# Sort tags as version numbers whenever applicable,
-	# so 1.10.2 is AFTER 1.2.0.
+	# Version ordering, so 1.10.2 sorts after 1.2.0
 	sort = version:refname
 [include]
-	# Private user info: a plain file in $HOME, untracked here. The path is
-	# absolute because git resolves a relative include.path against the
-	# directory of the file it actually read - ~/.gitconfig - which is a
-	# symlink into this repository, so a bare filename would be looked up in
-	# src/git/ and silently not found.
-	#
-	# Deliberately LAST: git applies includes in position order and
-	# last-one-wins, so an include at the top of this file could never
-	# override anything below it.
+	# Absolute: git resolves a relative include.path against the directory of
+	# the file it read - ~/.gitconfig - which is a symlink into this repo, so a
+	# bare name would be looked for in src/git/. Last, because includes apply
+	# in position order and last one wins.
 	path = ~/.gitconfig.private

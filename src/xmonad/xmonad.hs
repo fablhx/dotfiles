@@ -17,54 +17,44 @@ import XMonad.Layout.SimplestFloat
 import qualified Data.Map as M
 import qualified XMonad.StackSet as W
 
--- Default config
 myBaseConfig = mateConfig
 
--- Mod key. Mod4 is the Super / Windows key
+-- Mod4 is the Super / Windows key
 winMask, altMask :: KeyMask
 winMask = mod4Mask
 altMask = mod1Mask
 
--- Default terminal
 myTerminal :: String
 myTerminal = "warp-terminal"
 
--- Browser to launch
 browserCmd :: String
 browserCmd = "google-chrome"
 browserCmdIncognito :: String
 browserCmdIncognito = "google-chrome --incognito"
 
--- Editor to launch
 editorCmd :: String
 editorCmd = "emacs"
 
--- File explorer to launch
 fileExplorerCmd :: String
 fileExplorerCmd = "caja ~"
 
--- Screenshot
 screenshotCmd :: String
 screenshotCmd = "mate-screenshot -i"
 
--- Setup workspace layout
 setupWorkspaces :: X ()
 setupWorkspaces = do
   spawnOn "1" browserCmd
   spawnOn "2" myTerminal
 
--- Display
 myBorderWidth :: Dimension
 myBorderWidth = 2
 myNormalBorderColor, myFocusedBorderColor :: String
 myNormalBorderColor = "#202030"
 myFocusedBorderColor = "#A0A0D0"
 
--- Workspaces
 myWorkspaces :: [String]
 myWorkspaces = ["1", "2", "3", "4", "5", "6", "7"]
 
--- Hooks
 myManageHook :: ManageHook
 myManageHook =
   (composeAll . concat $
@@ -72,9 +62,7 @@ myManageHook =
     , [ manageSpawn ]
     ])
 
--- Layouts
--- Every layout goes through avoidStruts: without it the MATE panel overlaps
--- windows in that layout. `named` is superseded by Renamed's `renamed`.
+-- Every layout needs avoidStruts, or the MATE panel overlaps windows in it.
 basicLayout = ResizableTall nmaster delta ratio [] where
     nmaster = 1
     delta   = 3/100
@@ -167,11 +155,10 @@ myKeys conf = M.fromList $
     , ((winMask .|. shiftMask, xK_q     ), spawn "mate-session-save --shutdown-dialog")
     , ((winMask              , xK_x     ), broadcastMessage ReleaseResources >> restart "xmonad" True)
     ]
-    -- zip against myWorkspaces truncates to the number of workspaces
+    -- zip truncates to the number of workspaces
     where workspaceKeys = [xK_F1 .. xK_F12]
 
--- Mouse bindings that mimic Gnome's. These all use altMask, so the config's
--- own modMask is deliberately not bound here.
+-- Gnome-like. All use altMask, so the config's own modMask is unused here.
 myMouseBindings _ = M.fromList $
     [ ((altMask, button1), (\w -> focus w >> mouseMoveWindow w))
     , ((altMask, button2), (\w -> focus w >> mouseResizeWindow w))
@@ -180,7 +167,6 @@ myMouseBindings _ = M.fromList $
     , ((altMask, button5), (const $ windows W.swapDown))
     ]
 
--- Main configuration
 myConfig =
   myBaseConfig
     { modMask = winMask
@@ -195,10 +181,8 @@ myConfig =
     , mouseBindings = myMouseBindings
     }
 
--- main
 main = xmonad $ myConfig
 
--- help
 help :: String
 help = unlines
   [ "-- Navigation:"

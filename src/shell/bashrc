@@ -3,7 +3,6 @@
 #                             (Warp Terminal / Linux)
 # =============================================================================
 
-# Early exit for dumb terminals
 [[ $TERM == "dumb" ]] && PS1='$ ' && return
 
 # =============================================================================
@@ -90,7 +89,7 @@ fi
 # =============================================================================
 
 __emacs_client() {
-    # Check if there's already a frame available, reuse it if so
+    # Reuse an existing frame rather than piling up empty ones
     if emacsclient -n -e "(if (> (length (frame-list)) 1) 't)" 2>/dev/null | grep -q t; then
         emacsclient -n "$@"
     else
@@ -98,7 +97,6 @@ __emacs_client() {
     fi
 }
 
-# Emacs client aliases
 alias cedit='emacsclient -c -nw'    # Console edit
 alias wedit='__emacs_client'        # Window edit
 alias start_emacs='emacs --daemon'  # Start daemon
@@ -107,16 +105,15 @@ alias stop_emacs='emacsclient -e "(kill-emacs)"'  # Stop daemon
 # =============================================================================
 #                           Git Info
 # =============================================================================
-# A single `git status --porcelain=v2 --branch` call supplies branch, upstream
-# divergence and per-file state. Every git invocation is wrapped in `timeout`
-# so a slow filesystem or a huge repository can never stall the shell.
+# One `git status --porcelain=v2 --branch` call supplies everything below.
+# Every git invocation is wrapped in `timeout` so a slow filesystem or a huge
+# repository can never stall the shell.
 
 declare -A __git_large_repo_cache
 
-# Repositories with many packfiles get tighter timeouts and skip the untracked
-# scan, which is the expensive part of `git status`. The verdict is cached per
-# repository; the key must be an ABSOLUTE path, otherwise every repository
-# collides on the literal key ".git".
+# Many packfiles means a slow `git status`, so those repositories get tighter
+# timeouts and skip the untracked scan. The key must be an ABSOLUTE path, or
+# every repository collides on the literal key ".git".
 __is_large_repo() {
     local git_dir="$1"
 
@@ -157,8 +154,7 @@ __git_info_compute() {
     __gi_untracked=0
     __gi_stashed=0
 
-    # Skip only when genuinely inside the .git directory. A plain
-    # `*"/.git"*` glob also matches .github/, .gitlab/ and friends.
+    # A plain `*"/.git"*` glob would also match .github/, .gitlab/ and friends.
     [[ "$PWD" == */.git || "$PWD" == */.git/* ]] && return
 
     local git_dir
@@ -234,7 +230,6 @@ __git_info_compute() {
     __git_info_stash_count "${git_dir}" "${fast_timeout}"
 }
 
-# One-line summary for the current directory, bound to `gi` below.
 __gi() {
     __git_info_compute
 
@@ -271,8 +266,8 @@ alias gi='__gi'
 #                           Prompt sync
 # =============================================================================
 
-# Flush this shell's history and pull in what other shells wrote. Guarded so
-# that re-sourcing this file does not keep prepending to PROMPT_COMMAND.
+# Share history between shells. Guarded so re-sourcing this file does not keep
+# prepending to PROMPT_COMMAND.
 if [[ "${PROMPT_COMMAND}" != *"history -a; history -n;"* ]]; then
     PROMPT_COMMAND="history -a; history -n; ${PROMPT_COMMAND}"
 fi
@@ -281,6 +276,5 @@ fi
 #                           Private / Corporate
 # =============================================================================
 
-# A plain file in $HOME, untracked by this repository and untouched by any
-# make target. Sourced last so it can override anything above.
+# Untracked, and sourced last so it can override anything above.
 [[ -f "${HOME}/.bashrc.private" ]] && source "${HOME}/.bashrc.private"
