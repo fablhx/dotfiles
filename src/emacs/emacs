@@ -640,6 +640,10 @@ STATUS, CODE and MESSAGE are as for `compilation-exit-message-function'."
   :custom
   (recentf-max-saved-items 200)
   (recentf-max-menu-items 15)
+  ;; Seconds of idle time, rather than the default `mode': cleaning up stats
+  ;; every entry, and the list may name unreachable TRAMP paths that block for
+  ;; as long as the connection takes to time out.  Not on the startup path.
+  (recentf-auto-cleanup 300)
   :init
   (recentf-mode 1))
 
@@ -789,9 +793,15 @@ STATUS, CODE and MESSAGE are as for `compilation-exit-message-function'."
 ;; ACSL and cc-mode helpers live at top level rather than inside the
 ;; use-package :config below: defuns nested in a macro body are invisible to
 ;; the byte-compiler when it checks the :hook references above them.
-;; cc-mode is required at compile time only, for c-basic-offset and the
-;; c-set-* helpers.
-(eval-when-compile (require 'cc-mode))
+
+;; Declarations rather than `(eval-when-compile (require (quote cc-mode)))':
+;; `eval-when-compile' is plain `progn' in interpreted code, and this file is
+;; installed as source, so that require pulled all of cc-mode into every
+;; startup to satisfy the byte-compiler.
+(defvar c-basic-offset)
+(defvar c-default-style)
+(declare-function c-set-style "cc-styles")
+(declare-function c-set-offset "cc-vars")
 
 (defconst my-acsl-keywords
   '("assert" "assigns" "ensures" "slevel" "slevel_merge" "requires")
@@ -892,6 +902,9 @@ STATUS, CODE and MESSAGE are as for `compilation-exit-message-function'."
 
 (use-package python
   :ensure nil
+  ;; python.el is autoloaded from `auto-mode-alist'; without :defer, use-package
+  ;; would require it up front just to set the two options below.
+  :defer t
   :config
   (setq python-indent-offset 4
         python-indent-guess-indent-offset-verbose nil))
