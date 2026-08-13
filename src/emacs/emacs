@@ -52,6 +52,10 @@
   (error "This configuration requires Emacs 29.1 or newer (running %s)" emacs-version))
 
 (require 'use-package)
+;; use-package expands `:bind' into `bind-key' calls, which live in a library it
+;; only loads for its own macros; a byte-compiled copy of this file needs it
+;; loaded at run time.
+(require 'bind-key)
 (setq use-package-always-ensure t)
 
 ;; Keep `M-x customize' out of this file, which is tracked in git.
