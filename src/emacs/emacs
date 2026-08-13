@@ -425,17 +425,38 @@ left where it was."
 
 ;; Bound below with plain `define-key': use-package's :bind would autoload these
 ;; from compile.el, which does not define them.
+
+(defvar my-recompile-origin-buffer nil
+  "Buffer `my-interrupt-and-recompile' was called from, while it waits.")
+
+(defun my-recompile-when-finished (buffer _message)
+  "Restart the compilation displayed in BUFFER once the interrupted run exits."
+  (with-current-buffer buffer
+    (remove-hook 'compilation-finish-functions #'my-recompile-when-finished t))
+  (let ((origin my-recompile-origin-buffer))
+    (setq my-recompile-origin-buffer nil)
+    ;; Deferred out of the sentinel: `recompile' erases and reuses the very
+    ;; buffer compile.el is still writing the exit message into.
+    (run-at-time 0 nil
+                 (lambda ()
+                   (when (buffer-live-p origin)
+                     (with-current-buffer origin
+                       (recompile)))))))
+
 (defun my-interrupt-and-recompile ()
-  "Interrupt old compilation, if any, and recompile."
+  "Interrupt the running compilation, if any, and recompile.
+The compilation buffer is interrupted rather than killed: killing it prompts
+about the live process, throws away the arguments `recompile' repeats when
+called from that buffer, and races the process it just signalled."
   (interactive)
-  (let ((compilation-buffer (get-buffer "*compilation*")))
-    (when compilation-buffer
-      (with-current-buffer compilation-buffer
-        (when (get-buffer-process compilation-buffer)
-          (interrupt-process (get-buffer-process compilation-buffer))
-          (sleep-for 0.1)))  ; Brief pause to allow clean shutdown
-      (ignore-errors (kill-buffer compilation-buffer))))
-  (recompile))
+  (let* ((buffer (get-buffer "*compilation*"))
+         (process (and buffer (get-buffer-process buffer))))
+    (if (not process)
+        (recompile)
+      (setq my-recompile-origin-buffer (current-buffer))
+      (with-current-buffer buffer
+        (add-hook 'compilation-finish-functions #'my-recompile-when-finished nil t))
+      (interrupt-process process))))
 
 (defun my-compilation-hide (buffer)
   "Bury BUFFER and give back the windows showing it."
