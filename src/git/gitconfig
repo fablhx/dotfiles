@@ -30,10 +30,7 @@
 [column]
 	ui = auto
 [core]
-	# emacsclient reuses a running daemon; -a "" starts one when there is none.
-	# The quotes are escaped so git keeps them in the value - unescaped, git
-	# strips them and -a swallows the filename as its argument.
-	editor = emacsclient -c -nw -a \"\"
+	editor = emacs
 	# Overrides the XDG default (~/.config/git/ignore), so every global
 	# ignore rule must live in the file below or it is silently inactive.
 	excludesfile = ~/.gitignore
