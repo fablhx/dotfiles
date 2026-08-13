@@ -118,7 +118,7 @@ here can regenerate them, so they are the only part worth backing up.
 
 | Area | Files | Notes |
 | --- | --- | --- |
-| Shell | `src/shell/bashrc` | Includes the `gi` git-status helper |
+| Shell | `src/shell/bashrc` | Aliases, history and Emacs helpers. Warp supplies the prompt and completion, so neither is configured |
 | Editor | `src/emacs/emacs` | Emacs 29.1+, loaded as source |
 | Terminal | `src/config/warp-terminal/`, `src/tmux/tmux.conf` | Warp rewrites `settings.toml` itself, so UI changes appear as edits here |
 | Window manager | `src/xmonad/` | `Win+H` shows the key bindings; build output stays in `~/.xmonad` |
