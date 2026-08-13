@@ -328,56 +328,62 @@ ORIG-FUN untouched, along with ARGS."
 ;;                         Preprocessor Conditionals
 ;; =============================================================================
 
-(defun my-jump-to-matching-ifdef ()
-  "Jump between matching #if/#ifdef/#ifndef and #endif."
-  (interactive)
-  (let ((start-point (point)))
+(defconst my-cpp-conditional-regexp
+  "^[ \t]*#[ \t]*\\(ifdef\\|ifndef\\|if\\|elif\\|else\\|endif\\)\\_>"
+  "Match a conditional preprocessor directive at the start of a line.
+The longer keywords come first: the alternation is ordered, so a leading
+\"if\" would otherwise win against \"ifdef\".")
+
+(defun my-cpp-directive-at-point ()
+  "Return the conditional directive on the current line as a string, or nil."
+  (save-excursion
     (beginning-of-line)
+    (and (looking-at my-cpp-conditional-regexp)
+         (match-string 1))))
+
+(defun my-cpp-matching-position (direction)
+  "Return the position of the directive matching the one on the current line.
+DIRECTION is 1 to scan forward for the closing #endif, -1 to scan backward
+for the opening #if.  Returns nil when the block is unbalanced.  Point is
+left where it was."
+  (let* ((forward (> direction 0))
+         (search (if forward #'re-search-forward #'re-search-backward))
+         (depth 1)
+         (position nil))
+    (save-excursion
+      (beginning-of-line)
+      ;; Forward, the search would match the directive under point and count it
+      ;; a second time; backward it cannot, since the match would extend past
+      ;; point.
+      (when forward (forward-line 1))
+      (while (and (> depth 0)
+                  (funcall search my-cpp-conditional-regexp nil t))
+        (let ((start (match-beginning 0))
+              (keyword (match-string 1)))
+          (cond
+           ((equal keyword "endif")
+            (setq depth (if forward (1- depth) (1+ depth))))
+           ((member keyword '("if" "ifdef" "ifndef"))
+            (setq depth (if forward (1+ depth) (1- depth)))))
+          (when (zerop depth)
+            (setq position start)))))
+    position))
+
+(defun my-jump-to-matching-ifdef ()
+  "Jump between matching #if/#ifdef/#ifndef, #else/#elif and #endif."
+  (interactive)
+  (let ((directive (my-cpp-directive-at-point)))
     (cond
-     ((looking-at "^\\s-*#\\s-*\\(if\\|ifdef\\|ifndef\\)")
-      (let ((level 1))
-        (while (and (> level 0)
-                    (re-search-forward "^\\s-*#\\s-*\\(if\\|ifdef\\|ifndef\\|endif\\)" nil t))
-          (beginning-of-line)
-          (cond
-           ((looking-at "^\\s-*#\\s-*\\(if\\|ifdef\\|ifndef\\)")
-            (setq level (1+ level)))
-           ((looking-at "^\\s-*#\\s-*endif")
-            (setq level (1- level))))
-          (unless (zerop level)
-            (forward-line)))
-        (when (zerop level)
-          (beginning-of-line))))
-
-     ((looking-at "^\\s-*#\\s-*endif")
-      (let ((level 1))
-        (while (and (> level 0)
-                    (re-search-backward "^\\s-*#\\s-*\\(if\\|ifdef\\|ifndef\\|endif\\)" nil t))
-          (cond
-           ((looking-at "^\\s-*#\\s-*endif")
-            (setq level (1+ level)))
-           ((looking-at "^\\s-*#\\s-*\\(if\\|ifdef\\|ifndef\\)")
-            (setq level (1- level)))))))
-
-     ((looking-at "^\\s-*#\\s-*\\(else\\|elif\\)")
-      (let ((level 1)
-            (found nil))
-        (while (and (> level 0) (not found)
-                    (re-search-backward "^\\s-*#\\s-*\\(if\\|ifdef\\|ifndef\\|endif\\)" nil t))
-          (cond
-           ((looking-at "^\\s-*#\\s-*endif")
-            (setq level (1+ level)))
-           ((looking-at "^\\s-*#\\s-*\\(if\\|ifdef\\|ifndef\\)")
-            (setq level (1- level))
-            (when (zerop level)
-              (setq found t)))))
-        (unless found
-          (goto-char start-point)
-          (message "No matching #if found"))))
-
+     ((null directive)
+      (message "Not on a preprocessor directive"))
+     ((member directive '("if" "ifdef" "ifndef"))
+      (if-let* ((target (my-cpp-matching-position 1)))
+          (goto-char target)
+        (message "No matching #endif found")))
      (t
-      (goto-char start-point)
-      (message "Not on a preprocessor directive")))))
+      (if-let* ((target (my-cpp-matching-position -1)))
+          (goto-char target)
+        (message "No matching #if found"))))))
 
 ;; =============================================================================
 ;;                                  Windows
