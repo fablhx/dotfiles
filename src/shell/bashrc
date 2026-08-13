@@ -3,6 +3,14 @@
 #                             (Warp Terminal / Linux)
 # =============================================================================
 
+# sshd and rshd hand a non-interactive shell this file too, where every line
+# below is either wasted or actively harmful: stray output on stdout corrupts
+# scp, sftp and rsync transports.
+case $- in
+    *i*) ;;
+      *) return ;;
+esac
+
 [[ $TERM == "dumb" ]] && PS1='$ ' && return
 
 # =============================================================================
