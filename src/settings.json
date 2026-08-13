@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash"
+    ]
+  },
+  "model": "opus[1m]",
+  "statusLine": {
+    "type": "command",
+    "command": "bash /home/flheureux/.claude/statusline-command.sh"
+  },
+  "enabledPlugins": {
+    "warp@claude-code-warp": true,
+    "clangd-lsp@claude-plugins-official": true,
+    "rust-analyzer-lsp@claude-plugins-official": true
+  },
+  "extraKnownMarketplaces": {
+    "claude-code-warp": {
+      "source": {
+        "source": "github",
+        "repo": "warpdotdev/claude-code-warp"
+      }
+    }
+  },
+  "effortLevel": "xhigh",
+  "theme": "auto",
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  }
+}

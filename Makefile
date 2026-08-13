@@ -1,18 +1,11 @@
 # =============================================================================
 #                        Config files Management
 # =============================================================================
-# src/ is the deployed configuration, symlinked straight into $HOME. There is
-# no staging copy: the file Emacs or bash reads *is* the file in this
-# repository, so "edited but never rebuilt" cannot happen and `make build` is
-# only ever creating links and recompiling xmonad.
+# src/ is symlinked straight into $HOME; there is no staging copy.
 #
-# Every entry below links a FILE, never a directory. Applications own their
-# own directories (~/.config/warp-terminal, ~/.xmonad) and write runtime state
-# into them; replacing one with a symlink either destroys that state or, when
-# the directory already exists, silently creates the link *inside* it.
-#
-# Recipes run under bash with `set -e` and .ONESHELL, so a failing step aborts
-# the target instead of being swallowed by a chain of `if`s.
+# Every entry links a FILE, never a directory. Applications own their own
+# directories and write state into them, so linking one either destroys that
+# state or, if it already exists, creates the link inside it.
 # =============================================================================
 
 SHELL := /bin/bash
@@ -21,7 +14,6 @@ SHELL := /bin/bash
 
 CONFIG_DIR := $(CURDIR)
 
-# Colors for status output
 GREEN  := \033[0;32m
 ORANGE := \033[0;33m
 RED    := \033[0;31m
@@ -39,9 +31,8 @@ LINKS := \
   config/warp-terminal/keybindings.yaml:.config/warp-terminal/keybindings.yaml \
   config/warp-terminal/settings.toml:.config/warp-terminal/settings.toml
 
-# Machine-local, never tracked here. Plain files in $HOME: they are read
-# through no indirection, survive every target below, and are the only part of
-# the setup this repository cannot recreate.
+# Machine-local, never tracked, untouched by every target below. The only part
+# of the setup this repository cannot recreate.
 PRIVATE_FILES := .bashrc.private .gitconfig.private
 
 .DEFAULT_GOAL := usage
@@ -61,18 +52,12 @@ usage help:
 	@echo "Private files, kept in \$$HOME and never tracked:"
 	@echo "  $(PRIVATE_FILES)"
 
-# -----------------------------------------------------------------------------
-# Shell helpers emitted into the recipes that need them.
+# link_path refuses anything that is not already a symlink, since `ln -sfn`
+# against a real directory links inside it. It returns rather than exits, so a
+# skipped link does not abort the build.
 #
-# link_path refuses to touch anything that is not already a symlink: `ln -sfn`
-# against a real directory creates the link inside it instead of replacing it.
-# A skipped link must not abort the build, so this returns rather than exits.
-#
-# prune_foreign removes symlinks that point into this repository but are not in
-# LINKS. That is what a file deleted from src/ leaves behind, and without it a
-# removed tool stays deployed forever - ~/.zshrc and ~/.valgrindrc outlived
-# their sources by weeks that way.
-# -----------------------------------------------------------------------------
+# prune_foreign removes links into this repository that LINKS no longer claims,
+# which is what deleting a file from src/ leaves behind.
 define SHELL_HELPERS
 link_path() {
   local target="$$1" link="$$2"
@@ -127,8 +112,8 @@ build:
 	done
 	prune_foreign
 
-	# Created on demand rather than by a one-shot first-run target, which
-	# ossifies: any later change to it never reaches an existing install.
+	# On demand, not from a first-run target: that ossifies, and later changes
+	# to it never reach an existing install.
 	if [ ! -f "$(HOME)/.gitconfig.private" ]; then
 	  if [ -t 0 ]; then
 	    echo "Creating $(HOME)/.gitconfig.private"
@@ -146,8 +131,8 @@ build:
 	  echo -e "  $(GREEN)created$(NC) $(HOME)/.bashrc.private"
 	fi
 
-	# xmonad reads ~/.xmonad/xmonad.hs (a symlink into src/) and writes its
-	# build output beside it, which is why that directory is not itself linked.
+	# xmonad writes its build output beside xmonad.hs, which is why ~/.xmonad
+	# is a real directory rather than a link.
 	if command -v xmonad >/dev/null 2>&1; then
 	  echo "Compiling xmonad config..."
 	  xmonad --recompile || echo -e "  $(RED)Warning$(NC): xmonad recompile failed"
@@ -191,13 +176,10 @@ status:
 	  fi
 	done
 
-# Static checks over src/, in a scratch directory so nothing is deployed and no
-# .elc lands next to the sources. Emacs is not byte-compiled during build any
-# more, but compiling here still catches errors before they reach a live init.
-#
-# Byte-compilation fails the target on errors only. Warnings are printed and
-# counted but tolerated, because a package update can introduce one that is not
-# ours to fix; add byte-compile-error-on-warn to tighten that.
+# Static checks over src/, in a scratch directory so no .elc lands beside the
+# sources. Byte-compilation fails on errors only: warnings are counted but
+# tolerated, since a package update can introduce one that is not ours to fix.
+# Add byte-compile-error-on-warn to tighten that.
 lint:
 	@failed=0
 	tmp=$$(mktemp -d)
@@ -205,8 +187,7 @@ lint:
 
 	echo "bashrc:"
 	if command -v shellcheck >/dev/null 2>&1; then
-	  # SC1091 only reports that bash-completion and .bashrc.private are not
-	  # readable from here; both exist at runtime.
+	  # SC1091 only reports sourced files missing at lint time; both exist at runtime.
 	  if shellcheck -s bash -e SC1091 src/shell/bashrc; then
 	    echo -e "  $(GREEN)ok$(NC)      shellcheck"
 	  else
@@ -256,9 +237,8 @@ lint:
 
 	echo "tmux:"
 	if command -v tmux >/dev/null 2>&1; then
-	  # source-file against an already running server is the only form that
-	  # reports a bad option to the caller: `tmux -f bad.conf new-session`
-	  # shows the error inside the new session and still exits 0.
+	  # The only form that reports a bad option to the caller: `tmux -f bad.conf
+	  # new-session` shows it inside the session and still exits 0.
 	  tmux -f /dev/null -S "$$tmp/tmux.sock" new-session -d -s lint
 	  if out=$$(tmux -S "$$tmp/tmux.sock" source-file src/tmux/tmux.conf 2>&1); then
 	    echo -e "  $(GREEN)ok$(NC)      config loads"
@@ -275,8 +255,8 @@ lint:
 	if git config --list --file src/git/gitconfig >/dev/null 2>&1; then
 	  echo -e "  $(GREEN)ok$(NC)      gitconfig parses"
 	else
-	  # || true: this rerun exists only to surface the parse error, and under
-	  # set -e its non-zero status would abort the target before the summary.
+	  # || true: this rerun only surfaces the error; set -e would otherwise abort
+	  # before the summary.
 	  git config --list --file src/git/gitconfig 2>&1 >/dev/null | sed 's/^/  /' || true
 	  echo -e "  $(RED)fail$(NC)    gitconfig parses"; failed=1
 	fi
@@ -289,9 +269,8 @@ lint:
 	  exit 1
 	fi
 
-# Removes only what this repository installed. The private files in $HOME, the
-# Emacs packages in ~/.emacs.d and the compiled xmonad in ~/.xmonad are not
-# ours to delete and are left alone.
+# Removes only what this repository installed; ~/.emacs.d, ~/.xmonad and the
+# private files are not ours to delete.
 clean:
 	@echo "Removing symlinks..."
 	$(SHELL_HELPERS)
