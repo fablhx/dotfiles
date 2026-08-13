@@ -5,16 +5,17 @@
 
 input=$(cat)
 
+# A malformed payload must not put jq's parse error where the status line goes.
 mapfile -t fields < <(
     jq -r '
-        .model.display_name,
+        (.model.display_name // "?"),
         (.context_window.used_percentage // 0 | floor),
         (.workspace.current_dir // .cwd // ".")
-    ' <<<"$input"
+    ' <<<"$input" 2>/dev/null
 )
-model=${fields[0]}
-pct=${fields[1]}
-cwd=${fields[2]}
+model=${fields[0]:-?}
+pct=${fields[1]:-0}
+cwd=${fields[2]:-.}
 
 [[ "$pct" =~ ^[0-9]+$ ]] || pct=0
 (( pct > 100 )) && pct=100
@@ -62,7 +63,7 @@ printf -v e '%*s' "$empty" ''
 bar="${f// /$FULL}${e// /$LIGHT}"
 
 branch=""
-if git -C "$cwd" --no-optional-locks rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+if timeout 0.3s git -C "$cwd" --no-optional-locks rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     branch=$(timeout 0.3s git -C "$cwd" --no-optional-locks branch --show-current 2>/dev/null)
     if [[ -z "$branch" ]]; then
         sha=$(timeout 0.3s git -C "$cwd" --no-optional-locks rev-parse --short HEAD 2>/dev/null)

@@ -16,6 +16,9 @@ CONFIG_DIR := $(CURDIR)
 
 # <path under src/>:<path under $HOME>
 LINKS := \
+  claude/CLAUDE.md:.claude/CLAUDE.md \
+  claude/settings.json:.claude/settings.json \
+  claude/statusline-command.sh:.claude/statusline-command.sh \
   shell/bashrc:.bashrc \
   clang-format/clang-format:.clang-format \
   emacs/emacs:.emacs \
@@ -25,6 +28,8 @@ LINKS := \
   xmonad/xmonad.hs:.xmonad/xmonad.hs \
   config/warp-terminal/keybindings.yaml:.config/warp-terminal/keybindings.yaml \
   config/warp-terminal/settings.toml:.config/warp-terminal/settings.toml
+
+SHELL_SOURCES := src/shell/bashrc src/claude/statusline-command.sh
 
 # Machine-local, never tracked, untouched by every target below. The only part
 # of the setup this repository cannot recreate.
@@ -70,18 +75,26 @@ link_path() {
 }
 
 # Removes links into this repository that LINKS no longer claims, which is what
-# deleting a file from src/ leaves behind.
+# deleting a file from src/ leaves behind. The directories searched are derived
+# from LINKS, so adding a destination under a new directory extends the sweep
+# with it; ~/.config is included as well, to catch links left by an application
+# that is no longer configured here at all.
 prune_foreign() {
-  local managed link
+  local managed dirs dir link
   managed=$$(for pair in $(LINKS); do echo "$$HOME/$${pair#*:}"; done)
+  dirs=$$( { echo "$$HOME"; echo "$$HOME/.config"
+             for pair in $(LINKS); do dirname "$$HOME/$${pair#*:}"; done
+             for d in "$$HOME"/.config/*/; do echo "$${d%/}"; done; } | sort -u)
   shopt -s nullglob
-  for link in "$$HOME"/.[!.]* "$$HOME"/.config/* "$$HOME"/.config/*/*; do
-    [ -L "$$link" ] || continue
-    [[ "$$(readlink -m "$$link")" == "$(CONFIG_DIR)"/* ]] || continue
-    if ! grep -Fxq "$$link" <<< "$$managed"; then
-      rm -f "$$link"
-      say pruned "$$link (no longer in src/)"
-    fi
+  for dir in $$dirs; do
+    for link in "$$dir"/* "$$dir"/.[!.]*; do
+      [ -L "$$link" ] || continue
+      [[ "$$(readlink -m "$$link")" == "$(CONFIG_DIR)"/* ]] || continue
+      if ! grep -Fxq "$$link" <<< "$$managed"; then
+        rm -f "$$link"
+        say pruned "$$link (no longer in src/)"
+      fi
+    done
   done
   shopt -u nullglob
 }
@@ -185,12 +198,12 @@ lint:
 	  fi
 	}
 
-	echo "bashrc:"
+	echo "shell:"
 	# SC1091 only reports sourced files missing at lint time; both exist at runtime.
 	if have shellcheck; then
-	  try shellcheck shellcheck -s bash -e SC1091 src/shell/bashrc
+	  try shellcheck shellcheck -s bash -e SC1091 $(SHELL_SOURCES)
 	fi
-	try "bash -n" bash -n src/shell/bashrc
+	for f in $(SHELL_SOURCES); do try "bash -n $$(basename "$$f")" bash -n "$$f"; done
 
 	echo "emacs:"
 	if have emacs; then

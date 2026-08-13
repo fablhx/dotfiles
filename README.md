@@ -19,7 +19,7 @@ state into them.
 
 ```bash
 sudo apt update && sudo apt install \
-  bat eza fd-find git git-lfs ripgrep tree xclip xdg-utils \
+  bat eza fd-find git git-lfs jq ripgrep tree xclip xdg-utils \
   emacs hunspell hunspell-en-us hunspell-fr hunspell-fr-classical \
   clang-format clangd \
   tmux \
@@ -40,7 +40,8 @@ make build
 > **On a machine with existing dotfiles**, move aside anything already present
 > as a real file: `~/.bashrc ~/.emacs ~/.gitconfig ~/.gitignore ~/.tmux.conf`
 > `~/.clang-format`, plus `keybindings.yaml` and `settings.toml` under
-> `~/.config/warp-terminal`.
+> `~/.config/warp-terminal`, and `CLAUDE.md`, `settings.json` and
+> `statusline-command.sh` under `~/.claude`.
 >
 > The build prints `skip` rather than replacing a non-symlink, so nothing is
 > destroyed — but that config is then not deployed. Anything `make status`
@@ -123,6 +124,7 @@ here can regenerate them, so they are the only part worth backing up.
 | Window manager | `src/xmonad/` | `Win+H` shows the key bindings; build output stays in `~/.xmonad` |
 | Version control | `src/git/{gitconfig,gitignore}` | `core.excludesfile` points at `gitignore`, overriding git's XDG default, so all global rules belong there |
 | Formatting | `src/clang-format/clang-format` | |
+| Claude Code | `src/claude/` | `settings.json`, global `CLAUDE.md` and the status line. `~/.claude` holds session state, so only these three files are linked |
 
 ## Development tools
 

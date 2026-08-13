@@ -2,3 +2,5 @@
 # (~/.config/git/ignore): every global rule must live in this file.
 .DS_Store
 **/.claude/settings.local.json
+
+**/.claude/.cc-writes/
