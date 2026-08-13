@@ -699,12 +699,13 @@ STATUS, CODE and MESSAGE are as for `compilation-exit-message-function'."
         dumb-jump-prefer-searcher 'rg)
   :hook (c-mode . my-dumb-jump-c-setup))
 
-;; Help for key bindings
+;; Help for key bindings.  Deferred: it only ever draws after a prefix key has
+;; been held for `which-key-idle-delay'.
 (use-package which-key
   :ensure t
-  :config
-  (which-key-mode)
-  (setq which-key-idle-delay 0.5))
+  :defer 1
+  :custom (which-key-idle-delay 0.5)
+  :config (which-key-mode))
 
 ;; Settings for modern completion
 (use-package vertico
@@ -727,16 +728,18 @@ STATUS, CODE and MESSAGE are as for `compilation-exit-message-function'."
 ;;                           Development Tools
 ;; =============================================================================
 
-;; Project-specific formatting
+;; Project-specific formatting.  Loaded eagerly: it has to be watching before
+;; the files named on the command line are visited.
 (use-package dtrt-indent
   :ensure t
   :config
   (dtrt-indent-global-mode 1))
 
-;; Completion
+;; Completion.  Deferred off the startup path: `global-company-mode' switches
+;; on the buffers that already exist when it finally runs.
 (use-package company
   :ensure t
-  :hook (after-init . global-company-mode)
+  :defer 0.5
   ;; Improved completion cycling. Declared through :bind rather than
   ;; define-key in :config so the keymap is bound lazily and the compiler is
   ;; not asked about commands from a package it has not loaded.
@@ -749,7 +752,9 @@ STATUS, CODE and MESSAGE are as for `compilation-exit-message-function'."
   (company-idle-delay 0.2)
   (company-dabbrev-downcase nil)
   (company-tooltip-align-annotations t)
-  (company-tooltip-limit 10))
+  (company-tooltip-limit 10)
+  :config
+  (global-company-mode))
 
 (use-package compile
   :ensure nil
@@ -1148,14 +1153,18 @@ STATUS, CODE and MESSAGE are as for `compilation-exit-message-function'."
  '(whitespace-trailing ((t (:foreground "red" :background "yellow")))))
 
 ;; M-x nerd-icons-install-fonts
+;; Deferred: it is the heaviest package here, and the mode line it replaces is
+;; already on screen and correct while it loads.
 (use-package doom-modeline
   :ensure t
-  :init (doom-modeline-mode 1))
+  :defer 0.1
+  :config (doom-modeline-mode 1))
 
 ;; No display-graphic-p guard: under `emacs --daemon' it is nil at startup, so
 ;; the guard disabled icons for every frame emacsclient created later.
 (use-package nerd-icons
-  :ensure t)
+  :ensure t
+  :defer t)
 
 (use-package whitespace
   :ensure nil
