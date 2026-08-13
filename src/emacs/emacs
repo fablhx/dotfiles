@@ -44,12 +44,42 @@
     (tsx        . ("https://github.com/tree-sitter/tree-sitter-typescript" nil "tsx/src")))
   "Grammar sources, pinned where a revision matters for this Emacs ABI.")
 
+(defconst my-treesit-file-modes
+  '(("\\.ts\\'"    typescript typescript-ts-mode typescript-mode)
+    ("\\.tsx\\'"   tsx        tsx-ts-mode        typescript-mode)
+    ("\\.ya?ml\\'" yaml       yaml-ts-mode       conf-mode))
+  "File types served by a tree-sitter mode when its grammar is installed.
+Each entry is (REGEXP LANGUAGE TS-MODE FALLBACK-MODE).")
+
 (require 'treesit nil t)
 
 (when (treesit-available-p)
   (dolist (entry my-treesit-grammars)
     (add-to-list 'treesit-language-source-alist
                  (cons (car entry) (cdr entry)))))
+
+(defun my-treesit-mode-if-available (lang ts-mode fallback-mode)
+  "Return TS-MODE when grammar LANG is usable, else FALLBACK-MODE."
+  (if (and (treesit-available-p)
+           (treesit-language-available-p lang))
+      ts-mode
+    fallback-mode))
+
+(defun my-set-auto-mode (regexp mode)
+  "Bind REGEXP to MODE in `auto-mode-alist', replacing any entry for REGEXP.
+Replacing rather than pushing is what lets the registration below be re-run
+after a grammar is installed."
+  (setq auto-mode-alist
+        (cons (cons regexp mode)
+              (assoc-delete-all regexp auto-mode-alist))))
+
+(defun my-treesit-register-auto-modes ()
+  "Point every `my-treesit-file-modes' entry at the best mode available now."
+  (dolist (entry my-treesit-file-modes)
+    (my-set-auto-mode (nth 0 entry)
+                      (my-treesit-mode-if-available (nth 1 entry)
+                                                    (nth 2 entry)
+                                                    (nth 3 entry)))))
 
 (defun my-install-treesit-grammars ()
   "Compile and install every grammar in `my-treesit-grammars'.
@@ -67,14 +97,10 @@ tens of seconds."
         (condition-case err
             (treesit-install-language-grammar lang)
           (error (message "Failed to install %s: %s"
-                          lang (error-message-string err))))))))
-
-(defun my-treesit-mode-if-available (lang ts-mode fallback-mode)
-  "Return TS-MODE when grammar LANG is usable, else FALLBACK-MODE."
-  (if (and (treesit-available-p)
-           (treesit-language-available-p lang))
-      ts-mode
-    fallback-mode))
+                          lang (error-message-string err)))))))
+  ;; Hand the affected file types over to their tree-sitter modes now, so a
+  ;; freshly installed grammar takes effect without restarting Emacs.
+  (my-treesit-register-auto-modes))
 
 ;; =============================================================================
 ;;                                Remote Hosts
@@ -1051,24 +1077,11 @@ STATUS, CODE and MESSAGE are as for `compilation-exit-message-function'."
   :if (not (and (treesit-available-p)
                 (treesit-language-available-p 'typescript))))
 
-(add-to-list 'auto-mode-alist
-             (cons "\\.ts\\'"
-                   (my-treesit-mode-if-available
-                    'typescript 'typescript-ts-mode 'typescript-mode)))
-(add-to-list 'auto-mode-alist
-             (cons "\\.tsx\\'"
-                   (my-treesit-mode-if-available
-                    'tsx 'tsx-ts-mode 'typescript-mode)))
-
 (use-package make-mode
   :ensure nil
   :mode "Makefile\\.inc\\'")
 
-;; yaml-ts-mode cannot activate without its grammar, so only claim .yaml/.yml
-;; once it is installed.
-(add-to-list 'auto-mode-alist
-             (cons "\\.ya?ml\\'"
-                   (my-treesit-mode-if-available 'yaml 'yaml-ts-mode 'conf-mode)))
+(my-treesit-register-auto-modes)
 
 (add-to-list 'auto-mode-alist '("/emacs\\'" . emacs-lisp-mode))
 
