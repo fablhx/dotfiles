@@ -437,14 +437,26 @@ left where it was."
       (ignore-errors (kill-buffer compilation-buffer))))
   (recompile))
 
-(defun new-compilation-window-hook ()
-  "Create a new window for compilation buffer if not already visible."
-  (unless (get-buffer-window "*compilation*")
-    (let ((total-height (window-height)))
-      (when (> total-height 20)
-        (split-window-below (- total-height 15))))))
+(defun my-compilation-hide (buffer)
+  "Bury BUFFER and give back the windows showing it."
+  (when (buffer-live-p buffer)
+    (dolist (window (get-buffer-window-list buffer nil t))
+      ;; quit-window, not bury-buffer plus delete-window: it restores whatever
+      ;; the window showed before, and cannot leave a stray window behind when
+      ;; the compilation buffer happens to be the selected one.
+      (quit-window nil window))))
 
-(add-hook 'compilation-mode-hook #'new-compilation-window-hook)
+(defun my-compilation-bury-on-success (status code message)
+  "Hide a compilation that ended well, a second after it did.
+STATUS, CODE and MESSAGE are as for `compilation-exit-message-function'."
+  (when (and (eq status 'exit)
+             (zerop code)
+             ;; grep, rg and the other compilation-derived modes keep their
+             ;; results on screen; only a build hides itself.
+             (eq major-mode 'compilation-mode))
+    (let ((buffer (current-buffer)))
+      (run-with-timer 1 nil #'my-compilation-hide buffer)))
+  (cons message code))
 
 ;; =============================================================================
 ;;                           Personal Keymap
@@ -684,18 +696,16 @@ left where it was."
   (compilation-window-height 15)
   ;; recompile really does live in compile.el, so this autoload is correct.
   :bind ("C-c r" . recompile)
+  :init
+  ;; display-buffer-alist rather than a `compilation-mode-hook' that splits the
+  ;; frame itself: the hook runs for every compilation-derived mode, so grep and
+  ;; rg results opened a window nobody asked for.
+  (add-to-list 'display-buffer-alist
+               '("\\`\\*compilation\\*\\'"
+                 (display-buffer-reuse-window display-buffer-below-selected)
+                 (window-height . 15)))
   :config
-  (setq compilation-exit-message-function
-        (lambda (status code msg)
-          (when (and (eq status 'exit) (zerop code))
-            (let ((comp-buf (current-buffer)))
-              (run-with-timer 1 nil
-                              (lambda ()
-                                (when (buffer-live-p comp-buf)
-                                  (bury-buffer comp-buf)
-                                  (when-let ((window (get-buffer-window comp-buf)))
-                                    (delete-window window)))))))
-          (cons msg code))))
+  (setq compilation-exit-message-function #'my-compilation-bury-on-success))
 
 ;; ANSI color support in compilation
 (use-package ansi-color
