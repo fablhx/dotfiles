@@ -85,6 +85,13 @@
 [mergetool "ediff"]
 	cmd = emacs --eval \"(ediff-merge-files-with-ancestor \\\"$LOCAL\\\" \\\"$REMOTE\\\" \\\"$BASE\\\" nil \\\"$MERGED\\\")\"
 [filter "lfs"]
+	# Requires the git-lfs package; it is in the README prerequisites because
+	# of this section. Without the binary, any repository with an LFS
+	# .gitattributes fails outright: a `process` filter that cannot start is
+	# fatal, and required = false does not soften that. Dropping the section
+	# instead would be worse - git would then store and check out the pointer
+	# text as if it were the real content, with no error at all.
+	#
 	# The filter-process form is the current git-lfs interface: one long-lived
 	# process instead of a fork per file, and "--" so filenames starting with
 	# a dash are not parsed as options.

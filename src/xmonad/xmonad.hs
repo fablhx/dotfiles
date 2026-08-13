@@ -1,5 +1,3 @@
-{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, TypeSynonymInstances, FlexibleContexts, NoMonomorphismRestriction #-}
-
 import XMonad
 
 import XMonad.Actions.CycleWS
@@ -229,8 +227,8 @@ help = unlines
   , ""
   , "-- Layout management:"
   , ""
-  , "-- Ctrl+Win+Alt+Left/Right     Shrink/expand master area"
-  , "-- Ctrl+Win+Alt+Up/Down        Shrink/expand mirror-master area"
+  , "-- Ctrl+Win+Alt+Left/Right     Expand/shrink master area"
+  , "-- Ctrl+Win+Alt+Up/Down        Expand/shrink mirror-master area"
   , "-- Ctrl+Win+Alt+Space          Cycle layouts"
   , "-- Win+,                       Increase number windows master"
   , "-- Win+.                       Decrease number windows master"

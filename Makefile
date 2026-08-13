@@ -58,6 +58,7 @@ usage help:
 	@echo "  make build     - Build and install config files"
 	@echo "  make status    - Show current config files status"
 	@echo "  make check     - Report src/ vs _build/ drift"
+	@echo "  make lint      - Static-check src/ (shellcheck, byte-compile, ghc, tmux)"
 	@echo "  make clean     - Remove installed symlinks (keeps _build)"
 	@echo "  make distclean - clean + delete _build (emacs packages, compiled xmonad)"
 	@echo ""
@@ -164,8 +165,11 @@ build: $(BUILD_DIR)
 	if [ -f "$(BUILD_DIR)/emacs" ] && command -v emacs >/dev/null 2>&1; then
 	  echo "Byte-compiling emacs config..."
 	  rm -f "$(BUILD_DIR)/emacs.elc" "$(HOME)/.emacs.elc"
+	  # batch-byte-compile, not --eval '(byte-compile-file ...)': the latter
+	  # returns nil on failure but still exits 0, so the warning below could
+	  # never fire and a broken config looked like a successful build.
 	  emacs --batch -f package-initialize \
-	        --eval '(byte-compile-file "$(BUILD_DIR)/emacs")' \
+	        -f batch-byte-compile "$(BUILD_DIR)/emacs" \
 	    || echo "Warning: Emacs compilation failed (falling back to source config)"
 	  if [ -f "$(BUILD_DIR)/emacs.elc" ]; then
 	    link_path "$(BUILD_DIR)/emacs.elc" "$(HOME)/.emacs.elc"
@@ -327,6 +331,107 @@ check:
 	  echo -e "  $(GREEN)up to date$(NC)"
 	else
 	  echo    "  run 'make build'"
+	fi
+
+# Static checks over src/, in a scratch directory so nothing is deployed and
+# no .elc lands next to the sources. Distinct from `check`, which only compares
+# src/ against the deployed copy: that notices a change was never built, this
+# notices the change was wrong. Every tool is optional and reports skip when
+# absent, so this stays runnable on a machine that has only some of them.
+#
+# Byte-compilation fails the target on errors only. Warnings are printed and
+# counted but tolerated, because a package update can introduce one that is not
+# ours to fix; add byte-compile-error-on-warn to tighten that.
+.PHONY: lint
+lint:
+	@failed=0
+	tmp=$$(mktemp -d)
+	trap 'rm -rf "$$tmp"' EXIT
+
+	echo "bashrc:"
+	if command -v shellcheck >/dev/null 2>&1; then
+	  # SC1091 only reports that bash-completion and bashrc.private are not
+	  # readable from here; both exist at runtime.
+	  if shellcheck -s bash -e SC1091 src/shell/bashrc; then
+	    echo -e "  $(GREEN)ok$(NC)      shellcheck"
+	  else
+	    echo -e "  $(RED)fail$(NC)    shellcheck"; failed=1
+	  fi
+	else
+	  echo -e "  $(ORANGE)skip$(NC)    shellcheck not installed"
+	fi
+	if bash -n src/shell/bashrc; then
+	  echo -e "  $(GREEN)ok$(NC)      bash -n"
+	else
+	  echo -e "  $(RED)fail$(NC)    bash -n"; failed=1
+	fi
+
+	echo "emacs:"
+	if command -v emacs >/dev/null 2>&1; then
+	  cp src/emacs/emacs "$$tmp/init.el"
+	  if out=$$(emacs --batch -f package-initialize \
+	                  -f batch-byte-compile "$$tmp/init.el" 2>&1); then
+	    n=$$(printf '%s' "$$out" | grep -c 'Warning:' || true)
+	    if [ "$$n" -eq 0 ]; then
+	      echo -e "  $(GREEN)ok$(NC)      byte-compile"
+	    else
+	      printf '%s\n' "$$out" | grep 'Warning:' | sed 's|^.*/init.el:|  src/emacs/emacs:|'
+	      echo -e "  $(ORANGE)warn$(NC)    byte-compile: $$n warning(s)"
+	    fi
+	  else
+	    printf '%s\n' "$$out"
+	    echo -e "  $(RED)fail$(NC)    byte-compile"; failed=1
+	  fi
+	else
+	  echo -e "  $(ORANGE)skip$(NC)    emacs not installed"
+	fi
+
+	echo "xmonad:"
+	if command -v ghc >/dev/null 2>&1; then
+	  cp src/xmonad/xmonad.hs "$$tmp/"
+	  if (cd "$$tmp" && ghc --make xmonad.hs -fno-code -outputdir out \
+	        -Wunused-imports -Werror=unused-imports >/dev/null); then
+	    echo -e "  $(GREEN)ok$(NC)      ghc type-check"
+	  else
+	    echo -e "  $(RED)fail$(NC)    ghc type-check"; failed=1
+	  fi
+	else
+	  echo -e "  $(ORANGE)skip$(NC)    ghc not installed"
+	fi
+
+	echo "tmux:"
+	if command -v tmux >/dev/null 2>&1; then
+	  # source-file against an already running server is the only form that
+	  # reports a bad option to the caller: `tmux -f bad.conf new-session`
+	  # shows the error inside the new session and still exits 0.
+	  tmux -f /dev/null -S "$$tmp/tmux.sock" new-session -d -s lint
+	  if out=$$(tmux -S "$$tmp/tmux.sock" source-file src/tmux/tmux.conf 2>&1); then
+	    echo -e "  $(GREEN)ok$(NC)      config loads"
+	  else
+	    printf '%s\n' "$$out" | sed 's/^/  /'
+	    echo -e "  $(RED)fail$(NC)    config loads"; failed=1
+	  fi
+	  tmux -S "$$tmp/tmux.sock" kill-server 2>/dev/null || true
+	else
+	  echo -e "  $(ORANGE)skip$(NC)    tmux not installed"
+	fi
+
+	echo "git:"
+	if git config --list --file src/git/gitconfig >/dev/null 2>&1; then
+	  echo -e "  $(GREEN)ok$(NC)      gitconfig parses"
+	else
+	  # || true: this rerun exists only to surface the parse error, and under
+	  # set -e its non-zero status would abort the target before the summary.
+	  git config --list --file src/git/gitconfig 2>&1 >/dev/null | sed 's/^/  /' || true
+	  echo -e "  $(RED)fail$(NC)    gitconfig parses"; failed=1
+	fi
+
+	echo ""
+	if [ "$$failed" -eq 0 ]; then
+	  echo -e "$(GREEN)Lint passed.$(NC)"
+	else
+	  echo -e "$(RED)Lint failed.$(NC)"
+	  exit 1
 	fi
 
 # Removes the symlinks only. _build (emacs packages, compiled xmonad, the

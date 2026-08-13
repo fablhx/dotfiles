@@ -525,7 +525,6 @@ ORIG-FUN untouched, along with ARGS."
   (global-auto-revert-mode t)     ; Auto reload changed files
   (save-place-mode t)             ; Remember cursor position
   (savehist-mode 1)               ; Persist minibuffer history
-  (recentf-mode 1)                ; Track recent files
 
   ;; Scrolling behavior
   (setq scroll-conservatively 10000
@@ -562,11 +561,18 @@ ORIG-FUN untouched, along with ARGS."
         `((".*" ,(expand-file-name "auto-save/" user-emacs-directory) t)))
   (let ((auto-save-dir (expand-file-name "auto-save/" user-emacs-directory)))
     (unless (file-directory-p auto-save-dir)
-      (make-directory auto-save-dir t)))
+      (make-directory auto-save-dir t))))
 
-  ;; Recentf settings
-  (setq recentf-max-saved-items 200
-        recentf-max-menu-items 15))
+;; recentf's own block, so its variables are declared by the time they are set.
+;; use-package applies :custom before :init, so the list is already sized
+;; correctly when recentf-mode loads the saved file.
+(use-package recentf
+  :ensure nil
+  :custom
+  (recentf-max-saved-items 200)
+  (recentf-max-menu-items 15)
+  :init
+  (recentf-mode 1))
 
 ;; =============================================================================
 ;;                           Search and Navigation
@@ -658,17 +664,19 @@ ORIG-FUN untouched, along with ARGS."
 (use-package company
   :ensure t
   :hook (after-init . global-company-mode)
-  :bind ([C-tab] . company-complete-common)
+  ;; Improved completion cycling. Declared through :bind rather than
+  ;; define-key in :config so the keymap is bound lazily and the compiler is
+  ;; not asked about commands from a package it has not loaded.
+  :bind (([C-tab] . company-complete-common)
+         :map company-active-map
+         ("C-n" . company-select-next)
+         ("C-p" . company-select-previous))
   :custom
   (company-minimum-prefix-length 2)
   (company-idle-delay 0.2)
   (company-dabbrev-downcase nil)
   (company-tooltip-align-annotations t)
-  (company-tooltip-limit 10)
-  :config
-  ;; Improved completion cycling
-  (define-key company-active-map (kbd "C-n") #'company-select-next)
-  (define-key company-active-map (kbd "C-p") #'company-select-previous))
+  (company-tooltip-limit 10))
 
 (use-package compile
   :ensure nil
@@ -699,9 +707,9 @@ ORIG-FUN untouched, along with ARGS."
 (use-package ediff
   :ensure nil
   :defer t
-  :config
-  (setq ediff-split-window-function #'split-window-horizontally
-        ediff-window-setup-function #'ediff-setup-windows-plain))
+  :custom
+  (ediff-split-window-function #'split-window-horizontally)
+  (ediff-window-setup-function #'ediff-setup-windows-plain))
 
 ;; =============================================================================
 ;;                           Programming Languages
@@ -711,78 +719,83 @@ ORIG-FUN untouched, along with ARGS."
 (setq-default sh-basic-offset 2)
 
 ;; C/C++
+;; ACSL and cc-mode helpers live at top level rather than inside the
+;; use-package :config below: defuns nested in a macro body are invisible to
+;; the byte-compiler when it checks the :hook references above them.
+;; cc-mode is required at compile time only, for c-basic-offset and the
+;; c-set-* helpers.
+(eval-when-compile (require 'cc-mode))
+
+(defconst acsl-keywords
+  '("assert" "assigns" "ensures" "slevel" "slevel_merge" "requires")
+  "List of ACSL keywords to highlight.")
+
+(defvar acsl-font-lock-keywords
+  (let ((find-acsl-comment
+         (lambda (limit)
+           ;; Search for ACSL comment starts: /*@ or //@
+           (when (re-search-forward "/[*/]@" limit t)
+             (let* ((comment-start (match-beginning 0))
+                    (is-block-comment (eq (char-after (1+ comment-start)) ?*))
+                    (comment-end
+                     (if is-block-comment
+                         ;; For /*@ find matching */
+                         (save-excursion
+                           (goto-char comment-start)
+                           (if (search-forward "*/" limit 'move)
+                               (point)
+                             limit))
+                       ;; For //@ find end of line
+                       (save-excursion
+                         (goto-char comment-start)
+                         (if (search-forward "\n" limit 'move)
+                             (1- (point))
+                           limit)))))
+               (set-match-data (list comment-start comment-end))
+               (goto-char comment-end)
+               t)))))
+    (list
+     `(,find-acsl-comment
+       (0 'font-lock-doc-face t)
+       (,(regexp-opt acsl-keywords 'words)
+        ;; Pre-match: rewind to the start of the comment and report its end
+        ;; as the search limit for the keyword matcher.
+        (progn (goto-char (match-beginning 0)) (match-end 0))
+        ;; Post-match: leave point after the comment.
+        (goto-char (match-end 0))
+        (0 '(:inherit (font-lock-doc-face bold)) t)))))
+  "Default highlighting for ACSL mode.")
+
+(defun my-acsl-mode ()
+  "Enable ACSL (ANSI/ISO C Specification Language) syntax highlighting."
+  (font-lock-add-keywords nil acsl-font-lock-keywords))
+
+(defun my-cc-style ()
+  "Set custom C/C++ style with Linux base and custom offsets."
+  (c-set-style "linux")
+  (c-set-offset 'innamespace 0)
+  (c-set-offset 'inextern-lang 0)
+  (c-set-offset 'inline-open 0)
+  (c-set-offset 'label '*)
+  (c-set-offset 'case-label '*)
+  (c-set-offset 'access-label '/)
+  (setq c-basic-offset 4))
+
+(defun my-cc-clang-format-keys ()
+  "Set custom keybindings for clang-format in C/C++ modes."
+  (local-set-key (kbd "C-M-\\") #'clang-format-region))
+
+(defun my-cc-mode-setup ()
+  "Setup function for C/C++ modes."
+  (my-cc-style)
+  (my-cc-clang-format-keys)
+  (my-acsl-mode))
+
 (use-package cc-mode
   :ensure nil
   :config
   (setq c-default-style "linux"
         c-basic-offset 4)
-
-  ;; ACSL mode configuration
-  (defconst acsl-keywords
-    '("assert" "assigns" "ensures" "slevel" "slevel_merge" "requires")
-    "List of ACSL keywords to highlight.")
-
-  (defvar acsl-font-lock-keywords
-    (let ((find-acsl-comment
-           (lambda (limit)
-             ;; Search for ACSL comment starts: /*@ or //@
-             (when (re-search-forward "/[*/]@" limit t)
-               (let* ((comment-start (match-beginning 0))
-                      (is-block-comment (eq (char-after (1+ comment-start)) ?*))
-                      (comment-end
-                       (if is-block-comment
-                           ;; For /*@ find matching */
-                           (save-excursion
-                             (goto-char comment-start)
-                             (if (search-forward "*/" limit 'move)
-                                 (point)
-                               limit))
-                         ;; For //@ find end of line
-                         (save-excursion
-                           (goto-char comment-start)
-                           (if (search-forward "\n" limit 'move)
-                               (1- (point))
-                             limit)))))
-                 (set-match-data (list comment-start comment-end))
-                 (goto-char comment-end)
-                 t)))))
-      (list
-       `(,find-acsl-comment
-         (0 'font-lock-doc-face t)
-         (,(regexp-opt acsl-keywords 'words)
-          ;; Pre-match: rewind to the start of the comment and report its end
-          ;; as the search limit for the keyword matcher.
-          (progn (goto-char (match-beginning 0)) (match-end 0))
-          ;; Post-match: leave point after the comment.
-          (goto-char (match-end 0))
-          (0 '(:inherit (font-lock-doc-face bold)) t)))))
-    "Default highlighting for ACSL mode.")
-
-  (defun my-acsl-mode ()
-    "Enable ACSL (ANSI/ISO C Specification Language) syntax highlighting."
-    (font-lock-add-keywords nil acsl-font-lock-keywords))
-
-  (defun my-cc-style ()
-    "Set custom C/C++ style with Linux base and custom offsets."
-    (c-set-style "linux")
-    (c-set-offset 'innamespace 0)
-    (c-set-offset 'inextern-lang 0)
-    (c-set-offset 'inline-open 0)
-    (c-set-offset 'label '*)
-    (c-set-offset 'case-label '*)
-    (c-set-offset 'access-label '/)
-    (setq c-basic-offset 4))
-
-  (defun my-cc-clang-format-keys ()
-    "Set custom keybindings for clang-format in C/C++ modes."
-    (local-set-key (kbd "C-M-\\") #'clang-format-region))
-
-  (defun my-cc-mode-setup ()
-    "Setup function for C/C++ modes."
-    (my-cc-style)
-    (my-cc-clang-format-keys)
-    (my-acsl-mode))
-
   (add-to-list 'auto-mode-alist '("\\.ipp\\'" . c++-mode))
 
   :hook ((c++-mode . my-cc-mode-setup)
@@ -855,18 +868,18 @@ ORIG-FUN untouched, along with ARGS."
   :after (tuareg merlin)
   :config (flycheck-ocaml-setup))
 
+(defun my-rust-mode-setup ()
+  "Setup for Rust mode buffers."
+  (setq-local compile-command "cargo build"))
+
 (use-package rust-mode
   :ensure t
   :mode "\\.rs\\'"
+  :hook (rust-mode . my-rust-mode-setup)
+  :custom
+  (rust-format-on-save nil)
+  (rust-indent-offset 4)
   :config
-  (setq rust-format-on-save nil
-        rust-indent-offset 4)
-
-  (defun my-rust-mode-setup ()
-    "Setup for Rust mode buffers."
-    (setq-local compile-command "cargo build"))
-  (add-hook 'rust-mode-hook #'my-rust-mode-setup)
-
   ;; Prefer the tree-sitter mode when its grammar is actually installed.
   (when (and (treesit-available-p)
              (treesit-language-available-p 'rust))
@@ -883,39 +896,47 @@ ORIG-FUN untouched, along with ARGS."
   :commands (lsp lsp-deferred)
   :init
   (setq lsp-keymap-prefix "C-c l")
-  :config
+  ;; :custom rather than setq in :config. use-package records these as theme
+  ;; values that apply the moment each defcustom is evaluated, which both keeps
+  ;; the byte-compiler from seeing a package's variables as free and settles
+  ;; lsp-clients-clangd-executable before lsp-clangd is loaded, as it requires.
+  :custom
   ;; Performance tuning
-  (setq lsp-idle-delay 0.5
-        lsp-log-io nil
-        lsp-enable-file-watchers nil
-        lsp-enable-folding nil
-        lsp-enable-snippet t
-        lsp-enable-symbol-highlighting t
-        lsp-lens-enable nil
-        lsp-headerline-breadcrumb-enable nil)
+  (lsp-idle-delay 0.5)
+  (lsp-log-io nil)
+  (lsp-enable-file-watchers nil)
+  (lsp-enable-folding nil)
+  (lsp-enable-snippet t)
+  (lsp-enable-symbol-highlighting t)
+  (lsp-lens-enable nil)
+  (lsp-headerline-breadcrumb-enable nil)
+
+  ;; --- Inlay hints ---
+  ;; Master switch, nil by default: without it the per-server hint settings
+  ;; below are inert. The old per-server toggle
+  ;; `lsp-rust-analyzer-server-display-inlay-hints' no longer exists.
+  (lsp-inlay-hint-enable t)
 
   ;; --- Rust (rust-analyzer) ---
-  (setq lsp-rust-analyzer-cargo-watch-command "clippy"
-        lsp-rust-analyzer-server-display-inlay-hints t
-        lsp-rust-analyzer-display-chaining-hints t
-        lsp-rust-analyzer-display-parameter-hints t)
+  (lsp-rust-analyzer-cargo-watch-command "clippy")
+  (lsp-rust-analyzer-display-chaining-hints t)
+  (lsp-rust-analyzer-display-parameter-hints t)
 
   ;; --- C/C++ (clangd) ---
-  (when-let ((clangd (executable-find "clangd")))
-    (setq lsp-clients-clangd-executable clangd))
-  (setq lsp-clients-clangd-args
-        '("--background-index"           ; Index in background
-          "--clang-tidy"                  ; Enable clang-tidy diagnostics
-          "--completion-style=detailed"   ; Detailed completions
-          "--header-insertion=iwyu"       ; Include-what-you-use
-          "--fallback-style=linux"        ; Match c-default-style
-          "-j=4"))                        ; Parallel indexing jobs
+  ;; nil when clangd is absent, which is also the default: let lsp-mode search.
+  (lsp-clients-clangd-executable (executable-find "clangd"))
+  (lsp-clients-clangd-args '("--background-index"          ; Index in background
+                             "--clang-tidy"                ; clang-tidy diagnostics
+                             "--completion-style=detailed"
+                             "--header-insertion=iwyu"     ; Include-what-you-use
+                             "--fallback-style=linux"      ; Match c-default-style
+                             "-j=4"))                      ; Parallel indexing jobs
 
   ;; OCaml and Bash need no configuration: lsp-mode looks for "ocamllsp" and
   ;; "bash-language-server" on PATH.
 
   ;; Explicitly use flycheck as the diagnostics provider
-  (setq lsp-diagnostics-provider :flycheck)
+  (lsp-diagnostics-provider :flycheck)
 
   :hook (;; Rust
          (rust-mode    . lsp-deferred)

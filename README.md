@@ -17,7 +17,7 @@ src/<tool>/<file>  ──copy──►  _build/<file>  ──symlink──►  ~
 
 ```bash
 sudo apt update && sudo apt install \
-  bat eza fd-find git ripgrep tree xclip xdg-utils \
+  bat eza fd-find git git-lfs ripgrep tree xclip xdg-utils \
   emacs hunspell hunspell-en-us hunspell-fr hunspell-fr-classical \
   clang-format clangd \
   tmux \
@@ -103,6 +103,7 @@ sudo cp src/xmonad/applications/mate-xmonad.desktop /usr/share/applications/
 | `make build` | Copy `src/` → `_build/`, symlink into `$HOME`, compile Emacs + XMonad |
 | `make status` | Show every symlink, private file, and any `src/` ↔ `_build/` drift |
 | `make check` | Drift only — warns when `src/` was edited but not rebuilt |
+| `make lint` | Static-check `src/` before building: shellcheck + `bash -n`, Emacs byte-compilation, `ghc` type-check with unused imports fatal, tmux config load, gitconfig parse. Each tool is skipped when not installed |
 | `make clean` | Remove the installed symlinks. **Keeps** `_build/` |
 | `make distclean` | `clean`, then delete `_build/` after an explicit `yes` |
 
