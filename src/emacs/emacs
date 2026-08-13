@@ -13,6 +13,31 @@
 ;;; Code:
 
 ;; =============================================================================
+;;                                  Startup
+;; =============================================================================
+
+;; Emacs reads this file with the GC threshold at 800 kB and the file name
+;; handlers armed, which buys a collection every few files loaded and a regexp
+;; sweep per `load'.  Neither pays off before the first frame exists.  The
+;; originals are restored from `emacs-startup-hook', which Emacs runs even when
+;; this file signals partway through.
+(defconst my-startup-file-name-handler-alist file-name-handler-alist)
+
+(setq gc-cons-threshold most-positive-fixnum
+      gc-cons-percentage 0.6
+      file-name-handler-alist nil)
+
+(defun my-restore-startup-defaults ()
+  "Undo the startup-only performance settings made at the top of this file."
+  ;; Not the 800 kB default: collecting that often costs more in a long-lived
+  ;; session, with LSP and flycheck allocating, than the pauses it avoids.
+  (setq gc-cons-threshold (* 32 1024 1024)
+        gc-cons-percentage 0.1
+        file-name-handler-alist my-startup-file-name-handler-alist))
+
+(add-hook 'emacs-startup-hook #'my-restore-startup-defaults)
+
+;; =============================================================================
 ;;                             Package Management
 ;; =============================================================================
 
