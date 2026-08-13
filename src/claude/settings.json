@@ -1,31 +1,104 @@
 {
-  "permissions": {
-    "allow": [
-      "Bash"
-    ]
+  "attribution": {
+    "commit": "",
+    "pr": ""
   },
-  "model": "opus[1m]",
-  "statusLine": {
-    "type": "command",
-    "command": "bash /home/flheureux/.claude/statusline-command.sh"
-  },
+  "effortLevel": "xhigh",
   "enabledPlugins": {
-    "warp@claude-code-warp": true,
     "clangd-lsp@claude-plugins-official": true,
-    "rust-analyzer-lsp@claude-plugins-official": true
+    "rust-analyzer-lsp@claude-plugins-official": true,
+    "warp@claude-code-warp": true
   },
   "extraKnownMarketplaces": {
     "claude-code-warp": {
       "source": {
-        "source": "github",
-        "repo": "warpdotdev/claude-code-warp"
+        "repo": "warpdotdev/claude-code-warp",
+        "source": "github"
       }
     }
   },
-  "effortLevel": "xhigh",
-  "theme": "auto",
-  "attribution": {
-    "commit": "",
-    "pr": ""
-  }
+  "model": "opus[1m]",
+  "permissions": {
+    "allow": [
+      "Bash(apt-cache:*)",
+      "Bash(basename:*)",
+      "Bash(bat:*)",
+      "Bash(batcat:*)",
+      "Bash(cargo build:*)",
+      "Bash(cargo check:*)",
+      "Bash(cargo clippy:*)",
+      "Bash(cargo fmt:*)",
+      "Bash(cargo test:*)",
+      "Bash(cat:*)",
+      "Bash(cmp:*)",
+      "Bash(command -v:*)",
+      "Bash(cut:*)",
+      "Bash(date:*)",
+      "Bash(df:*)",
+      "Bash(diff:*)",
+      "Bash(dirname:*)",
+      "Bash(du:*)",
+      "Bash(echo:*)",
+      "Bash(env)",
+      "Bash(eza:*)",
+      "Bash(fd:*)",
+      "Bash(fdfind:*)",
+      "Bash(file:*)",
+      "Bash(find:*)",
+      "Bash(git blame:*)",
+      "Bash(git branch:*)",
+      "Bash(git check-ignore:*)",
+      "Bash(git describe:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git ls-files:*)",
+      "Bash(git remote:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(git show:*)",
+      "Bash(git stash list:*)",
+      "Bash(git status:*)",
+      "Bash(grep:*)",
+      "Bash(head:*)",
+      "Bash(id)",
+      "Bash(jq:*)",
+      "Bash(ls:*)",
+      "Bash(make help:*)",
+      "Bash(make lint:*)",
+      "Bash(make status:*)",
+      "Bash(printf:*)",
+      "Bash(pwd)",
+      "Bash(readlink:*)",
+      "Bash(realpath:*)",
+      "Bash(rg:*)",
+      "Bash(shellcheck:*)",
+      "Bash(sort:*)",
+      "Bash(stat:*)",
+      "Bash(tail:*)",
+      "Bash(tr:*)",
+      "Bash(tree:*)",
+      "Bash(type:*)",
+      "Bash(uname:*)",
+      "Bash(uniq:*)",
+      "Bash(wc:*)",
+      "Bash(which:*)",
+      "Bash(whoami)"
+    ],
+    "deny": [
+      "Bash(chmod -R:*)",
+      "Bash(dd:*)",
+      "Bash(git clean:*)",
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(mkfs:*)",
+      "Bash(rm -fr:*)",
+      "Bash(rm -rf:*)",
+      "Bash(sudo:*)"
+    ]
+  },
+  "statusLine": {
+    "command": "bash $HOME/.claude/statusline-command.sh",
+    "type": "command"
+  },
+  "theme": "auto"
 }
