@@ -134,6 +134,14 @@ enabled = false
 [appearance.window]
 zoom_level = 100
 
+[appearance.tabs]
+
+[appearance.tabs.header_toolbar_chip_selection]
+
+[appearance.tabs.header_toolbar_chip_selection.custom]
+left = ["tools_panel", "agent_management"]
+right = ["notifications_mailbox"]
+
 [text_editing]
 autocomplete_symbols = false
 
@@ -158,3 +166,6 @@ play_notification_sound = true
 
 [code.indexing]
 agent_mode_codebase_context = false
+
+[code.editor]
+show_code_review_button = false
