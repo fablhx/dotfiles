@@ -277,6 +277,13 @@ instead of 1."
   "\\`\\(.+?\\):\\([0-9]+\\)\\(?::\\([0-9]+\\)\\)?:?\\'"
   "Anchored match for a whole filename ending in :LINE[:COL].")
 
+(defconst my-error-location-tail-regexp
+  ":[0-9]+:?\\'"
+  "Cheap necessary condition for `my-error-location-suffix-regexp'.
+Anything that regexp accepts ends this way, so a name failing this one cannot
+be a location reference.  It exists to keep the non-anchored, backtracking
+match off the path every file name takes.")
+
 (defun my-open-error-location--parse (text &optional anchored)
   "Parse TEXT of form FILE:LINE[:COL] and return (FILE LINE COL), or nil.
 With ANCHORED non-nil, TEXT must consist entirely of such a reference."
@@ -329,7 +336,11 @@ Rewriting is attempted only when FILENAME names no existing file but the
 path before the :LINE suffix does.  Anything else - including remote
 names and ordinary files that merely contain a colon - is handed to
 ORIG-FUN untouched, along with ARGS."
+  ;; Every file Emacs opens comes through here, so the tests are ordered by
+  ;; cost: an anchored string match rejects almost everything before anything
+  ;; touches the filesystem.
   (let ((parsed (and (stringp filename)
+                     (string-match-p my-error-location-tail-regexp filename)
                      (not (file-remote-p filename))
                      (not (file-exists-p filename))
                      (my-open-error-location--parse filename t))))
