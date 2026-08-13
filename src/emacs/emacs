@@ -3,6 +3,12 @@
 ;;; Commentary:
 ;; Symlinked as ~/.emacs.  Requires Emacs 29.1+, which bundles use-package and
 ;; tree-sitter.
+;;
+;; Function keys, which are spread across the blocks below:
+;;   f1 comment-dwim   f2 whitespace-mode  f3 rg          f4 flycheck-mode
+;;   f5 compile        f6 recompile        f7 next-error  f8 pop mark
+;;   f9 open error location at point       f12 enlarge-window
+;; Shift adds: f3 rg-project, f8 pop-global-mark.
 
 ;;; Code:
 
@@ -71,7 +77,7 @@ tens of seconds."
     fallback-mode))
 
 ;; =============================================================================
-;;                           Custom Functions
+;;                                Remote Hosts
 ;; =============================================================================
 
 (defun my-sanitize-ssh-value (value)
@@ -138,6 +144,10 @@ The remote user is taken from ~/.ssh/config when it names one."
              (message "Failed to open remote path: %s"
                       (error-message-string err)))))))))
 
+;; =============================================================================
+;;                                Search Glue
+;; =============================================================================
+
 (defvar my-phi-search-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "C-s") #'phi-search)
@@ -157,6 +167,10 @@ The remote user is taken from ~/.ssh/config when it names one."
 (defun my-disable-phi-search ()
   "Disable `my-phi-search-mode'."
   (my-phi-search-mode -1))
+
+;; =============================================================================
+;;                              Editing Commands
+;; =============================================================================
 
 (defun my-pop-local-mark-ring ()
   "Pop to the local mark ring."
@@ -210,6 +224,10 @@ instead of 1."
   (require 'sort)
   (let ((sort-fold-case t))
     (call-interactively #'sort-lines)))
+
+;; =============================================================================
+;;                              Error Locations
+;; =============================================================================
 
 (defconst my-error-location-regexp
   "\\([^:\n\t ]+\\):\\([0-9]+\\)\\(?::\\([0-9]+\\)\\)?"
@@ -292,6 +310,10 @@ ORIG-FUN untouched, along with ARGS."
 (advice-add 'find-file-noselect :around
             #'my-find-file-noselect--advice-with-line-and-column)
 
+;; =============================================================================
+;;                         Preprocessor Conditionals
+;; =============================================================================
+
 (defun my-jump-to-matching-ifdef ()
   "Jump between matching #if/#ifdef/#ifndef and #endif."
   (interactive)
@@ -343,6 +365,10 @@ ORIG-FUN untouched, along with ARGS."
       (goto-char start-point)
       (message "Not on a preprocessor directive")))))
 
+;; =============================================================================
+;;                                  Windows
+;; =============================================================================
+
 (defun my-special-buffer-visible-p ()
   "Check if any visible window displays a *special* buffer."
   (seq-some (lambda (w)
@@ -373,9 +399,13 @@ ORIG-FUN untouched, along with ARGS."
   (delete-window)
   (my-balance-windows-maybe))
 
+;; =============================================================================
+;;                                Compilation
+;; =============================================================================
+
 ;; Bound below with plain `define-key': use-package's :bind would autoload these
 ;; from compile.el, which does not define them.
-(defun interrupt-and-recompile ()
+(defun my-interrupt-and-recompile ()
   "Interrupt old compilation, if any, and recompile."
   (interactive)
   (let ((compilation-buffer (get-buffer "*compilation*")))
@@ -422,8 +452,8 @@ ORIG-FUN untouched, along with ARGS."
     (define-key map (kbd "C-c C-l") #'xref-find-definitions)
     (define-key map (kbd "C-c C-b") #'xref-go-back)
 
-    (define-key map (kbd "<f6>") #'interrupt-and-recompile)
-    (define-key map (kbd "C-c c") #'interrupt-and-recompile)
+    (define-key map (kbd "<f6>") #'my-interrupt-and-recompile)
+    (define-key map (kbd "C-c c") #'my-interrupt-and-recompile)
 
     map)
   "Keymap for `my-keys-minor-mode'.")
@@ -453,10 +483,7 @@ ORIG-FUN untouched, along with ARGS."
   :bind
   ([f1] . comment-dwim)
   ([f2] . whitespace-mode)
-  ;; [f3] => see rg
-  ([f4] . flycheck-mode)
   ([f5] . compile)
-  ;; [f6] => interrupt-and-recompile, bound in my-keys-minor-mode-map
   ([f7] . next-error)
   ([f8] . my-pop-local-mark-ring)
   ([(shift f8)] . pop-global-mark)
@@ -560,6 +587,11 @@ ORIG-FUN untouched, along with ARGS."
   :hook ((multiple-cursors-mode-enabled . my-enable-phi-search)
          (multiple-cursors-mode-disabled . my-disable-phi-search)))
 
+(defun my-dumb-jump-c-setup ()
+  "Restrict dumb-jump to function definitions found with rg, in C buffers."
+  (setq-local dumb-jump-force-searcher 'rg
+              dumb-jump-functions-only t))
+
 ;; Used purely as an xref backend; its minor mode is deprecated upstream.
 (use-package dumb-jump
   :ensure t
@@ -571,9 +603,7 @@ ORIG-FUN untouched, along with ARGS."
         '(".dumbjump" ".projectile" ".git" ".hg" ".fslckout"
           ".bzr" "_darcs" ".svn" "PkgInfo" "-pkg.el")
         dumb-jump-prefer-searcher 'rg)
-  :hook (c-mode . (lambda ()
-                    (setq-local dumb-jump-force-searcher 'rg
-                                dumb-jump-functions-only t))))
+  :hook (c-mode . my-dumb-jump-c-setup))
 
 ;; Help for key bindings
 (use-package which-key
@@ -675,11 +705,11 @@ ORIG-FUN untouched, along with ARGS."
 ;; c-set-* helpers.
 (eval-when-compile (require 'cc-mode))
 
-(defconst acsl-keywords
+(defconst my-acsl-keywords
   '("assert" "assigns" "ensures" "slevel" "slevel_merge" "requires")
   "List of ACSL keywords to highlight.")
 
-(defvar acsl-font-lock-keywords
+(defvar my-acsl-font-lock-keywords
   (let ((find-acsl-comment
          (lambda (limit)
            ;; Search for ACSL comment starts: /*@ or //@
@@ -706,7 +736,7 @@ ORIG-FUN untouched, along with ARGS."
     (list
      `(,find-acsl-comment
        (0 'font-lock-doc-face t)
-       (,(regexp-opt acsl-keywords 'words)
+       (,(regexp-opt my-acsl-keywords 'words)
         ;; Pre-match: rewind to the start of the comment and report its end
         ;; as the search limit for the keyword matcher.
         (progn (goto-char (match-beginning 0)) (match-end 0))
@@ -717,7 +747,7 @@ ORIG-FUN untouched, along with ARGS."
 
 (defun my-acsl-mode ()
   "Enable ACSL (ANSI/ISO C Specification Language) syntax highlighting."
-  (font-lock-add-keywords nil acsl-font-lock-keywords))
+  (font-lock-add-keywords nil my-acsl-font-lock-keywords))
 
 (defun my-cc-style ()
   "Set custom C/C++ style with Linux base and custom offsets."
@@ -781,6 +811,7 @@ ORIG-FUN untouched, along with ARGS."
 (use-package flycheck
   :ensure t
   :hook (python-mode . flycheck-mode)
+  :bind ([f4] . flycheck-mode)
   :config
   (let ((pylint (or (executable-find "pylint")
                     (executable-find "pylint3"))))
@@ -994,15 +1025,15 @@ ORIG-FUN untouched, along with ARGS."
 ;;                           Text and Spelling
 ;; =============================================================================
 
-(defun custom-ispell ()
-  "Skip regions from spell checking."
+(defun my-ispell-skip-regions ()
+  "Skip code regions from spell checking."
   (make-local-variable 'ispell-skip-region-alist)
   (add-to-list 'ispell-skip-region-alist '("`" . "`"))
   (add-to-list 'ispell-skip-region-alist '("^```" . "```$")))
 
 (use-package ispell
   :ensure nil
-  :hook (markdown-mode . custom-ispell)
+  :hook (markdown-mode . my-ispell-skip-regions)
   :config
   (when (executable-find "hunspell")
     (setq-default ispell-program-name "hunspell")
