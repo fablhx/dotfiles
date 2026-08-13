@@ -623,13 +623,13 @@ STATUS, CODE and MESSAGE are as for `compilation-exit-message-function'."
   (transient-mark-mode t)         ; Highlight selection
   (delete-selection-mode t)       ; Delete selected text
   (setq use-short-answers t)      ; Use modern y/n
-  (global-auto-revert-mode t)     ; Auto reload changed files
   (save-place-mode t)             ; Remember cursor position
   (savehist-mode 1)               ; Persist minibuffer history
 
+  ;; `scroll-step' is deliberately absent: `scroll-conservatively' above 100
+  ;; overrides it.
   (setq scroll-conservatively 10000
         scroll-margin 3
-        scroll-step 1
         auto-window-vscroll nil)
 
   (add-hook 'prog-mode-hook #'eldoc-mode)
@@ -658,6 +658,15 @@ STATUS, CODE and MESSAGE are as for `compilation-exit-message-function'."
   (let ((auto-save-dir (expand-file-name "auto-save/" user-emacs-directory)))
     (unless (file-directory-p auto-save-dir)
       (make-directory auto-save-dir t))))
+
+(use-package autorevert
+  :ensure nil
+  :custom
+  ;; Reload off file notifications rather than the one-second poll it otherwise
+  ;; runs over every visited buffer for the life of the session.
+  (auto-revert-avoid-polling t)
+  :init
+  (global-auto-revert-mode t))
 
 ;; :custom runs before :init, so the list is sized before the mode reads it.
 (use-package recentf
