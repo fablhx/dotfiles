@@ -92,8 +92,14 @@ fi
 # =============================================================================
 
 __emacs_client() {
-    # Reuse an existing frame rather than piling up empty ones
-    if emacsclient -n -e "(if (> (length (frame-list)) 1) 't)" 2>/dev/null | grep -q t; then
+    local frames
+
+    # Reuse an existing frame rather than piling up empty ones. Matching on a
+    # count rather than searching the reply for "t" matters: an Emacs error
+    # message contains letters too, and would otherwise be read as a frame.
+    frames=$(emacsclient -n -e '(length (frame-list))' 2>/dev/null)
+
+    if [[ ${frames} =~ ^[0-9]+$ ]] && (( frames > 1 )); then
         emacsclient -n "$@"
     else
         emacsclient -c -n "$@"
