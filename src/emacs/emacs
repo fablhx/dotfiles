@@ -82,43 +82,55 @@ tens of seconds."
 
 (defun my-sanitize-ssh-value (value)
   "Sanitize SSH config values to prevent path injection.
-Returns VALUE if it contains only safe characters, nil otherwise."
+Returns VALUE if it contains only safe characters, nil otherwise.
+Wildcard patterns are rejected: they configure defaults rather than name a
+host that can be connected to."
   (when (and value
              (stringp value)
              (not (string-empty-p value))
              (string-match-p "\\`[a-zA-Z0-9._-]+\\'" value))
     value))
 
-(defun my-ssh-config-host-alist ()
-  "Parse SSH config file and return an alist of (host . user).
-Returns nil if config file doesn't exist or isn't readable."
-  (let ((config-file (expand-file-name "~/.ssh/config")))
-    (if (not (file-readable-p config-file))
+(defun my-ssh-config-host-alist (&optional file)
+  "Parse FILE, by default ~/.ssh/config, and return an alist of (HOST . USER).
+USER is nil for a host whose block names none.  Returns nil when the file
+does not exist or cannot be read."
+  (let ((file (or file (expand-file-name "~/.ssh/config"))))
+    (if (not (file-readable-p file))
         (progn
-          (message "SSH config file not found or not readable: %s" config-file)
+          (message "SSH config file not found or not readable: %s" file)
           nil)
       (condition-case err
-          (let ((lines (split-string (with-temp-buffer
-                                       (insert-file-contents config-file)
-                                       (buffer-string))
-                                     "\n"))
-                current-host
-                result)
-            (dolist (line lines)
-              (let ((trimmed-line (string-trim line)))
+          (with-temp-buffer
+            (insert-file-contents file)
+            (goto-char (point-min))
+            ;; ssh_config keywords are case-insensitive, and `case-fold-search'
+            ;; is buffer-local: bind it rather than inherit the caller's.
+            (let ((case-fold-search t)
+                  (hosts nil)
+                  (block nil))
+              (while (not (eobp))
                 (cond
-                 ;; Match Host entries (ignore wildcards)
-                 ((string-match "^Host\\s-+\\([^ *?\n]+\\)" trimmed-line)
-                  (let ((host (match-string 1 trimmed-line)))
-                    (when (my-sanitize-ssh-value host)
-                      (setq current-host host))))
-                 ((and current-host
-                       (string-match "^User\\s-+\\([^ \t\n]+\\)" trimmed-line))
-                  (let ((user (match-string 1 trimmed-line)))
-                    (when (my-sanitize-ssh-value user)
-                      (push (cons current-host user) result)
-                      (setq current-host nil)))))))
-            (nreverse result))
+                 ;; A Host line opens a new block, so any User below it belongs
+                 ;; to these names only.  That holds for the patterns dropped by
+                 ;; `my-sanitize-ssh-value' too: `Host *' leaves BLOCK empty, and
+                 ;; its User must not fall back to the host declared above.
+                 ((looking-at "[ \t]*Host[ \t]+\\(.*\\)$")
+                  (setq block nil)
+                  (dolist (name (split-string (match-string 1) "[ \t]+" t))
+                    (when (my-sanitize-ssh-value name)
+                      (let ((cell (cons name nil)))
+                        (push cell hosts)
+                        (push cell block)))))
+                 ((looking-at "[ \t]*Match[ \t]")
+                  (setq block nil))
+                 ((and block (looking-at "[ \t]*User[ \t]+\\([^ \t\n]+\\)"))
+                  (let ((user (my-sanitize-ssh-value (match-string 1))))
+                    (when user
+                      (dolist (cell block)
+                        (setcdr cell user))))))
+                (forward-line 1))
+              (nreverse hosts)))
         (error
          (message "Error parsing SSH config: %s" (error-message-string err))
          nil)))))
@@ -132,6 +144,8 @@ The remote user is taken from ~/.ssh/config when it names one."
         (message "No SSH hosts found in configuration file")
       (let* ((host (completing-read "SSH host: " (mapcar #'car host-alist) nil t))
              (user (or (cdr (assoc host host-alist)) (user-login-name))))
+        ;; Both values were sanitized while parsing; they are checked again here
+        ;; because this is where they are spliced into a path.
         (unless (my-sanitize-ssh-value host)
           (error "Invalid host name: %s" host))
         (unless (my-sanitize-ssh-value user)
