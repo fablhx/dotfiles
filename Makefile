@@ -1,12 +1,18 @@
 # =============================================================================
 #                        Config files Management
 # =============================================================================
-# src/ is the tracked source. `make build` copies it into _build/ and symlinks
-# the results into $HOME. Build artifacts (compiled emacs/xmonad, installed
-# packages) live in _build/ and are never tracked.
+# src/ is the deployed configuration, symlinked straight into $HOME. There is
+# no staging copy: the file Emacs or bash reads *is* the file in this
+# repository, so "edited but never rebuilt" cannot happen and `make build` is
+# only ever creating links and recompiling xmonad.
+#
+# Every entry below links a FILE, never a directory. Applications own their
+# own directories (~/.config/warp-terminal, ~/.xmonad) and write runtime state
+# into them; replacing one with a symlink either destroys that state or, when
+# the directory already exists, silently creates the link *inside* it.
 #
 # Recipes run under bash with `set -e` and .ONESHELL, so a failing step aborts
-# the target instead of being silently swallowed by a chain of `if`s.
+# the target instead of being swallowed by a chain of `if`s.
 # =============================================================================
 
 SHELL := /bin/bash
@@ -14,7 +20,6 @@ SHELL := /bin/bash
 .ONESHELL:
 
 CONFIG_DIR := $(CURDIR)
-BUILD_DIR  := $(CONFIG_DIR)/_build
 
 # Colors for status output
 GREEN  := \033[0;32m
@@ -22,327 +27,177 @@ ORANGE := \033[0;33m
 RED    := \033[0;31m
 NC     := \033[0m
 
-# src/<path> -> _build/<basename>, symlinked to ~/.<basename>
-SOURCE_FILES  := clang-format/clang-format emacs/emacs git/gitconfig git/gitignore \
-                 shell/bashrc tmux/tmux.conf
-XMONAD_FILES  := xmonad/xmonad.hs
+# <path under src/>:<path under $HOME>
+LINKS := \
+  shell/bashrc:.bashrc \
+  clang-format/clang-format:.clang-format \
+  emacs/emacs:.emacs \
+  git/gitconfig:.gitconfig \
+  git/gitignore:.gitignore \
+  tmux/tmux.conf:.tmux.conf \
+  xmonad/xmonad.hs:.xmonad/xmonad.hs \
+  config/warp-terminal/keybindings.yaml:.config/warp-terminal/keybindings.yaml \
+  config/warp-terminal/settings.toml:.config/warp-terminal/settings.toml
 
-BUILD_DIRS := emacs.d xmonad config
-LINK_DIRS  := emacs.d xmonad
-# emacs.elc is linked by the compile step, not this list, so a failed
-# compilation cannot leave a dangling ~/.emacs.elc behind.
-LINK_FILES := bashrc clang-format emacs gitconfig gitignore tmux.conf
-CONFIG_ITEMS := warp-terminal
-ALL_DOTFILES := $(LINK_FILES) emacs.elc $(LINK_DIRS)
-
-# Personal overrides. Untracked by *this* repo, but committed to the git repo
-# that lives inside _build - that is the point: they get history without ever
-# being pushed here.
-#
-# bashrc sources its own straight out of _build, resolving its location through
-# the symlink. gitconfig cannot do that: git resolves a relative include.path
-# against the directory of the file it *read*, which is ~/.gitconfig, not the
-# _build/gitconfig that symlink points at - so a relative include would look in
-# $HOME and silently find nothing. Git does follow a symlinked include target,
-# so gitconfig.private gets one.
-PRIVATE_FILES := gitconfig.private bashrc.private
-PRIVATE_LINKS := gitconfig.private
+# Machine-local, never tracked here. Plain files in $HOME: they are read
+# through no indirection, survive every target below, and are the only part of
+# the setup this repository cannot recreate.
+PRIVATE_FILES := .bashrc.private .gitconfig.private
 
 .DEFAULT_GOAL := usage
 
-.PHONY: usage help
+.PHONY: usage help build status lint clean mate-session
+
 usage help:
 	@echo "Config files Management"
 	@echo ""
 	@echo "Usage:"
-	@echo "  make build     - Build and install config files"
-	@echo "  make status    - Show current config files status"
-	@echo "  make check     - Report src/ vs _build/ drift"
-	@echo "  make lint      - Static-check src/ (shellcheck, byte-compile, ghc, tmux)"
-	@echo "  make clean     - Remove installed symlinks (keeps _build)"
-	@echo "  make distclean - clean + delete _build (emacs packages, compiled xmonad)"
+	@echo "  make build        - Symlink src/ into \$$HOME and recompile xmonad"
+	@echo "  make status       - Show every symlink and private file"
+	@echo "  make lint         - Static-check src/ (shellcheck, emacs, ghc, tmux, git)"
+	@echo "  make clean        - Remove the symlinks this repository installed"
+	@echo "  make mate-session - Point the MATE session at XMonad (gsettings)"
 	@echo ""
-	@echo "Private files, versioned inside $(BUILD_DIR) but never pushed:"
+	@echo "Private files, kept in \$$HOME and never tracked:"
 	@echo "  $(PRIVATE_FILES)"
-	@echo ""
-	@echo "Configuration:"
-	@echo "  CONFIG_DIR = $(CONFIG_DIR)"
-	@echo "  BUILD_DIR  = $(BUILD_DIR)"
 
 # -----------------------------------------------------------------------------
-# Shell helper emitted into any recipe that creates symlinks.
+# Shell helpers emitted into the recipes that need them.
 #
-# `ln -sfn` only replaces a destination that is already a symlink. Against a
-# real directory it silently creates the link *inside* it - which is how
-# ~/.config/gtk-3.0/gtk-3.0 and ~/.config/warp-terminal/warp-terminal came to
-# exist while the actual configs were never deployed, with `make status`
-# reporting them as "exists but not a symlink" the whole time.
+# link_path refuses to touch anything that is not already a symlink: `ln -sfn`
+# against a real directory creates the link inside it instead of replacing it.
+# A skipped link must not abort the build, so this returns rather than exits.
 #
-# A skipped link must not abort the build, so this is a function that returns
-# rather than a macro that exits.
+# prune_foreign removes symlinks that point into this repository but are not in
+# LINKS. That is what a file deleted from src/ leaves behind, and without it a
+# removed tool stays deployed forever - ~/.zshrc and ~/.valgrindrc outlived
+# their sources by weeks that way.
 # -----------------------------------------------------------------------------
-define LINK_FN
+define SHELL_HELPERS
 link_path() {
   local target="$$1" link="$$2"
   if [ -L "$$link" ]; then
     rm -f "$$link"
-  elif [ -d "$$link" ] || [ -e "$$link" ]; then
+  elif [ -e "$$link" ]; then
     echo -e "  $(ORANGE)skip$(NC)    $$link exists and is not a symlink"
     echo    "          move it aside and re-run: mv '$$link' '$$link.bak'"
     return 0
   fi
+  mkdir -p "$$(dirname "$$link")"
   ln -s "$$target" "$$link"
   echo -e "  $(GREEN)linked$(NC)  $$link"
   return 0
 }
+
+managed_destinations() {
+  for pair in $(LINKS); do echo "$$HOME/$${pair#*:}"; done
+}
+
+prune_foreign() {
+  local managed link resolved
+  managed="$$(managed_destinations)"
+  shopt -s nullglob
+  for link in "$$HOME"/.[!.]* "$$HOME"/.config/* "$$HOME"/.config/*/*; do
+    [ -L "$$link" ] || continue
+    resolved="$$(readlink -m "$$link")"
+    case "$$resolved" in
+      "$(CONFIG_DIR)"/*) ;;
+      *) continue ;;
+    esac
+    if ! grep -Fxq "$$link" <<< "$$managed"; then
+      rm -f "$$link"
+      echo -e "  $(ORANGE)pruned$(NC)  $$link (no longer in src/)"
+    fi
+  done
+  shopt -u nullglob
+}
 endef
 
-.PHONY: build
-build: $(BUILD_DIR)
-	@echo "Building config files..."
-	mkdir -p "$(BUILD_DIR)"
-	for d in $(BUILD_DIRS); do mkdir -p "$(BUILD_DIR)/$$d"; done
-
-	# --- Copy sources -------------------------------------------------------
-	for f in $(SOURCE_FILES); do
-	  if [ -f "src/$$f" ]; then
-	    cp "src/$$f" "$(BUILD_DIR)/$$(basename "$$f")"
+build:
+	@echo "Linking src/ into $(HOME)..."
+	$(SHELL_HELPERS)
+	for pair in $(LINKS); do
+	  src="src/$${pair%%:*}"
+	  dest="$(HOME)/$${pair#*:}"
+	  if [ -f "$$src" ]; then
+	    link_path "$(CONFIG_DIR)/$$src" "$$dest"
 	  else
-	    echo "Warning: missing source src/$$f"
+	    echo -e "  $(RED)missing$(NC) $$src"
 	  fi
 	done
+	prune_foreign
 
-	for f in $(XMONAD_FILES); do
-	  if [ -f "src/$$f" ]; then cp "src/$$f" "$(BUILD_DIR)/$$f"; fi
-	done
-
-	# Copy tracked files in, but never wipe the directory: these are live
-	# application config dirs, and the app writes its own runtime state
-	# alongside our files (Warp keeps a ~200KB user_preferences.json there).
-	# An `rm -rf` here destroys that state on every rebuild.
-	for item in $(CONFIG_ITEMS); do
-	  if [ -d "src/config/$$item" ]; then
-	    mkdir -p "$(BUILD_DIR)/config/$$item"
-	    find "src/config/$$item" -mindepth 1 -maxdepth 1 -exec \
-	      cp -r {} "$(BUILD_DIR)/config/$$item/" \;
+	# Created on demand rather than by a one-shot first-run target, which
+	# ossifies: any later change to it never reaches an existing install.
+	if [ ! -f "$(HOME)/.gitconfig.private" ]; then
+	  if [ -t 0 ]; then
+	    echo "Creating $(HOME)/.gitconfig.private"
+	    read -r -p "  Git email: " git_email
+	    read -r -p "  Git name:  " git_name
+	    printf '[user]\n\temail = %s\n\tname = %s\n' "$$git_email" "$$git_name" \
+	      > "$(HOME)/.gitconfig.private"
+	  else
+	    echo -e "  $(ORANGE)skip$(NC)    .gitconfig.private (not a terminal)"
 	  fi
-	done
-
-	# --- Link ---------------------------------------------------------------
-	echo "Linking into $(HOME)..."
-	$(LINK_FN)
-	for f in $(LINK_FILES); do
-	  if [ -f "$(BUILD_DIR)/$$f" ]; then
-	    link_path "$(BUILD_DIR)/$$f" "$(HOME)/.$$f"
-	  fi
-	done
-
-	for d in $(LINK_DIRS); do
-	  if [ -d "$(BUILD_DIR)/$$d" ]; then
-	    link_path "$(BUILD_DIR)/$$d" "$(HOME)/.$$d"
-	  fi
-	done
-
-	# Only gitconfig.private needs this; see the PRIVATE_LINKS comment above.
-	for p in $(PRIVATE_LINKS); do
-	  if [ -f "$(BUILD_DIR)/$$p" ]; then
-	    link_path "$(BUILD_DIR)/$$p" "$(HOME)/.$$p"
-	  fi
-	done
-
-	mkdir -p "$(HOME)/.config"
-	for item in $(CONFIG_ITEMS); do
-	  if [ -e "$(BUILD_DIR)/config/$$item" ]; then
-	    link_path "$(BUILD_DIR)/config/$$item" "$(HOME)/.config/$$item"
-	  fi
-	done
-
-	# --- Compile ------------------------------------------------------------
-	# -f package-initialize matters: batch Emacs does not activate packages
-	# (startup.el gates that on user-init-file), so without it the compiler
-	# cannot see any installed package and use-package's :ensure tries to
-	# reinstall them mid-compile.
-	if [ -f "$(BUILD_DIR)/emacs" ] && command -v emacs >/dev/null 2>&1; then
-	  echo "Byte-compiling emacs config..."
-	  rm -f "$(BUILD_DIR)/emacs.elc" "$(HOME)/.emacs.elc"
-	  # batch-byte-compile, not --eval '(byte-compile-file ...)': the latter
-	  # returns nil on failure but still exits 0, so the warning below could
-	  # never fire and a broken config looked like a successful build.
-	  emacs --batch -f package-initialize \
-	        -f batch-byte-compile "$(BUILD_DIR)/emacs" \
-	    || echo "Warning: Emacs compilation failed (falling back to source config)"
-	  if [ -f "$(BUILD_DIR)/emacs.elc" ]; then
-	    link_path "$(BUILD_DIR)/emacs.elc" "$(HOME)/.emacs.elc"
-	  fi
-	else
-	  echo "Warning: emacs not found, skipping compilation"
+	fi
+	if [ ! -f "$(HOME)/.bashrc.private" ]; then
+	  printf '# Machine-local bashrc overrides, sourced last by ~/.bashrc.\n' \
+	    > "$(HOME)/.bashrc.private"
+	  echo -e "  $(GREEN)created$(NC) $(HOME)/.bashrc.private"
 	fi
 
-	if [ -f "$(BUILD_DIR)/xmonad/xmonad.hs" ] && command -v xmonad >/dev/null 2>&1; then
+	# xmonad reads ~/.xmonad/xmonad.hs (a symlink into src/) and writes its
+	# build output beside it, which is why that directory is not itself linked.
+	if command -v xmonad >/dev/null 2>&1; then
 	  echo "Compiling xmonad config..."
-	  cd "$(BUILD_DIR)/xmonad" && xmonad --recompile \
-	    || echo "Warning: XMonad compilation failed"
+	  xmonad --recompile || echo -e "  $(RED)Warning$(NC): xmonad recompile failed"
 	else
-	  echo "Warning: xmonad not found, skipping compilation"
+	  echo -e "  $(ORANGE)skip$(NC)    xmonad not installed"
 	fi
 
 	@echo -e "$(GREEN)Build complete.$(NC)"
 
-# First-time setup: private files, build-tree git repo, MATE session wiring.
-$(BUILD_DIR):
-	@echo "First-time setup..."
-	mkdir -p "$(BUILD_DIR)"
-	printf '%s\n' bin emacs.elc emacs.d config/warp-terminal \
-	  'xmonad/xmonad.errors' 'xmonad/xmonad.hi' 'xmonad/xmonad.o' \
-	  'xmonad/xmonad.state' 'xmonad/build-*' 'xmonad/xmonad-*-linux' \
-	  > "$(BUILD_DIR)/.gitignore"
-
-	# Adopt private files stashed in $HOME back into _build. This is the return
-	# leg of what `distclean` does before it removes the build tree, and it also
-	# picks up files left in $HOME by the interim layout that kept them there.
-	for p in $(PRIVATE_FILES); do
-	  if [ -f "$(HOME)/.$$p" ] && [ ! -L "$(HOME)/.$$p" ] && [ ! -f "$(BUILD_DIR)/$$p" ]; then
-	    echo "Adopting \$$HOME/.$$p into $(BUILD_DIR)/$$p"
-	    mv "$(HOME)/.$$p" "$(BUILD_DIR)/$$p"
-	  fi
-	done
-
-	if [ ! -f "$(BUILD_DIR)/gitconfig.private" ]; then
-	  echo "Creating $(BUILD_DIR)/gitconfig.private"
-	  read -r -p "Enter your Git email: " git_email
-	  read -r -p "Enter your Git name: " git_name
-	  printf '[user]\n\temail = %s\n\tname = %s\n' "$$git_email" "$$git_name" \
-	    > "$(BUILD_DIR)/gitconfig.private"
-	fi
-
-	# bashrc sources this only if present, so an empty stub keeps the
-	# "edit this file" story obvious rather than leaving nothing to find.
-	if [ ! -f "$(BUILD_DIR)/bashrc.private" ]; then
-	  printf '# Machine-local bashrc overrides. Versioned in this build tree only.\n' \
-	    > "$(BUILD_DIR)/bashrc.private"
-	fi
-
-	if [ ! -d "$(BUILD_DIR)/.git" ] && command -v git >/dev/null 2>&1; then
-	  git init -q "$(BUILD_DIR)"
-	fi
-
-	if command -v gsettings >/dev/null 2>&1; then
-	  echo "Configuring MATE session for XMonad..."
-	  gsettings set org.mate.session.required-components windowmanager xmonad || echo "  warning: gsettings windowmanager failed"
-	  gsettings set org.mate.session required-components-list "['windowmanager', 'panel']" || echo "  warning: gsettings components-list failed"
-	  gsettings set org.mate.mate-menu hot-key '' || echo "  warning: gsettings mate-menu failed"
-	  gsettings set com.solus-project.brisk-menu hot-key '' || echo "  warning: gsettings brisk-menu failed"
-	fi
-
-.PHONY: status
 status:
-	@echo "Dotfile symlinks:"
-	for f in $(ALL_DOTFILES); do
-	  link="$(HOME)/.$$f"
-	  if [ -L "$$link" ]; then
-	    tgt="$$(readlink "$$link")"
-	    if [ -e "$$link" ]; then
-	      echo -e "  $(GREEN)ok$(NC)      .$$f -> $$tgt"
+	@echo "Symlinks:"
+	for pair in $(LINKS); do
+	  src="$(CONFIG_DIR)/src/$${pair%%:*}"
+	  dest="$(HOME)/$${pair#*:}"
+	  name="$${pair#*:}"
+	  if [ -L "$$dest" ]; then
+	    tgt="$$(readlink "$$dest")"
+	    if [ ! -e "$$dest" ]; then
+	      echo -e "  $(RED)dangling$(NC) $$name -> $$tgt"
+	    elif [ "$$tgt" != "$$src" ]; then
+	      echo -e "  $(ORANGE)foreign$(NC)  $$name -> $$tgt"
 	    else
-	      echo -e "  $(RED)dangling$(NC) .$$f -> $$tgt"
+	      echo -e "  $(GREEN)ok$(NC)       $$name"
 	    fi
-	  elif [ -e "$$link" ]; then
-	    echo -e "  $(ORANGE)blocked$(NC)  .$$f (exists, not a symlink)"
+	  elif [ -e "$$dest" ]; then
+	    echo -e "  $(ORANGE)blocked$(NC)  $$name (exists, not a symlink)"
 	  else
-	    echo -e "  $(RED)missing$(NC)  .$$f"
+	    echo -e "  $(RED)missing$(NC)  $$name"
 	  fi
 	done
 
 	@echo ""
-	@echo "~/.config symlinks:"
-	for item in $(CONFIG_ITEMS); do
-	  link="$(HOME)/.config/$$item"
-	  if [ -L "$$link" ]; then
-	    tgt="$$(readlink "$$link")"
-	    if [ -e "$$link" ]; then
-	      echo -e "  $(GREEN)ok$(NC)      .config/$$item -> $$tgt"
-	    else
-	      echo -e "  $(RED)dangling$(NC) .config/$$item -> $$tgt"
-	    fi
-	  elif [ -e "$$link" ]; then
-	    echo -e "  $(ORANGE)blocked$(NC)  .config/$$item (exists, not a symlink)"
-	  else
-	    echo -e "  $(RED)missing$(NC)  .config/$$item"
-	  fi
-	done
-
-	@echo ""
-	@echo "Private files (in $(BUILD_DIR), versioned by its own git repo):"
+	@echo "Private files (in \$$HOME, untracked):"
 	for p in $(PRIVATE_FILES); do
-	  if [ -f "$(BUILD_DIR)/$$p" ]; then
-	    echo -e "  $(GREEN)ok$(NC)      $$p"
+	  if [ -L "$(HOME)/$$p" ]; then
+	    echo -e "  $(ORANGE)symlink$(NC)  $$p (expected a real file)"
+	  elif [ -f "$(HOME)/$$p" ]; then
+	    echo -e "  $(GREEN)ok$(NC)       $$p ($$(wc -c < "$(HOME)/$$p") bytes)"
 	  else
-	    echo -e "  $(ORANGE)absent$(NC)   $$p"
+	    echo -e "  $(RED)missing$(NC)  $$p"
 	  fi
 	done
-	for p in $(PRIVATE_LINKS); do
-	  link="$(HOME)/.$$p"
-	  if [ -L "$$link" ] && [ -e "$$link" ]; then
-	    echo -e "  $(GREEN)ok$(NC)      .$$p -> $$(readlink "$$link")"
-	  elif [ -L "$$link" ]; then
-	    echo -e "  $(RED)dangling$(NC) .$$p -> $$(readlink "$$link")"
-	  elif [ -e "$$link" ]; then
-	    echo -e "  $(ORANGE)blocked$(NC)  .$$p (exists, not a symlink)"
-	  else
-	    echo -e "  $(RED)missing$(NC)  .$$p (git include will find nothing)"
-	  fi
-	done
-	if [ -d "$(BUILD_DIR)/.git" ]; then
-	  uncommitted=$$(cd "$(BUILD_DIR)" && git status --porcelain -- $(PRIVATE_FILES) 2>/dev/null)
-	  if [ -n "$$uncommitted" ]; then
-	    echo -e "  $(ORANGE)uncommitted$(NC) changes in $(BUILD_DIR): $$uncommitted"
-	  fi
-	fi
 
-	@$(MAKE) --no-print-directory check
-
-# Catches the failure mode where src/ was edited but `make build` never ran,
-# so the deployed (and byte-compiled) config silently lags behind.
-.PHONY: check
-check:
-	@echo ""
-	@echo "src/ vs _build/ drift:"
-	drift=0
-	for f in $(SOURCE_FILES); do
-	  src="src/$$f"
-	  built="$(BUILD_DIR)/$$(basename "$$f")"
-	  if [ -f "$$src" ] && [ -f "$$built" ] && ! cmp -s "$$src" "$$built"; then
-	    echo -e "  $(ORANGE)stale$(NC)   $$built"
-	    drift=1
-	  fi
-	done
-	for f in $(XMONAD_FILES); do
-	  if [ -f "src/$$f" ] && [ -f "$(BUILD_DIR)/$$f" ] && ! cmp -s "src/$$f" "$(BUILD_DIR)/$$f"; then
-	    echo -e "  $(ORANGE)stale$(NC)   $(BUILD_DIR)/$$f"
-	    drift=1
-	  fi
-	done
-	if [ -f "$(BUILD_DIR)/emacs" ] && [ -f "$(BUILD_DIR)/emacs.elc" ] \
-	   && [ "$(BUILD_DIR)/emacs" -nt "$(BUILD_DIR)/emacs.elc" ]; then
-	  echo -e "  $(ORANGE)stale$(NC)   emacs.elc is older than emacs (Emacs loads the .elc)"
-	  drift=1
-	fi
-	if [ "$$drift" -eq 0 ]; then
-	  echo -e "  $(GREEN)up to date$(NC)"
-	else
-	  echo    "  run 'make build'"
-	fi
-
-# Static checks over src/, in a scratch directory so nothing is deployed and
-# no .elc lands next to the sources. Distinct from `check`, which only compares
-# src/ against the deployed copy: that notices a change was never built, this
-# notices the change was wrong. Every tool is optional and reports skip when
-# absent, so this stays runnable on a machine that has only some of them.
+# Static checks over src/, in a scratch directory so nothing is deployed and no
+# .elc lands next to the sources. Emacs is not byte-compiled during build any
+# more, but compiling here still catches errors before they reach a live init.
 #
 # Byte-compilation fails the target on errors only. Warnings are printed and
 # counted but tolerated, because a package update can introduce one that is not
 # ours to fix; add byte-compile-error-on-warn to tighten that.
-.PHONY: lint
 lint:
 	@failed=0
 	tmp=$$(mktemp -d)
@@ -350,7 +205,7 @@ lint:
 
 	echo "bashrc:"
 	if command -v shellcheck >/dev/null 2>&1; then
-	  # SC1091 only reports that bash-completion and bashrc.private are not
+	  # SC1091 only reports that bash-completion and .bashrc.private are not
 	  # readable from here; both exist at runtime.
 	  if shellcheck -s bash -e SC1091 src/shell/bashrc; then
 	    echo -e "  $(GREEN)ok$(NC)      shellcheck"
@@ -434,61 +289,29 @@ lint:
 	  exit 1
 	fi
 
-# Removes the symlinks only. _build (emacs packages, compiled xmonad, the
-# build-tree git history) survives; use distclean to remove that too.
-.PHONY: clean
+# Removes only what this repository installed. The private files in $HOME, the
+# Emacs packages in ~/.emacs.d and the compiled xmonad in ~/.xmonad are not
+# ours to delete and are left alone.
 clean:
-	@echo "Removing config symlinks..."
-	for f in $(ALL_DOTFILES); do
-	  link="$(HOME)/.$$f"
-	  if [ -L "$$link" ]; then
-	    rm -f "$$link"; echo "  removed .$$f"
-	  elif [ -e "$$link" ]; then
-	    echo "  skipped .$$f (not a symlink)"
+	@echo "Removing symlinks..."
+	$(SHELL_HELPERS)
+	for pair in $(LINKS); do
+	  dest="$(HOME)/$${pair#*:}"
+	  if [ -L "$$dest" ]; then
+	    rm -f "$$dest"; echo "  removed $${pair#*:}"
+	  elif [ -e "$$dest" ]; then
+	    echo "  skipped $${pair#*:} (not a symlink)"
 	  fi
 	done
-	for item in $(CONFIG_ITEMS); do
-	  link="$(HOME)/.config/$$item"
-	  if [ -L "$$link" ]; then
-	    rm -f "$$link"; echo "  removed .config/$$item"
-	  elif [ -e "$$link" ]; then
-	    echo "  skipped .config/$$item (not a symlink)"
-	  fi
-	done
-	# Only the link is removed; the file itself stays in _build.
-	for p in $(PRIVATE_LINKS); do
-	  if [ -L "$(HOME)/.$$p" ]; then
-	    rm -f "$(HOME)/.$$p"; echo "  removed .$$p"
-	  fi
-	done
-	@echo "Clean complete (_build kept; run 'make distclean' to remove it)."
+	prune_foreign
+	@echo "Clean complete. Private files, ~/.emacs.d and ~/.xmonad were left alone."
 
-.PHONY: distclean
-distclean: clean
-	@if [ -d "$(BUILD_DIR)" ]; then
-	  echo ""
-	  echo "This deletes $(BUILD_DIR), including:"
-	  echo "  - every installed Emacs package (emacs.d)"
-	  echo "  - the compiled xmonad binary"
-	  echo "  - the build-tree git history, including every past revision of"
-	  echo "    the private files"
-	  echo ""
-	  echo "The current contents of the private files are moved to \$$HOME first"
-	  echo "and adopted back by the next 'make build', so only their history is"
-	  echo "lost - but that history is the only copy. Back up $(BUILD_DIR)/.git"
-	  echo "first if you want to keep it."
-	  read -r -p "Type 'yes' to continue: " confirm
-	  if [ "$$confirm" = "yes" ]; then
-	    for p in $(PRIVATE_FILES); do
-	      if [ -f "$(BUILD_DIR)/$$p" ]; then
-	        rm -f "$(HOME)/.$$p"
-	        mv "$(BUILD_DIR)/$$p" "$(HOME)/.$$p"
-	        echo "  preserved $$p as \$$HOME/.$$p"
-	      fi
-	    done
-	    rm -rf "$(BUILD_DIR)"
-	    echo "Removed $(BUILD_DIR)"
-	  else
-	    echo "Aborted."
-	  fi
+mate-session:
+	@if ! command -v gsettings >/dev/null 2>&1; then
+	  echo "gsettings not found"; exit 1
 	fi
+	gsettings set org.mate.session.required-components windowmanager xmonad
+	gsettings set org.mate.session required-components-list "['windowmanager', 'panel']"
+	gsettings set org.mate.mate-menu hot-key '' || echo "  warning: mate-menu schema absent"
+	gsettings set com.solus-project.brisk-menu hot-key '' || echo "  warning: brisk-menu schema absent"
+	@echo -e "$(GREEN)MATE session pointed at XMonad.$(NC)"

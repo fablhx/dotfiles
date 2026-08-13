@@ -6,11 +6,6 @@
 # Early exit for dumb terminals
 [[ $TERM == "dumb" ]] && PS1='$ ' && return
 
-# Directory this file was deployed into (_build), used to locate the private
-# overrides at the end of this file. ~/.bashrc is a symlink, so BASH_SOURCE
-# alone gives $HOME; realpath is what resolves it to the build directory.
-__config_dir="$(dirname "$(realpath "${BASH_SOURCE[0]}")")"
-
 # =============================================================================
 #                           Shell Options
 # =============================================================================
@@ -286,8 +281,6 @@ fi
 #                           Private / Corporate
 # =============================================================================
 
-# Lives beside this file in the build directory, where the build tree's own
-# git repo keeps it under version control without it ever reaching the public
-# remote. `make clean` removes only symlinks, so it survives.
-[[ -f "${__config_dir}/bashrc.private" ]] && source "${__config_dir}/bashrc.private"
-unset __config_dir
+# A plain file in $HOME, untracked by this repository and untouched by any
+# make target. Sourced last so it can override anything above.
+[[ -f "${HOME}/.bashrc.private" ]] && source "${HOME}/.bashrc.private"

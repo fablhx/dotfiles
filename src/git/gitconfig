@@ -102,16 +102,11 @@
 	# so 1.10.2 is AFTER 1.2.0.
 	sort = version:refname
 [include]
-	# Load private user info. The real file lives in the build directory, under
-	# the build tree's own git repo; ~/.gitconfig.private is a symlink to it,
-	# created by `make build`.
-	#
-	# A relative path here would NOT work. Git resolves include.path against
-	# the directory of the config file it actually read - ~/.gitconfig - and
-	# not the _build/gitconfig that symlink resolves to, so `path =
-	# gitconfig.private` looks in $HOME and silently finds nothing. Git does
-	# follow a symlinked include target, hence this indirection; it also keeps
-	# the clone location out of this file.
+	# Private user info: a plain file in $HOME, untracked here. The path is
+	# absolute because git resolves a relative include.path against the
+	# directory of the file it actually read - ~/.gitconfig - which is a
+	# symlink into this repository, so a bare filename would be looked up in
+	# src/git/ and silently not found.
 	#
 	# Deliberately LAST: git applies includes in position order and
 	# last-one-wins, so an include at the top of this file could never

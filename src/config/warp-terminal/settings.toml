@@ -1,26 +1,3 @@
-[appearance]
-
-[appearance.text]
-notebook_font_size = 14.0
-font_size = 16.0
-
-[appearance.full_screen_apps]
-alt_screen_padding = { custom = { uniform_padding = 0.0 } }
-
-[appearance.vertical_tabs]
-enabled = false
-display_granularity = "panes"
-
-[appearance.tabs]
-workspace_decoration_visibility = "hide_fullscreen"
-
-[appearance.themes]
-theme = "solarized_dark"
-system_theme = false
-
-[appearance.input]
-input_mode = "waterfall"
-
 [agents]
 cloud_conversation_storage_enabled = false
 
@@ -28,19 +5,17 @@ cloud_conversation_storage_enabled = false
 
 [agents.warp_agent.active_ai]
 shared_block_title_generation_enabled = false
-agent_mode_query_suggestions_enabled = false
 enabled = true
 code_suggestions_enabled = false
+agent_mode_query_suggestions_enabled = false
 
 [agents.warp_agent.input]
 ai_auto_detection_enabled = false
-nld_in_terminal_enabled = false
 show_agent_tips = false
+nld_in_terminal_enabled = false
 
 [agents.warp_agent.other]
-should_show_oz_updates_in_zero_state = false
-should_render_use_agent_toolbar_for_user_commands = true
-show_conversation_history = true
+should_render_use_agent_toolbar_for_user_commands = false
 
 [agents.knowledge]
 warp_drive_context_enabled = false
@@ -88,9 +63,23 @@ run_agents = "always_ask"
 web_search_enabled = true
 write_to_pty = "always_ask"
 
+[general]
+show_warning_before_quitting = false
+show_changelog_after_update = false
+new_tab_placement = "after_all_tabs"
+
+[terminal]
+show_terminal_zero_state_block = false
+
+[terminal.input]
+input_box_type_setting = "universal"
+show_hint_text = false
+honor_ps1 = false
+completions_open_while_typing = false
+
 [privacy]
-crash_reporting_enabled = true
 telemetry_enabled = false
+crash_reporting_enabled = true
 custom_secret_regex_list = [
   { name = "IPv4 Address", pattern = '\b((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}\b' },
   {
@@ -123,12 +112,38 @@ custom_secret_regex_list = [
   { name = "Fireworks API Key", pattern = '\bfw_[a-zA-Z0-9]{24}\b' },
 ]
 
-[general]
-show_warning_before_quitting = false
-default_session_mode = "terminal"
+[appearance]
+
+[appearance.full_screen_apps]
+alt_screen_padding = { custom = { uniform_padding = 0.0 } }
+
+[appearance.text]
+notebook_font_size = 14.0
+font_size = 18.0
+
+[appearance.input]
+input_mode = "waterfall"
+
+[appearance.themes]
+theme = "solarized_dark"
+system_theme = false
+
+[appearance.vertical_tabs]
+enabled = false
+
+[appearance.window]
+zoom_level = 100
+
+[text_editing]
+autocomplete_symbols = false
+
+[warpify]
+
+[warpify.ssh]
+use_ssh_tmux_wrapper = false
+ssh_tmux_deprecation_notice_pending = false
 
 [notifications]
-toast_duration_secs = 8
 
 [notifications.preferences]
 is_agent_task_completed_enabled = true
@@ -143,11 +158,3 @@ play_notification_sound = true
 
 [code.indexing]
 agent_mode_codebase_context = false
-
-[terminal]
-show_terminal_zero_state_block = false
-
-[terminal.input]
-show_hint_text = false
-input_box_type_setting = "universal"
-honor_ps1 = false
