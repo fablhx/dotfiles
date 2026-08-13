@@ -45,6 +45,8 @@ setupWorkspaces :: X ()
 setupWorkspaces = do
   spawnOn "1" browserCmd
   spawnOn "2" myTerminal
+  spawnOn "6" "1password"
+  spawnOn "7" "slack"
 
 myBorderWidth :: Dimension
 myBorderWidth = 2
