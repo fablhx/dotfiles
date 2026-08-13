@@ -109,10 +109,21 @@ alias stop_emacs='emacsclient -e "(kill-emacs)"'  # Stop daemon
 #                           Prompt sync
 # =============================================================================
 
+__history_sync() {
+    history -a
+    history -n
+}
+
 # Share history between shells. Guarded so re-sourcing this file does not keep
-# prepending to PROMPT_COMMAND.
-if [[ "${PROMPT_COMMAND}" != *"history -a; history -n;"* ]]; then
-    PROMPT_COMMAND="history -a; history -n; ${PROMPT_COMMAND}"
+# prepending, and array-aware because bash 5.1+ lets PROMPT_COMMAND be one --
+# assigning a string to an array variable would drop every other hook in it,
+# and Warp installs hooks of its own here.
+if [[ ${PROMPT_COMMAND[*]} != *__history_sync* ]]; then
+    if [[ ${PROMPT_COMMAND@a} == *a* ]]; then
+        PROMPT_COMMAND=( __history_sync "${PROMPT_COMMAND[@]}" )
+    else
+        PROMPT_COMMAND="__history_sync${PROMPT_COMMAND:+; ${PROMPT_COMMAND}}"
+    fi
 fi
 
 # =============================================================================
