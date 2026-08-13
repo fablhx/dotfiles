@@ -30,11 +30,14 @@ shopt -s histappend       # Append to history, don't overwrite
 # =============================================================================
 #                           History Configuration
 # =============================================================================
+# Deliberately not exported: bash reads these from its own scope, and every
+# exported variable is copied into the environment of every child process.
+# Warp prepends its own generator commands to HISTIGNORE at session start.
 
-export HISTCONTROL=ignoredups:erasedups:ignorespace
-export HISTSIZE=50000
-export HISTFILESIZE=50000
-export HISTIGNORE="ls:ll:la:l:cd:rm:pwd:exit:clear:history:bg:fg:jobs"
+HISTCONTROL=ignoredups:erasedups:ignorespace
+HISTSIZE=50000
+HISTFILESIZE=50000
+HISTIGNORE="ls:ll:la:l:cd:rm:pwd:exit:clear:history:bg:fg:jobs"
 
 # =============================================================================
 #                           Environment Variables
