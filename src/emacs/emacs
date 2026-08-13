@@ -1016,6 +1016,9 @@ STATUS, CODE and MESSAGE are as for `compilation-exit-message-function'."
   :commands (lsp lsp-deferred)
   :init
   (setq lsp-keymap-prefix "C-c l")
+  ;; A language server answers in bursts far larger than the 4 kB default, and
+  ;; every short read costs a process-filter round trip.
+  (setq read-process-output-max (* 1024 1024))
   ;; :custom, not setq in :config: these apply as each defcustom is evaluated,
   ;; which is what settles lsp-clients-clangd-executable before lsp-clangd loads.
   :custom
