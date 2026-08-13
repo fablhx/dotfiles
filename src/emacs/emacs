@@ -1094,6 +1094,22 @@ STATUS, CODE and MESSAGE are as for `compilation-exit-message-function'."
 ;;                           Visual Enhancement
 ;; =============================================================================
 
+;; Faces are set here rather than from the packages that use them: whitespace
+;; only loads with the first prog-mode buffer, which left `region' looking
+;; different in a session that opened nothing but text.
+(custom-set-faces
+ '(region ((t (:background "SlateGray1"))))
+ '(whitespace-empty ((t (:foreground "firebrick" :background "SlateGray1"))))
+ '(whitespace-hspace ((t (:foreground "white" :background "red"))))
+ '(whitespace-indentation ((t (:foreground "firebrick" :background "beige"))))
+ '(whitespace-line ((t (:foreground "black" :background "red"))))
+ '(whitespace-newline ((t (:foreground "orange" :background "blue"))))
+ '(whitespace-space ((t (:bold t :foreground "gray75"))))
+ '(whitespace-space-after-tab ((t (:foreground "black" :background "green"))))
+ '(whitespace-space-before-tab ((t (:foreground "black" :background "DarkOrange"))))
+ '(whitespace-tab ((t (:foreground "red"))))
+ '(whitespace-trailing ((t (:foreground "red" :background "yellow")))))
+
 ;; M-x nerd-icons-install-fonts
 (use-package doom-modeline
   :ensure t
@@ -1109,20 +1125,6 @@ STATUS, CODE and MESSAGE are as for `compilation-exit-message-function'."
   :hook (prog-mode . whitespace-mode)
   :custom
   (whitespace-style '(face trailing empty lines-tail tabs tab-mark))
-  (whitespace-line-column 80)
-  :config
-  (set-face-attribute 'region nil :background "SlateGray1")
-
-  (custom-set-faces
-   '(whitespace-empty ((t (:foreground "firebrick" :background "SlateGray1"))))
-   '(whitespace-hspace ((t (:foreground "white" :background "red"))))
-   '(whitespace-indentation ((t (:foreground "firebrick" :background "beige"))))
-   '(whitespace-line ((t (:foreground "black" :background "red"))))
-   '(whitespace-newline ((t (:foreground "orange" :background "blue"))))
-   '(whitespace-space ((t (:bold t :foreground "gray75"))))
-   '(whitespace-space-after-tab ((t (:foreground "black" :background "green"))))
-   '(whitespace-space-before-tab ((t (:foreground "black" :background "DarkOrange"))))
-   '(whitespace-tab ((t (:foreground "red"))))
-   '(whitespace-trailing ((t (:foreground "red" :background "yellow"))))))
+  (whitespace-line-column 80))
 
 ;;; emacs ends here
