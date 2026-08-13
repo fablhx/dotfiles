@@ -50,6 +50,7 @@
 
 (when (version< emacs-version "29.1")
   (error "This configuration requires Emacs 29.1 or newer (running %s)" emacs-version))
+
 (require 'use-package)
 (setq use-package-always-ensure t)
 
@@ -260,13 +261,13 @@ If optional prefix arg NUM is given, start numbering from that number
 instead of 1."
   (interactive "*r\np")
   (save-excursion
-    (let ((end-marker (make-marker))
+    (let ((end-marker (copy-marker end))
           (num (or num 1)))
-      (set-marker end-marker end)
       (goto-char start)
       (save-match-data
         (while (re-search-forward "^\\(-* *\\)\\([0-9]+\\)" end-marker t)
-          (replace-match (concat (match-string 1) (number-to-string num)))
+          ;; Literal replacement: the number is data, not a template.
+          (replace-match (concat (match-string 1) (number-to-string num)) t t)
           (setq num (1+ num))))
       (set-marker end-marker nil))))
 
