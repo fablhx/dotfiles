@@ -14,11 +14,6 @@ SHELL := /bin/bash
 
 CONFIG_DIR := $(CURDIR)
 
-GREEN  := \033[0;32m
-ORANGE := \033[0;33m
-RED    := \033[0;31m
-NC     := \033[0m
-
 # <path under src/>:<path under $HOME>
 LINKS := \
   shell/bashrc:.bashrc \
@@ -36,13 +31,65 @@ LINKS := \
 PRIVATE_FILES := .bashrc.private .gitconfig.private
 
 .DEFAULT_GOAL := usage
-
 .PHONY: usage help build status lint clean mate-session
+
+# Shared shell prelude. `say` is the single place that decides how a status
+# word is coloured and aligned, so every target reports the same way.
+define PRELUDE
+say() {
+  local kind="$$1"; shift
+  local color
+  case "$$kind" in
+    ok|linked|created)   color=32 ;;
+    skip|warn|pruned)    color=33 ;;
+    *)                   color=31 ;;
+  esac
+  printf '  \033[0;%sm%-8s\033[0m %s\n' "$$color" "$$kind" "$$*"
+}
+
+have() {
+  command -v "$$1" >/dev/null 2>&1 && return 0
+  say skip "$$1 not installed"
+  return 1
+}
+
+# Refuses anything that is not already a symlink, since `ln -sfn` against a
+# real directory links inside it. Returns rather than exits, so one skipped
+# link does not abort the build.
+link_path() {
+  local target="$$1" link="$$2"
+  if [ -L "$$link" ]; then
+    rm -f "$$link"
+  elif [ -e "$$link" ]; then
+    say skip "$$link exists and is not a symlink; move it aside and re-run"
+    return 0
+  fi
+  mkdir -p "$$(dirname "$$link")"
+  ln -s "$$target" "$$link"
+  say linked "$$link"
+}
+
+# Removes links into this repository that LINKS no longer claims, which is what
+# deleting a file from src/ leaves behind.
+prune_foreign() {
+  local managed link
+  managed=$$(for pair in $(LINKS); do echo "$$HOME/$${pair#*:}"; done)
+  shopt -s nullglob
+  for link in "$$HOME"/.[!.]* "$$HOME"/.config/* "$$HOME"/.config/*/*; do
+    [ -L "$$link" ] || continue
+    [[ "$$(readlink -m "$$link")" == "$(CONFIG_DIR)"/* ]] || continue
+    if ! grep -Fxq "$$link" <<< "$$managed"; then
+      rm -f "$$link"
+      say pruned "$$link (no longer in src/)"
+    fi
+  done
+  shopt -u nullglob
+}
+endef
 
 usage help:
 	@echo "Config files Management"
 	@echo ""
-	@echo "Usage:"
 	@echo "  make build        - Symlink src/ into \$$HOME and recompile xmonad"
 	@echo "  make status       - Show every symlink and private file"
 	@echo "  make lint         - Static-check src/ (shellcheck, emacs, ghc, tmux, git)"
@@ -52,127 +99,67 @@ usage help:
 	@echo "Private files, kept in \$$HOME and never tracked:"
 	@echo "  $(PRIVATE_FILES)"
 
-# link_path refuses anything that is not already a symlink, since `ln -sfn`
-# against a real directory links inside it. It returns rather than exits, so a
-# skipped link does not abort the build.
-#
-# prune_foreign removes links into this repository that LINKS no longer claims,
-# which is what deleting a file from src/ leaves behind.
-define SHELL_HELPERS
-link_path() {
-  local target="$$1" link="$$2"
-  if [ -L "$$link" ]; then
-    rm -f "$$link"
-  elif [ -e "$$link" ]; then
-    echo -e "  $(ORANGE)skip$(NC)    $$link exists and is not a symlink"
-    echo    "          move it aside and re-run: mv '$$link' '$$link.bak'"
-    return 0
-  fi
-  mkdir -p "$$(dirname "$$link")"
-  ln -s "$$target" "$$link"
-  echo -e "  $(GREEN)linked$(NC)  $$link"
-  return 0
-}
-
-managed_destinations() {
-  for pair in $(LINKS); do echo "$$HOME/$${pair#*:}"; done
-}
-
-prune_foreign() {
-  local managed link resolved
-  managed="$$(managed_destinations)"
-  shopt -s nullglob
-  for link in "$$HOME"/.[!.]* "$$HOME"/.config/* "$$HOME"/.config/*/*; do
-    [ -L "$$link" ] || continue
-    resolved="$$(readlink -m "$$link")"
-    case "$$resolved" in
-      "$(CONFIG_DIR)"/*) ;;
-      *) continue ;;
-    esac
-    if ! grep -Fxq "$$link" <<< "$$managed"; then
-      rm -f "$$link"
-      echo -e "  $(ORANGE)pruned$(NC)  $$link (no longer in src/)"
-    fi
-  done
-  shopt -u nullglob
-}
-endef
-
 build:
-	@echo "Linking src/ into $(HOME)..."
-	$(SHELL_HELPERS)
+	@$(PRELUDE)
+	echo "Linking src/ into $(HOME)..."
 	for pair in $(LINKS); do
-	  src="src/$${pair%%:*}"
-	  dest="$(HOME)/$${pair#*:}"
+	  src="$(CONFIG_DIR)/src/$${pair%%:*}"
 	  if [ -f "$$src" ]; then
-	    link_path "$(CONFIG_DIR)/$$src" "$$dest"
+	    link_path "$$src" "$(HOME)/$${pair#*:}"
 	  else
-	    echo -e "  $(RED)missing$(NC) $$src"
+	    say missing "src/$${pair%%:*}"
 	  fi
 	done
 	prune_foreign
 
 	# On demand, not from a first-run target: that ossifies, and later changes
 	# to it never reach an existing install.
-	if [ ! -f "$(HOME)/.gitconfig.private" ]; then
-	  if [ -t 0 ]; then
-	    echo "Creating $(HOME)/.gitconfig.private"
-	    read -r -p "  Git email: " git_email
-	    read -r -p "  Git name:  " git_name
-	    printf '[user]\n\temail = %s\n\tname = %s\n' "$$git_email" "$$git_name" \
-	      > "$(HOME)/.gitconfig.private"
-	  else
-	    echo -e "  $(ORANGE)skip$(NC)    .gitconfig.private (not a terminal)"
-	  fi
+	if [ ! -f "$(HOME)/.gitconfig.private" ] && [ -t 0 ]; then
+	  read -r -p "  Git email: " email
+	  read -r -p "  Git name:  " name
+	  printf '[user]\n\temail = %s\n\tname = %s\n' "$$email" "$$name" \
+	    > "$(HOME)/.gitconfig.private"
+	  say created "$(HOME)/.gitconfig.private"
 	fi
 	if [ ! -f "$(HOME)/.bashrc.private" ]; then
-	  printf '# Machine-local bashrc overrides, sourced last by ~/.bashrc.\n' \
+	  echo '# Machine-local bashrc overrides, sourced last by ~/.bashrc.' \
 	    > "$(HOME)/.bashrc.private"
-	  echo -e "  $(GREEN)created$(NC) $(HOME)/.bashrc.private"
+	  say created "$(HOME)/.bashrc.private"
 	fi
 
 	# xmonad writes its build output beside xmonad.hs, which is why ~/.xmonad
 	# is a real directory rather than a link.
-	if command -v xmonad >/dev/null 2>&1; then
-	  echo "Compiling xmonad config..."
-	  xmonad --recompile || echo -e "  $(RED)Warning$(NC): xmonad recompile failed"
-	else
-	  echo -e "  $(ORANGE)skip$(NC)    xmonad not installed"
+	if have xmonad; then
+	  xmonad --recompile >/dev/null && say ok "xmonad recompiled" \
+	    || say fail "xmonad recompile"
 	fi
-
-	@echo -e "$(GREEN)Build complete.$(NC)"
+	printf '\033[0;32mBuild complete.\033[0m\n'
 
 status:
-	@echo "Symlinks:"
+	@$(PRELUDE)
+	echo "Symlinks:"
 	for pair in $(LINKS); do
-	  src="$(CONFIG_DIR)/src/$${pair%%:*}"
+	  want="$(CONFIG_DIR)/src/$${pair%%:*}"
 	  dest="$(HOME)/$${pair#*:}"
 	  name="$${pair#*:}"
-	  if [ -L "$$dest" ]; then
-	    tgt="$$(readlink "$$dest")"
-	    if [ ! -e "$$dest" ]; then
-	      echo -e "  $(RED)dangling$(NC) $$name -> $$tgt"
-	    elif [ "$$tgt" != "$$src" ]; then
-	      echo -e "  $(ORANGE)foreign$(NC)  $$name -> $$tgt"
-	    else
-	      echo -e "  $(GREEN)ok$(NC)       $$name"
-	    fi
-	  elif [ -e "$$dest" ]; then
-	    echo -e "  $(ORANGE)blocked$(NC)  $$name (exists, not a symlink)"
+	  if [ ! -e "$$dest" ] && [ ! -L "$$dest" ]; then
+	    say missing "$$name"
+	  elif [ ! -L "$$dest" ]; then
+	    say blocked "$$name (exists, not a symlink)"
+	  elif [ "$$(readlink "$$dest")" != "$$want" ]; then
+	    say wrong "$$name -> $$(readlink "$$dest")"
 	  else
-	    echo -e "  $(RED)missing$(NC)  $$name"
+	    say ok "$$name"
 	  fi
 	done
 
-	@echo ""
-	@echo "Private files (in \$$HOME, untracked):"
+	echo ""
+	echo "Private files (in \$$HOME, untracked):"
 	for p in $(PRIVATE_FILES); do
-	  if [ -L "$(HOME)/$$p" ]; then
-	    echo -e "  $(ORANGE)symlink$(NC)  $$p (expected a real file)"
-	  elif [ -f "$(HOME)/$$p" ]; then
-	    echo -e "  $(GREEN)ok$(NC)       $$p ($$(wc -c < "$(HOME)/$$p") bytes)"
+	  if [ -f "$(HOME)/$$p" ] && [ ! -L "$(HOME)/$$p" ]; then
+	    say ok "$$p ($$(wc -c < "$(HOME)/$$p") bytes)"
 	  else
-	    echo -e "  $(RED)missing$(NC)  $$p"
+	    say missing "$$p"
 	  fi
 	done
 
@@ -181,116 +168,96 @@ status:
 # tolerated, since a package update can introduce one that is not ours to fix.
 # Add byte-compile-error-on-warn to tighten that.
 lint:
-	@failed=0
+	@$(PRELUDE)
+	failed=0
 	tmp=$$(mktemp -d)
 	trap 'rm -rf "$$tmp"' EXIT
 
-	echo "bashrc:"
-	if command -v shellcheck >/dev/null 2>&1; then
-	  # SC1091 only reports sourced files missing at lint time; both exist at runtime.
-	  if shellcheck -s bash -e SC1091 src/shell/bashrc; then
-	    echo -e "  $(GREEN)ok$(NC)      shellcheck"
+	# Runs a command, reporting pass or fail and showing output only on failure.
+	try() {
+	  local label="$$1" out; shift
+	  if out=$$("$$@" 2>&1); then
+	    say ok "$$label"
 	  else
-	    echo -e "  $(RED)fail$(NC)    shellcheck"; failed=1
+	    if [ -n "$$out" ]; then printf '%s\n' "$$out" | sed 's/^/          /'; fi
+	    say fail "$$label"
+	    failed=1
 	  fi
-	else
-	  echo -e "  $(ORANGE)skip$(NC)    shellcheck not installed"
+	}
+
+	echo "bashrc:"
+	# SC1091 only reports sourced files missing at lint time; both exist at runtime.
+	if have shellcheck; then
+	  try shellcheck shellcheck -s bash -e SC1091 src/shell/bashrc
 	fi
-	if bash -n src/shell/bashrc; then
-	  echo -e "  $(GREEN)ok$(NC)      bash -n"
-	else
-	  echo -e "  $(RED)fail$(NC)    bash -n"; failed=1
-	fi
+	try "bash -n" bash -n src/shell/bashrc
 
 	echo "emacs:"
-	if command -v emacs >/dev/null 2>&1; then
+	if have emacs; then
 	  cp src/emacs/emacs "$$tmp/init.el"
 	  if out=$$(emacs --batch -f package-initialize \
 	                  -f batch-byte-compile "$$tmp/init.el" 2>&1); then
-	    n=$$(printf '%s' "$$out" | grep -c 'Warning:' || true)
-	    if [ "$$n" -eq 0 ]; then
-	      echo -e "  $(GREEN)ok$(NC)      byte-compile"
+	    warnings=$$(printf '%s' "$$out" | grep -c 'Warning:' || true)
+	    if [ "$$warnings" -eq 0 ]; then
+	      say ok "byte-compile"
 	    else
 	      printf '%s\n' "$$out" | grep 'Warning:' | sed 's|^.*/init.el:|  src/emacs/emacs:|'
-	      echo -e "  $(ORANGE)warn$(NC)    byte-compile: $$n warning(s)"
+	      say warn "byte-compile: $$warnings warning(s)"
 	    fi
 	  else
 	    printf '%s\n' "$$out"
-	    echo -e "  $(RED)fail$(NC)    byte-compile"; failed=1
+	    say fail "byte-compile"
+	    failed=1
 	  fi
-	else
-	  echo -e "  $(ORANGE)skip$(NC)    emacs not installed"
 	fi
 
 	echo "xmonad:"
-	if command -v ghc >/dev/null 2>&1; then
+	if have ghc; then
 	  cp src/xmonad/xmonad.hs "$$tmp/"
-	  if (cd "$$tmp" && ghc --make xmonad.hs -fno-code -outputdir out \
-	        -Wunused-imports -Werror=unused-imports >/dev/null); then
-	    echo -e "  $(GREEN)ok$(NC)      ghc type-check"
-	  else
-	    echo -e "  $(RED)fail$(NC)    ghc type-check"; failed=1
-	  fi
-	else
-	  echo -e "  $(ORANGE)skip$(NC)    ghc not installed"
+	  try "ghc type-check" env -C "$$tmp" ghc --make xmonad.hs -fno-code \
+	    -outputdir out -Wunused-imports -Werror=unused-imports
 	fi
 
 	echo "tmux:"
-	if command -v tmux >/dev/null 2>&1; then
-	  # The only form that reports a bad option to the caller: `tmux -f bad.conf
-	  # new-session` shows it inside the session and still exits 0.
-	  tmux -f /dev/null -S "$$tmp/tmux.sock" new-session -d -s lint
-	  if out=$$(tmux -S "$$tmp/tmux.sock" source-file src/tmux/tmux.conf 2>&1); then
-	    echo -e "  $(GREEN)ok$(NC)      config loads"
-	  else
-	    printf '%s\n' "$$out" | sed 's/^/  /'
-	    echo -e "  $(RED)fail$(NC)    config loads"; failed=1
-	  fi
-	  tmux -S "$$tmp/tmux.sock" kill-server 2>/dev/null || true
-	else
-	  echo -e "  $(ORANGE)skip$(NC)    tmux not installed"
+	# source-file against a running server is the only form that reports a bad
+	# option to the caller; `tmux -f bad.conf new-session` still exits 0.
+	if have tmux; then
+	  tmux -f /dev/null -S "$$tmp/sock" new-session -d -s lint
+	  try "config loads" tmux -S "$$tmp/sock" source-file src/tmux/tmux.conf
+	  tmux -S "$$tmp/sock" kill-server 2>/dev/null || true
 	fi
 
 	echo "git:"
-	if git config --list --file src/git/gitconfig >/dev/null 2>&1; then
-	  echo -e "  $(GREEN)ok$(NC)      gitconfig parses"
-	else
-	  # || true: this rerun only surfaces the error; set -e would otherwise abort
-	  # before the summary.
-	  git config --list --file src/git/gitconfig 2>&1 >/dev/null | sed 's/^/  /' || true
-	  echo -e "  $(RED)fail$(NC)    gitconfig parses"; failed=1
-	fi
+	try "gitconfig parses" git config --list --file src/git/gitconfig
 
 	echo ""
 	if [ "$$failed" -eq 0 ]; then
-	  echo -e "$(GREEN)Lint passed.$(NC)"
+	  printf '\033[0;32mLint passed.\033[0m\n'
 	else
-	  echo -e "$(RED)Lint failed.$(NC)"
+	  printf '\033[0;31mLint failed.\033[0m\n'
 	  exit 1
 	fi
 
 # Removes only what this repository installed; ~/.emacs.d, ~/.xmonad and the
 # private files are not ours to delete.
 clean:
-	@echo "Removing symlinks..."
-	$(SHELL_HELPERS)
+	@$(PRELUDE)
+	echo "Removing symlinks..."
 	for pair in $(LINKS); do
 	  dest="$(HOME)/$${pair#*:}"
 	  if [ -L "$$dest" ]; then
-	    rm -f "$$dest"; echo "  removed $${pair#*:}"
-	  elif [ -e "$$dest" ]; then
-	    echo "  skipped $${pair#*:} (not a symlink)"
+	    rm -f "$$dest"
+	    say removed "$${pair#*:}"
 	  fi
 	done
 	prune_foreign
-	@echo "Clean complete. Private files, ~/.emacs.d and ~/.xmonad were left alone."
+	echo "Private files, ~/.emacs.d and ~/.xmonad were left alone."
 
 mate-session:
-	@if ! command -v gsettings >/dev/null 2>&1; then
-	  echo "gsettings not found"; exit 1
-	fi
+	@$(PRELUDE)
+	have gsettings || exit 1
 	gsettings set org.mate.session.required-components windowmanager xmonad
 	gsettings set org.mate.session required-components-list "['windowmanager', 'panel']"
-	gsettings set org.mate.mate-menu hot-key '' || echo "  warning: mate-menu schema absent"
-	gsettings set com.solus-project.brisk-menu hot-key '' || echo "  warning: brisk-menu schema absent"
-	@echo -e "$(GREEN)MATE session pointed at XMonad.$(NC)"
+	gsettings set org.mate.mate-menu hot-key '' || say warn "mate-menu schema absent"
+	gsettings set com.solus-project.brisk-menu hot-key '' || say warn "brisk-menu schema absent"
+	say ok "MATE session pointed at XMonad"
