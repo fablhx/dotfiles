@@ -2,6 +2,8 @@
 #                               Bash Configuration
 #                             (Warp Terminal / Linux)
 # =============================================================================
+# Warp supplies its own completion engine, so loading bash-completion here
+# would be ~26ms of startup whose result Warp discards.
 
 # sshd and rshd hand a non-interactive shell this file too, where every line
 # below is either wasted or actively harmful: stray output on stdout corrupts
@@ -20,20 +22,9 @@ esac
 shopt -s cdspell          # Autocorrect minor cd typos
 shopt -s checkwinsize     # Update LINES/COLUMNS after each command
 shopt -s dirspell         # Autocorrect directory name typos in completion
+shopt -s extglob          # Enable !(...) @(...) +(...) extended globs
 shopt -s globstar         # Enable ** recursive glob
 shopt -s histappend       # Append to history, don't overwrite
-
-# =============================================================================
-#                           Shell Completion
-# =============================================================================
-
-if ! shopt -oq posix; then
-  if [ -f /usr/share/bash-completion/bash_completion ]; then
-    . /usr/share/bash-completion/bash_completion
-  elif [ -f /etc/bash_completion ]; then
-    . /etc/bash_completion
-  fi
-fi
 
 # =============================================================================
 #                           History Configuration
