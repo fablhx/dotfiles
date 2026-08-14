@@ -666,8 +666,35 @@ STATUS, CODE and MESSAGE are as for `compilation-exit-message-function'."
 ;;                           Search and Navigation
 ;; =============================================================================
 
+;; Stands in for `rg-enable-default-bindings' until rg is loaded.  That function
+;; is what puts rg under the documented `C-c s' prefix - its transient menu, or
+;; `rg-global-map' where the menu is switched off - and it cannot run any sooner
+;; than rg, which costs more to load than the rest of this file put together.
+;; Autoloading the keymap in its place is not an option either: rg defines
+;; `rg-global-map' with `defvar', and a keymap autoload has to name a function
+;; cell.
+(defun my-rg-install-bindings ()
+  "Let rg bind its own prefix, then re-read the keys that reached this command.
+They go through whatever rg has just bound there, so the sequence the prefix
+was pressed for completes as if rg had been loaded all along."
+  (interactive)
+  (let ((keys (this-command-keys)))
+    ;; Autoloaded, so this is also what loads rg.
+    (rg-enable-default-bindings)
+    (if (eq (key-binding keys) #'my-rg-install-bindings)
+        ;; Replaying now would arrive back here, and again, forever.
+        (user-error "rg bound %s, not %s"
+                    (key-description rg-keymap-prefix)
+                    (key-description keys))
+      (setq unread-command-events
+            (append (listify-key-sequence keys) unread-command-events)))))
+
 (use-package rg
   :ensure t
+  :init
+  ;; nil is rg's own way of saying "no prefix", and it checks for it too.
+  (when rg-keymap-prefix
+    (global-set-key rg-keymap-prefix #'my-rg-install-bindings))
   :config
   (rg-enable-default-bindings)
   :bind
