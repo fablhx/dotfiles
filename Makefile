@@ -22,6 +22,7 @@ LINKS := \
   shell/bashrc:.bashrc \
   clang-format/clang-format:.clang-format \
   emacs/emacs:.emacs \
+  emacs/early-init.el:.emacs.d/early-init.el \
   git/gitconfig:.gitconfig \
   git/gitignore:.gitignore \
   tmux/tmux.conf:.tmux.conf \
@@ -206,22 +207,28 @@ lint:
 	for f in $(SHELL_SOURCES); do try "bash -n $$(basename "$$f")" bash -n "$$f"; done
 
 	echo "emacs:"
-	if have emacs; then
-	  cp src/emacs/emacs "$$tmp/init.el"
+	# Compiles SRC under a name Emacs accepts, reporting warnings against SRC.
+	byte_compile() {
+	  local src="$$1" name="$$2" out warnings
+	  cp "$$src" "$$tmp/$$name"
 	  if out=$$(emacs --batch -f package-initialize \
-	                  -f batch-byte-compile "$$tmp/init.el" 2>&1); then
+	                  -f batch-byte-compile "$$tmp/$$name" 2>&1); then
 	    warnings=$$(printf '%s' "$$out" | grep -c 'Warning:' || true)
 	    if [ "$$warnings" -eq 0 ]; then
-	      say ok "byte-compile"
+	      say ok "byte-compile $$src"
 	    else
-	      printf '%s\n' "$$out" | grep 'Warning:' | sed 's|^.*/init.el:|  src/emacs/emacs:|'
-	      say warn "byte-compile: $$warnings warning(s)"
+	      printf '%s\n' "$$out" | grep 'Warning:' | sed "s|^.*/$$name:|  $$src:|"
+	      say warn "byte-compile $$src: $$warnings warning(s)"
 	    fi
 	  else
 	    printf '%s\n' "$$out"
-	    say fail "byte-compile"
+	    say fail "byte-compile $$src"
 	    failed=1
 	  fi
+	}
+	if have emacs; then
+	  byte_compile src/emacs/early-init.el early-init.el
+	  byte_compile src/emacs/emacs init.el
 	fi
 
 	echo "xmonad:"

@@ -39,9 +39,9 @@ make build
 
 > **On a machine with existing dotfiles**, move aside anything already present
 > as a real file: `~/.bashrc ~/.emacs ~/.gitconfig ~/.gitignore ~/.tmux.conf`
-> `~/.clang-format`, plus `keybindings.yaml` and `settings.toml` under
-> `~/.config/warp-terminal`, and `CLAUDE.md`, `settings.json` and
-> `statusline-command.sh` under `~/.claude`.
+> `~/.clang-format`, plus `early-init.el` under `~/.emacs.d`, `keybindings.yaml`
+> and `settings.toml` under `~/.config/warp-terminal`, and `CLAUDE.md`,
+> `settings.json` and `statusline-command.sh` under `~/.claude`.
 >
 > The build prints `skip` rather than replacing a non-symlink, so nothing is
 > destroyed — but that config is then not deployed. Anything `make status`
@@ -60,6 +60,13 @@ Nerd Font glyphs for the modeline:
 
 ```
 M-x nerd-icons-install-fonts
+```
+
+One preloaded file of package autoloads, in place of one per package. From
+here on package.el rewrites it whenever a package is installed or deleted:
+
+```
+M-x package-quickstart-refresh
 ```
 
 Optional language servers, picked up from `PATH`:
@@ -119,7 +126,7 @@ here can regenerate them, so they are the only part worth backing up.
 | Area | Files | Notes |
 | --- | --- | --- |
 | Shell | `src/shell/bashrc` | Aliases, history and Emacs helpers. Warp supplies the prompt and completion, so neither is configured |
-| Editor | `src/emacs/emacs` | Emacs 29.1+, loaded as source |
+| Editor | `src/emacs/emacs`, `src/emacs/early-init.el` | Emacs 29.1+, loaded as source. `early-init.el` holds what has to run before packages are activated and before the first frame is created |
 | Terminal | `src/config/warp-terminal/`, `src/tmux/tmux.conf` | Warp rewrites `settings.toml` itself, so UI changes appear as edits here |
 | Window manager | `src/xmonad/` | `Win+H` shows the key bindings; build output stays in `~/.xmonad` |
 | Version control | `src/git/{gitconfig,gitignore}` | `core.excludesfile` points at `gitignore`, overriding git's XDG default, so all global rules belong there |
