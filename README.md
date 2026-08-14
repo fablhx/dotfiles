@@ -2,17 +2,6 @@
 
 Personal dotfiles for Ubuntu MATE 24.04.
 
-`make build` symlinks `src/` straight into `$HOME`, so editing `~/.bashrc` edits
-`src/shell/bashrc`. There is no rebuild step to forget.
-
-```
-src/<tool>/<file>  ──symlink──►  ~/.<file>
-```
-
-Only files are linked, never directories: `~/.config/warp-terminal` and
-`~/.xmonad` stay real directories, because the applications write their own
-state into them.
-
 ## Installation
 
 ### 1. Required packages
@@ -25,9 +14,6 @@ sudo apt update && sudo apt install \
   tmux \
   xmonad libghc-xmonad-dev libghc-xmonad-contrib-dev
 ```
-
-`libghc-xmonad-contrib-dev` is required: `src/xmonad/xmonad.hs` imports from
-`XMonad.Layout.*`, `XMonad.Actions.*` and `XMonad.Config.Mate`.
 
 ### 2. Deploy
 
@@ -120,18 +106,6 @@ here can regenerate them, so they are the only part worth backing up.
 | --- | --- |
 | `~/.gitconfig.private` | `[user]` name and email; included last, so it overrides anything |
 | `~/.bashrc.private` | Sourced last by `bashrc` |
-
-## Components
-
-| Area | Files | Notes |
-| --- | --- | --- |
-| Shell | `src/shell/bashrc` | Aliases, history and Emacs helpers. Warp supplies the prompt and completion, so neither is configured |
-| Editor | `src/emacs/emacs`, `src/emacs/early-init.el` | Emacs 29.1+, loaded as source. `early-init.el` holds what has to run before packages are activated and before the first frame is created |
-| Terminal | `src/config/warp-terminal/`, `src/tmux/tmux.conf` | Warp rewrites `settings.toml` itself, so UI changes appear as edits here |
-| Window manager | `src/xmonad/` | `Win+H` shows the key bindings; build output stays in `~/.xmonad` |
-| Version control | `src/git/{gitconfig,gitignore}` | `core.excludesfile` points at `gitignore`, overriding git's XDG default, so all global rules belong there |
-| Formatting | `src/clang-format/clang-format` | |
-| Claude Code | `src/claude/` | `settings.json`, global `CLAUDE.md` and the status line. `~/.claude` holds session state, so only these three files are linked |
 
 ## Development tools
 

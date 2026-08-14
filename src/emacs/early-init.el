@@ -1,12 +1,5 @@
 ;;; early-init.el --- Settings that must precede the init file  -*- lexical-binding: t; -*-
 
-;;; Commentary:
-;; Symlinked as ~/.emacs.d/early-init.el.  Emacs reads it before it activates
-;; packages and before it creates the first frame, which is the only reason
-;; anything here is not in ~/.emacs.
-
-;;; Code:
-
 ;; Emacs starts with the GC threshold at 800 kB and the file name handlers
 ;; armed, which buys a collection every few files loaded and a regexp sweep per
 ;; `load' - for the hundreds of files package activation and ~/.emacs go on to

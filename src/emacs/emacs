@@ -1,18 +1,5 @@
 ;;; emacs --- Personal Emacs configuration  -*- lexical-binding: t; -*-
 
-;;; Commentary:
-;; Symlinked as ~/.emacs.  Requires Emacs 29.1+, which bundles use-package and
-;; tree-sitter.  Whatever has to run before packages are activated or the first
-;; frame is created lives in early-init.el instead.
-;;
-;; Function keys, which are spread across the blocks below:
-;;   f1 comment-dwim   f2 whitespace-mode  f3 rg          f4 flycheck-mode
-;;   f5 compile        f6 recompile        f7 next-error  f8 pop mark
-;;   f9 open error location at point       f12 enlarge-window
-;; Shift adds: f3 rg-project, f8 pop-global-mark.
-
-;;; Code:
-
 ;; =============================================================================
 ;;                             Package Management
 ;; =============================================================================

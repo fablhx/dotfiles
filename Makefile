@@ -1,12 +1,6 @@
 # =============================================================================
 #                        Config files Management
 # =============================================================================
-# src/ is symlinked straight into $HOME; there is no staging copy.
-#
-# Every entry links a FILE, never a directory. Applications own their own
-# directories and write state into them, so linking one either destroys that
-# state or, if it already exists, creates the link inside it.
-# =============================================================================
 
 SHELL := /bin/bash
 .SHELLFLAGS := -eu -o pipefail -c
