@@ -124,11 +124,15 @@ __history_sync() {
 # prepending, and array-aware because bash 5.1+ lets PROMPT_COMMAND be one --
 # assigning a string to an array variable would drop every other hook in it,
 # and Warp installs hooks of its own here.
+#
+# The string case comes first because shellcheck reads the two branches in
+# order: after an array assignment it takes the variable for an array, and
+# reports the string one as a mistake (SC2178, SC2128).
 if [[ ${PROMPT_COMMAND[*]} != *__history_sync* ]]; then
-    if [[ ${PROMPT_COMMAND@a} == *a* ]]; then
-        PROMPT_COMMAND=( __history_sync "${PROMPT_COMMAND[@]}" )
-    else
+    if [[ ${PROMPT_COMMAND@a} != *a* ]]; then
         PROMPT_COMMAND="__history_sync${PROMPT_COMMAND:+; ${PROMPT_COMMAND}}"
+    else
+        PROMPT_COMMAND=( __history_sync "${PROMPT_COMMAND[@]}" )
     fi
 fi
 
