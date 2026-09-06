@@ -3,21 +3,6 @@
     "commit": "",
     "pr": ""
   },
-  "effortLevel": "xhigh",
-  "enabledPlugins": {
-    "clangd-lsp@claude-plugins-official": true,
-    "rust-analyzer-lsp@claude-plugins-official": true,
-    "warp@claude-code-warp": true
-  },
-  "extraKnownMarketplaces": {
-    "claude-code-warp": {
-      "source": {
-        "repo": "warpdotdev/claude-code-warp",
-        "source": "github"
-      }
-    }
-  },
-  "model": "opus[1m]",
   "permissions": {
     "allow": [
       "Bash(apt-cache:*)",
@@ -95,9 +80,24 @@
       "Bash(sudo:*)"
     ]
   },
+  "model": "opus[1m]",
   "statusLine": {
-    "command": "bash $HOME/.claude/statusline-command.sh",
-    "type": "command"
+    "type": "command",
+    "command": "bash $HOME/.claude/statusline-command.sh"
   },
+  "enabledPlugins": {
+    "clangd-lsp@claude-plugins-official": true,
+    "rust-analyzer-lsp@claude-plugins-official": true,
+    "warp@claude-code-warp": true
+  },
+  "extraKnownMarketplaces": {
+    "claude-code-warp": {
+      "source": {
+        "source": "github",
+        "repo": "warpdotdev/claude-code-warp"
+      }
+    }
+  },
+  "effortLevel": "xhigh",
   "theme": "auto"
 }

@@ -135,6 +135,7 @@ enabled = false
 zoom_level = 100
 
 [appearance.tabs]
+preserve_active_tab_color = true
 
 [appearance.tabs.header_toolbar_chip_selection]
 
@@ -152,6 +153,7 @@ use_ssh_tmux_wrapper = false
 ssh_tmux_deprecation_notice_pending = false
 
 [notifications]
+toast_duration_secs = 8
 
 [notifications.preferences]
 is_agent_task_completed_enabled = true
