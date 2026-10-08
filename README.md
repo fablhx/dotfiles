@@ -25,9 +25,9 @@ make build
 
 > **On a machine with existing dotfiles**, move aside anything already present
 > as a real file: `~/.bashrc ~/.emacs ~/.gitconfig ~/.gitignore ~/.tmux.conf`
-> `~/.clang-format`, plus `early-init.el` under `~/.emacs.d`, `keybindings.yaml`
-> and `settings.toml` under `~/.config/warp-terminal`, and `CLAUDE.md`,
-> `settings.json` and `statusline-command.sh` under `~/.claude`.
+> `~/.clang-format ~/.xsessionrc`, plus `early-init.el` under `~/.emacs.d`,
+> `keybindings.yaml` and `settings.toml` under `~/.config/warp-terminal`, and
+> `CLAUDE.md`, `settings.json` and `statusline-command.sh` under `~/.claude`.
 >
 > The build prints `skip` rather than replacing a non-symlink, so nothing is
 > destroyed — but that config is then not deployed. Anything `make status`

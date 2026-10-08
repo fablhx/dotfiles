@@ -1,0 +1,14 @@
+# shellcheck shell=sh
+# Sourced by /bin/sh from the X session wrapper (Xsession(5), lightdm-session)
+# before mate-session starts, so every process of the session inherits what is
+# exported here.
+
+# The ssh agent socket units (gcr-ssh-agent, ssh-agent, gpg-agent-ssh) publish
+# SSH_AUTH_SOCK only in systemd's user environment, which gnome-session imports
+# and mate-session does not. Without it ssh finds no agent, and keys whose
+# passphrase the keyring holds are unusable.
+sock=$(systemctl --user show-environment 2>/dev/null | sed -n 's/^SSH_AUTH_SOCK=//p')
+if [ -n "$sock" ]; then
+  export SSH_AUTH_SOCK="$sock"
+fi
+unset sock

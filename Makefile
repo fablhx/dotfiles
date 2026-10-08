@@ -20,11 +20,14 @@ LINKS := \
   git/gitconfig:.gitconfig \
   git/gitignore:.gitignore \
   tmux/tmux.conf:.tmux.conf \
+  x11/xsessionrc:.xsessionrc \
   xmonad/xmonad.hs:.xmonad/xmonad.hs \
   config/warp-terminal/keybindings.yaml:.config/warp-terminal/keybindings.yaml \
   config/warp-terminal/settings.toml:.config/warp-terminal/settings.toml
 
 SHELL_SOURCES := src/shell/bashrc src/claude/statusline-command.sh
+# Sourced by the X session wrapper, which runs /bin/sh rather than bash.
+SH_SOURCES := src/x11/xsessionrc
 
 # Machine-local, never tracked, untouched by every target below. The only part
 # of the setup this repository cannot recreate.
@@ -202,8 +205,10 @@ lint:
 	# SC1091 only reports sourced files missing at lint time; both exist at runtime.
 	if have shellcheck; then
 	  try shellcheck shellcheck -s bash -e SC1091 $(SHELL_SOURCES)
+	  try "shellcheck (sh)" shellcheck -s sh $(SH_SOURCES)
 	fi
 	for f in $(SHELL_SOURCES); do try "bash -n $$(basename "$$f")" bash -n "$$f"; done
+	for f in $(SH_SOURCES); do try "sh -n $$(basename "$$f")" sh -n "$$f"; done
 
 	echo "emacs:"
 	# Compiles SRC under a name Emacs accepts, reporting warnings against SRC.
