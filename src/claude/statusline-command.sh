@@ -40,8 +40,8 @@ SEP_C=$'\033[38;5;240m'
 # ASCII-only, dividing the LLM block from the repo block.
 SEP=$(printf '\xe2\x94\x82')
 
-if   (( pct >= 90 )); then CTX_C=$'\033[38;5;196m'
-elif (( pct >= 70 )); then CTX_C=$'\033[38;5;220m'
+if   (( pct >= 40 )); then CTX_C=$'\033[38;5;196m'
+elif (( pct >= 30 )); then CTX_C=$'\033[38;5;220m'
 else                       CTX_C=$'\033[38;5;35m'
 fi
 

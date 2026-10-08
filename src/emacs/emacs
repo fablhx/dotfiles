@@ -1029,7 +1029,7 @@ was pressed for completes as if rg had been loaded all along."
   ;; --- Inlay hints ---
   ;; Master switch, nil by default: the per-server hints below are inert
   ;; without it.
-  (lsp-inlay-hint-enable t)
+  ;;(lsp-inlay-hint-enable t)
 
   ;; --- Rust (rust-analyzer) ---
   (lsp-rust-analyzer-cargo-watch-command "clippy")

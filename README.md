@@ -98,14 +98,15 @@ are left alone.
 
 ## Private / machine-local configuration
 
-Two plain files in `$HOME`, untracked and untouched by every target. `make build`
-prompts for the git identity the first time and stubs out the other. Nothing
+Three plain files in `$HOME`, untracked and untouched by every target. `make build`
+prompts for the git identity the first time and stubs out the others. Nothing
 here can regenerate them, so they are the only part worth backing up.
 
 | File | Purpose |
 | --- | --- |
 | `~/.gitconfig.private` | `[user]` name and email; included last, so it overrides anything |
 | `~/.bashrc.private` | Sourced last by `bashrc` |
+| `~/.claude/CLAUDE.private.md` | Imported last by `CLAUDE.md`; employer and team instructions, which win over the common ones |
 
 ## Development tools
 

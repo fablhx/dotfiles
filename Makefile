@@ -28,7 +28,7 @@ SHELL_SOURCES := src/shell/bashrc src/claude/statusline-command.sh
 
 # Machine-local, never tracked, untouched by every target below. The only part
 # of the setup this repository cannot recreate.
-PRIVATE_FILES := .bashrc.private .gitconfig.private
+PRIVATE_FILES := .bashrc.private .gitconfig.private .claude/CLAUDE.private.md
 
 .DEFAULT_GOAL := usage
 .PHONY: usage help build status lint clean mate-session
@@ -133,6 +133,11 @@ build:
 	  echo '# Machine-local bashrc overrides, sourced last by ~/.bashrc.' \
 	    > "$(HOME)/.bashrc.private"
 	  say created "$(HOME)/.bashrc.private"
+	fi
+	if [ ! -f "$(HOME)/.claude/CLAUDE.private.md" ]; then
+	  echo '<!-- Machine-local Claude instructions, imported last by ~/.claude/CLAUDE.md. -->' \
+	    > "$(HOME)/.claude/CLAUDE.private.md"
+	  say created "$(HOME)/.claude/CLAUDE.private.md"
 	fi
 
 	# xmonad writes its build output beside xmonad.hs, which is why ~/.xmonad
