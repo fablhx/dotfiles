@@ -29,6 +29,7 @@ finished.
      failing after the attempt bound, with its exact error and what you tried;
    - for a non-trivial change in a typed language, where its guarantees come
      from (see *Reading and verifying code*);
+   - a change that got no new test, and why (see *Test new behavior*);
    - every lint suppression added for a false positive;
    - a new build target or script that CI doesn't exercise;
    - equivalent mutants left alive, and any tool that was missing or couldn't
@@ -51,18 +52,27 @@ The one exception is a lint suppression (`#[allow]`, `// eslint-disable`,
 
 ## Test new behavior
 
-- Any new feature or behavior change ships with tests that exercise it. A
-  feature isn't done when the code exists; it's done when tests prove it
-  behaves as intended. A pure refactor with no behavior change needs no new
-  tests, but the existing ones must still pass.
+- Add a test only to protect a behavior callers rely on: the contract of
+  what changed, meaning its outputs, the inputs it accepts or rejects, and
+  its side effects. A new feature or a contract change ships with tests that
+  exercise it; it's done when tests prove it behaves as intended. A change
+  that keeps the contract (refactor, reordering, performance tweak) gets no
+  new test: the existing ones passing is the proof.
 - Test the intended behavior, not the implementation. Assert on observable
   outcomes and the public contract so the test survives a refactor. Don't
   write tests that merely re-encode what the code happens to do.
+  - Before writing one, name the realistic bug that would make it fail. If
+    the only way to break it is to reorder code, rename internals or undo a
+    refactor, don't write it.
+  - The name says what is guaranteed, not how it's computed. A name with
+    "before", "after", "first" or an internal step in it is a red flag.
 - The test must be able to fail. If it would still pass against a broken or
   reverted implementation, it proves nothing. Sanity check: invert the core
   logic in your head; the test should go red. If it wouldn't, rewrite it.
 - Cover more than the happy path: edge cases, boundaries, empty/zero/overflow
   inputs, and the error paths the feature introduces.
+- Don't assert which error wins when an input is invalid in several ways at
+  once, unless that precedence is documented as part of the API.
 - Pick the right level (unit vs integration) for what's being verified. If a
   feature genuinely can't be tested at a reasonable level, say so and explain
   why; don't write a hollow test just to satisfy this rule.
@@ -443,7 +453,8 @@ catch. A surviving mutant is a real gap that quantity of tests cannot hide.
 - Use it as a diagnostic to find weak spots, not as a coverage-style
   percentage to chase to 100%. Some mutants are equivalent (no observable
   difference) and legitimately unkillable: list those in the final report
-  rather than contorting tests around them.
+  rather than contorting tests around them. A mutant observable only through
+  undocumented error precedence or internal ordering counts as equivalent.
 
 ## Undefined behavior (unsafe)
 
